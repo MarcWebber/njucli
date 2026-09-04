@@ -1,0 +1,17 @@
+{
+  "code": 0,
+  "msg": null,
+  "data": {
+    "actualTotal": 1,
+    "dataList": [
+      {
+        "bibId": "m-book-1",
+        "title": "操作系统",
+        "author": "王老师 主编",
+        "callno": ["TP316/1"],
+        "itemCount": 2,
+        "circCount": 1
+      }
+    ]
+  }
+}

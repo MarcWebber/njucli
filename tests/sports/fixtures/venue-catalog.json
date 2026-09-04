@@ -1,0 +1,20 @@
+{
+  "code": 200,
+  "message": "ok",
+  "data": {
+    "venueSiteInfo": {
+      "1": [
+        {
+          "id": 12,
+          "campusName": "仙林校区",
+          "venueName": "方肇周体育馆",
+          "siteName": "羽毛球场",
+          "sportName": "羽毛球",
+          "sportType": 7,
+          "openStartDate": "08:00",
+          "openEndDate": "22:00"
+        }
+      ]
+    }
+  }
+}

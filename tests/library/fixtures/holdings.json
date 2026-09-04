@@ -1,0 +1,7 @@
+{
+  "code": 0,
+  "msg": null,
+  "data": {
+    "holdings": "[{\"callNo\":\"TP316/1\",\"library\":\"仙林图书馆\",\"location\":\"仙林图书馆三楼中文图书借阅区\",\"shelfMark\":\"A-12-3\",\"status\":\"可借\",\"itemsAvailable\":1},{\"callNo\":\"TP316/1\",\"library\":\"鼓楼图书馆\",\"location\":\"鼓楼图书馆\",\"shelfMark\":null,\"status\":\"借出\",\"itemsAvailable\":0}]"
+  }
+}

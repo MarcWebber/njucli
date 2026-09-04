@@ -1,0 +1,9 @@
+{
+  "code": 200,
+  "message": "ok",
+  "data": {
+    "reservationDateSpaceInfo": {
+      "2026-09-07": []
+    }
+  }
+}

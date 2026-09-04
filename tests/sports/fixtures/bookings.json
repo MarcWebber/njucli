@@ -1,0 +1,21 @@
+{
+  "code": 200,
+  "message": "ok",
+  "data": {
+    "content": [
+      {
+        "id": 1234,
+        "campusName": "仙林校区",
+        "venueName": "方肇周体育馆",
+        "siteName": "羽毛球场",
+        "reservationDate": "2026-09-07",
+        "orderStatus": 1
+      },
+      {
+        "id": 1235,
+        "reservationDate": "2026-09-08",
+        "orderStatus": 2
+      }
+    ]
+  }
+}

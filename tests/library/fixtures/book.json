@@ -1,0 +1,14 @@
+{
+  "code": 0,
+  "msg": null,
+  "data": {
+    "map": {
+      "baseInfo": {
+        "map": {
+          "title": "操作系统",
+          "author": "王老师 主编"
+        }
+      }
+    }
+  }
+}
