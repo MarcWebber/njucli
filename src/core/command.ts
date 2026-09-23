@@ -38,14 +38,10 @@ export async function runCommand<T>(
     runtime.setExitCode(0);
   } catch (error) {
     const appError = asAppError(error);
-    const errorFormat = format ?? safeResolveFormat(runtime.environment);
+    const errorFormat = format ?? (runtime.environment.NJUCLI_FORMAT === "json" ? "json" : "text");
     renderError(runtime.output, errorFormat, appError);
     runtime.setExitCode(exitCodeFor(appError.code));
   }
-}
-
-function safeResolveFormat(environment: NodeJS.ProcessEnv): "text" | "json" {
-  return environment.NJUCLI_FORMAT === "json" ? "json" : "text";
 }
 
 function exitCodeFor(code: string): number {

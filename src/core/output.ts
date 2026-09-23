@@ -1,5 +1,5 @@
 import { AppError, asAppError } from "./errors.js";
-import { redact } from "./redaction.js";
+import { redact, redactText } from "./redaction.js";
 
 type OutputFormat = "text" | "json";
 
@@ -24,20 +24,13 @@ export function resolveOutputFormat(
   });
 }
 
-function successEnvelope<T>(payload: CommandPayload<T>) {
-  return {
-    ok: true,
-    data: redact(payload.data),
-  };
-}
-
 export function errorEnvelope(error: unknown) {
   const appError = asAppError(error);
   return {
     ok: false,
     error: {
       code: appError.code,
-      message: appError.message,
+      message: redactText(appError.message),
       ...(appError.hint === undefined ? {} : { hint: appError.hint }),
       ...(appError.authCommand === undefined
         ? {}
@@ -53,7 +46,7 @@ export function renderSuccess<T>(
   payload: CommandPayload<T>,
 ): void {
   if (format === "json") {
-    sink.stdout(`${JSON.stringify(successEnvelope(payload))}\n`);
+    sink.stdout(`${JSON.stringify({ ok: true, data: redact(payload.data) })}\n`);
     return;
   }
   sink.stdout(`${payload.text}\n`);

@@ -1,6 +1,5 @@
 import { addDays, parseCampusDate, weekRange } from "../../core/dates.js";
 import { AppError } from "../../core/errors.js";
-import { systemClock, type Clock } from "../../core/types.js";
 import type { EHallTimetableClient } from "./client.js";
 import type { CourseRow, TermDateRow, TermRow } from "./contract.js";
 import type {
@@ -27,13 +26,7 @@ const PERIODS = [
 ] as const;
 
 export class CourseService {
-  constructor(
-    private readonly remote: Pick<
-      EHallTimetableClient,
-      "listTerms" | "currentTerm" | "listTermDates" | "listSchedule"
-    >,
-    private readonly clock: Clock = systemClock,
-  ) {}
+  constructor(private readonly remote: EHallTimetableClient) {}
 
   async terms(): Promise<AcademicTerm[]> {
     const [terms, dates] = await Promise.all([
@@ -63,13 +56,13 @@ export class CourseService {
   }
 
   async onDate(input?: string, termId?: string): Promise<CourseOccurrence[]> {
-    const date = parseCampusDate(input, this.clock.now());
+    const date = parseCampusDate(input);
     const schedule = await this.schedule(termId);
     return this.expand(schedule).filter((entry) => entry.date === date);
   }
 
   async week(input?: string, termId?: string): Promise<CourseOccurrence[]> {
-    const date = parseCampusDate(input, this.clock.now());
+    const date = parseCampusDate(input);
     const range = weekRange(date);
     const schedule = await this.schedule(termId);
     return this.expand(schedule).filter(
@@ -78,7 +71,7 @@ export class CourseService {
   }
 
   async next(termId?: string): Promise<CourseOccurrence | null> {
-    const now = this.clock.now();
+    const now = new Date();
     const schedule = await this.schedule(termId);
     return (
       this.expand(schedule).find(
@@ -136,12 +129,7 @@ function mapTerm(term: TermRow, dates: TermDateRow[]): AcademicTerm {
   const start = dates.find(
     (candidate) => `${candidate.XN}-${candidate.XQ}` === term.DM,
   );
-  const startsOn = start?.XQKSRQ.slice(0, 10) ?? null;
-  if (startsOn && !/^\d{4}-\d{2}-\d{2}$/.test(startsOn)) {
-    throw new AppError("REMOTE_SCHEMA_CHANGED", "学期开始日期格式发生变化", {
-      details: { contract: "nju-ehall-wdkb-v1", value: start?.XQKSRQ },
-    });
-  }
+  const startsOn = start ? parseCampusDate(start.XQKSRQ.slice(0, 10)) : null;
   return {
     id: term.DM,
     name: term.MC,

@@ -9,7 +9,7 @@ const parser = createHtmlSourceParser({
     title: ".kxdt-r h3",
     titleRemove: "i",
     date: ".kxdt-l",
-    readDate: (_$, item) => {
+    readDate: (item) => {
       const monthAndDay = item.find(".kxdt-l p").first().text().trim();
       const year = item.find(".kxdt-l span").first().text().trim();
       return `${year}-${monthAndDay}`;

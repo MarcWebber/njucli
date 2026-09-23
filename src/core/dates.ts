@@ -23,8 +23,7 @@ export function parseCampusDate(input: string | undefined, now = new Date()): st
 }
 
 export function weekRange(date: string): { from: string; to: string } {
-  assertDate(date);
-  const utc = dateAtShanghaiMidnight(date);
+  const utc = new Date(`${date}T00:00:00.000Z`);
   const weekday = utc.getUTCDay() || 7;
   return {
     from: addDays(date, 1 - weekday),
@@ -33,16 +32,9 @@ export function weekRange(date: string): { from: string; to: string } {
 }
 
 export function addDays(date: string, count: number): string {
-  assertDate(date);
-  const value = dateAtShanghaiMidnight(date);
+  const value = new Date(`${date}T00:00:00.000Z`);
   value.setUTCDate(value.getUTCDate() + count);
   return value.toISOString().slice(0, 10);
-}
-
-function assertDate(value: string): void {
-  if (!DATE_PATTERN.test(value) || !isRealDate(value)) {
-    throw new AppError("INVALID_INPUT", `无效日期：${value}`);
-  }
 }
 
 function isRealDate(value: string): boolean {
@@ -53,8 +45,4 @@ function isRealDate(value: string): boolean {
     candidate.getUTCMonth() === month! - 1 &&
     candidate.getUTCDate() === day
   );
-}
-
-function dateAtShanghaiMidnight(value: string): Date {
-  return new Date(`${value}T00:00:00.000Z`);
 }

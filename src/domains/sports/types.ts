@@ -27,5 +27,12 @@ export interface SportsBookingSummary {
   venue: string | null;
   site: string | null;
   reservationDate: string;
+  reservationDetail: string | null;
   status: "active" | "cancelled";
+}
+
+export interface SportsReservationLink {
+  url: string;
+  venueSiteId: string;
+  date: string;
 }

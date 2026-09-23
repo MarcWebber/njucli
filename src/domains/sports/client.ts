@@ -1,11 +1,6 @@
 import { AppError } from "../../core/errors.js";
 import { parseCampusDate } from "../../core/dates.js";
-import {
-  systemClock,
-  type Clock,
-  type FetchLike,
-  type FetchResponse,
-} from "../../core/types.js";
+import type { FetchLike, FetchResponse } from "../../core/types.js";
 import {
   parseBookingDetail,
   parseBookingPage,
@@ -30,7 +25,6 @@ export class SportsClient {
   constructor(
     private readonly fetch: FetchLike,
     private readonly accessToken: string,
-    private readonly clock: Clock = systemClock,
   ) {}
 
   async listVenues(
@@ -63,7 +57,7 @@ export class SportsClient {
     dateInput: string,
   ): Promise<SportsSlotSchedule> {
     const venueSiteId = requiredId(venueSiteIdInput, "venueSiteId");
-    const date = parseCampusDate(dateInput, this.clock.now());
+    const date = parseCampusDate(dateInput);
     const query: SportsSignParameter[] = [
       ["venueSiteId", venueSiteId],
       ["searchDate", date],
@@ -77,11 +71,9 @@ export class SportsClient {
   }
 
   async listBookings(
-    pageInput = 0,
-    sizeInput = 20,
+    page = 0,
+    size = 20,
   ): Promise<SportsBookingSummary[]> {
-    const page = pageNumber(pageInput, "page", 0);
-    const size = pageNumber(sizeInput, "size", 1);
     const data = await this.get(
       "/api/orders/mine",
       [
@@ -107,18 +99,11 @@ export class SportsClient {
     path: string,
     query: readonly SportsSignParameter[],
   ): Promise<unknown> {
-    const timestamp = String(Math.trunc(this.clock.now().getTime()));
+    const timestamp = String(Date.now());
     const signedQuery: SportsSignParameter[] = [
       ...query,
       ["nocache", timestamp],
     ];
-    if (this.accessToken.trim().length === 0) {
-      throw new AppError("AUTH_REQUIRED", "体育场馆访问令牌不可用", {
-        hint: "运行 njucli auth login sports",
-        authCommand: "njucli auth login sports",
-      });
-    }
-
     const url = new URL(`${SPORTS_API_BASE_URL}${path}`);
     for (const [key, value] of signedQuery) url.searchParams.append(key, value);
     const headers = new Headers({
@@ -128,32 +113,9 @@ export class SportsClient {
       cgAuthorization: this.accessToken,
     });
 
-    let response: FetchResponse;
-    try {
-      response = await this.fetch(url, {
-        method: "GET",
-        headers,
-      });
-    } catch (error) {
-      throw new AppError("REMOTE_UNAVAILABLE", "无法连接体育场馆服务", {
-        cause: error,
-        details: { path },
-      });
-    }
+    const response = await this.fetch(url, { method: "GET", headers });
     assertHttpResponse(response, path);
-
-    let payload: unknown;
-    try {
-      const body = await response.text();
-      if (body.trim().length === 0) throw new Error("empty response body");
-      payload = JSON.parse(body) as unknown;
-    } catch (error) {
-      throw new AppError("REMOTE_SCHEMA_CHANGED", "体育场馆接口没有返回有效 JSON", {
-        cause: error,
-        details: { path, status: response.status },
-      });
-    }
-    return unwrapSportsEnvelope(payload, path);
+    return unwrapSportsEnvelope(JSON.parse(await response.text()), path);
   }
 }
 
@@ -166,31 +128,13 @@ function assertHttpResponse(response: FetchResponse, path: string): void {
       details: { path, status: response.status },
     });
   }
-  if (response.status === 429) {
-    throw new AppError("RATE_LIMITED", "体育场馆服务请求过于频繁", {
-      details: { path, status: response.status },
-    });
-  }
-  throw new AppError("REMOTE_UNAVAILABLE", "体育场馆服务返回错误", {
-    details: { path, status: response.status },
-  });
+  throw new Error(`体育场馆服务返回 HTTP ${response.status}: ${path}`);
 }
 
 function requiredId(value: string | number, field: string): string {
   const normalized = String(value).trim();
   if (normalized.length === 0) {
-    throw new AppError("INVALID_INPUT", `${field} 不能为空`, {
-      details: { field },
-    });
+    throw new Error(`${field} 不能为空`);
   }
   return normalized;
-}
-
-function pageNumber(value: number, field: string, minimum: number): number {
-  if (!Number.isInteger(value) || value < minimum) {
-    throw new AppError("INVALID_INPUT", `${field} 必须是不小于 ${minimum} 的整数`, {
-      details: { field, value },
-    });
-  }
-  return value;
 }

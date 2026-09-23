@@ -1,12 +1,7 @@
 import { z } from "zod";
 
 import { AppError } from "../core/errors.js";
-import {
-  systemClock,
-  type Clock,
-  type FetchLike,
-  type FetchResponse,
-} from "../core/types.js";
+import type { FetchLike, FetchResponse } from "../core/types.js";
 import { parseUrl, urlHostname } from "../core/url.js";
 import {
   SPORTS_API_BASE_URL,
@@ -35,7 +30,6 @@ const roleDataSchema = z.object({
 
 export async function exchangeSportsAccessToken(
   fetch: FetchLike,
-  clock: Clock = systemClock,
 ): Promise<string> {
   const landing = await request(fetch, SPORTS_SSO_URL);
   if (urlHostname(landing.url) === "authserver.nju.edu.cn") {
@@ -49,14 +43,13 @@ export async function exchangeSportsAccessToken(
     });
   }
 
-  const login = await sportsPost(fetch, "/api/login", [], clock, {
+  const login = await sportsPost(fetch, "/api/login", [], {
     "oauth-token": oauthToken,
   });
-  const parsedLogin = loginDataSchema.safeParse(login);
-  if (!parsedLogin.success) throw schemaChanged("/api/login", parsedLogin.error);
+  const parsedLogin = loginDataSchema.parse(login);
 
-  const token = parsedLogin.data.token.access_token;
-  const role = parsedLogin.data.roles[0];
+  const token = parsedLogin.token.access_token;
+  const role = parsedLogin.roles[0];
   if (!role) return token;
 
   const roleId = String(role.id);
@@ -64,22 +57,18 @@ export async function exchangeSportsAccessToken(
     fetch,
     "/roleLogin",
     [["roleid", roleId]],
-    clock,
     { cgAuthorization: token },
   );
-  const parsedRole = roleDataSchema.safeParse(roleLogin);
-  if (!parsedRole.success) throw schemaChanged("/roleLogin", parsedRole.error);
-  return parsedRole.data.token.access_token;
+  return roleDataSchema.parse(roleLogin).token.access_token;
 }
 
 async function sportsPost(
   fetch: FetchLike,
   path: string,
   form: ReadonlyArray<readonly [string, string]>,
-  clock: Clock,
   extraHeaders: Record<string, string>,
 ): Promise<unknown> {
-  const timestamp = String(Math.trunc(clock.now().getTime()));
+  const timestamp = String(Date.now());
   const body = new URLSearchParams(form.map(([key, value]) => [key, value]));
   const response = await request(fetch, `${SPORTS_API_BASE_URL}${path}`, {
     method: "POST",
@@ -92,23 +81,12 @@ async function sportsPost(
     },
     body: body.toString(),
   });
-  let value: unknown;
-  try {
-    value = JSON.parse(await response.text()) as unknown;
-  } catch (cause) {
-    throw schemaChanged(path, cause);
+  const envelope = envelopeSchema.parse(JSON.parse(await response.text()));
+  if (envelope.code === 401 || envelope.code === 403) throw authRequired();
+  if (envelope.code !== 200) {
+    throw new Error(envelope.message ?? `体育场馆登录失败 (${envelope.code})`);
   }
-  const envelope = envelopeSchema.safeParse(value);
-  if (!envelope.success) throw schemaChanged(path, envelope.error);
-  if (envelope.data.code === 401 || envelope.data.code === 403) throw authRequired();
-  if (envelope.data.code !== 200) {
-    throw new AppError(
-      "AUTH_REFRESH_FAILED",
-      envelope.data.message ?? "体育场馆登录失败",
-      { details: { path, code: envelope.data.code } },
-    );
-  }
-  return envelope.data.data;
+  return envelope.data;
 }
 
 async function request(
@@ -116,15 +94,10 @@ async function request(
   url: string,
   init?: RequestInit,
 ): Promise<FetchResponse> {
-  let response: FetchResponse;
-  try {
-    response = await fetch(url, init);
-  } catch (cause) {
-    throw new AppError("REMOTE_UNAVAILABLE", "无法连接体育场馆登录服务", { cause });
-  }
+  const response = await fetch(url, init);
   if (response.status === 401 || response.status === 403) throw authRequired();
   if (!response.ok) {
-    throw new AppError("AUTH_REFRESH_FAILED", `体育场馆登录返回 HTTP ${response.status}`);
+    throw new Error(`体育场馆登录返回 HTTP ${response.status}`);
   }
   return response;
 }
@@ -133,12 +106,5 @@ function authRequired(): AppError {
   return new AppError("AUTH_REQUIRED", "统一身份认证或体育场馆会话已失效", {
     hint: "运行 njucli auth login sports",
     authCommand: "njucli auth login sports",
-  });
-}
-
-function schemaChanged(path: string, cause: unknown): AppError {
-  return new AppError("REMOTE_SCHEMA_CHANGED", "体育场馆登录响应与固定契约不一致", {
-    details: { path },
-    cause,
   });
 }

@@ -9,6 +9,7 @@ import {
 import {
   sportsBookingText,
   sportsBookingsText,
+  sportsReservationLinkText,
   sportsSlotsText,
   sportsVenueText,
   sportsVenuesText,
@@ -44,6 +45,14 @@ export function registerSportsCommands(
       return { data, text: sportsSlotsText(data) };
     }));
 
+  addFormatOption(sports.command("reserve-link").description("生成官方预约链接")
+    .requiredOption("--venue-site <id>", "场地 ID")
+    .requiredOption("--date <date>", "日期，例如 2026-09-07 或 tomorrow"))
+    .action(async (options: FormatOptions & { venueSite: string; date: string }) => runCommand(runtime, options, async () => {
+      const data = await service.reservationLink(options.venueSite, options.date);
+      return { data, text: sportsReservationLinkText(data) };
+    }));
+
   addFormatOption(sports.command("bookings").description("查询我的体育预约")
     .option("--page <page>", "页码")
     .option("--size <size>", "每页条数"))
@@ -52,6 +61,12 @@ export function registerSportsCommands(
       const size = optionalPositiveInteger(options.size, "--size");
       const data = await service.bookings(page, size);
       return { data, text: sportsBookingsText(data) };
+    }));
+
+  addFormatOption(sports.command("cancel-link <booking-id>").description("返回官方预约记录页，继续取消指定订单（不执行取消）"))
+    .action(async (bookingId: string, options: FormatOptions) => runCommand(runtime, options, async () => {
+      const data = await service.cancellationLink(bookingId);
+      return { data, text: `请在官方预约记录页找到订单 ${data.bookingId}，按页面规则取消：${data.url}\n尚未取消订单。` };
     }));
 
   addFormatOption(sports.command("booking <booking-id>").description("读取一个预约详情"))

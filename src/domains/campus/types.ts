@@ -46,3 +46,7 @@ export interface CampusArticlePage {
   items: CampusArticleSummary[];
   nextPage: number | null;
 }
+export interface CampusCanteenDirectory {
+  sourceUrl: string;
+  items: Array<{ name: string; phone: string }>;
+}

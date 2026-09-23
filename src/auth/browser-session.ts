@@ -1,4 +1,6 @@
 import { mkdir } from "node:fs/promises";
+import { join } from "node:path";
+import { AsyncLocalStorage } from "node:async_hooks";
 
 import {
   chromium,
@@ -9,47 +11,55 @@ import {
 
 import type { AccountRecord } from "../account/types.js";
 import { AppError } from "../core/errors.js";
+import { readJsonFile, writeJsonFile } from "../core/fs.js";
 import type { FetchLike, FetchResponse } from "../core/types.js";
 
-export interface BrowserPageSession {
-  navigate(url: string): Promise<void>;
-  currentUrl(): string;
-  waitForUrl(
-    predicate: (url: URL) => boolean,
-    timeoutMilliseconds: number,
-  ): Promise<void>;
-}
+const browserScope = new AsyncLocalStorage<{
+  directory: string;
+  headless: boolean;
+  session: BrowserSession;
+}>();
 
-export interface BrowserSession {
-  page(): Promise<BrowserPageSession>;
-  request: FetchLike;
-  clearCookies(): Promise<void>;
-  close(): Promise<void>;
-}
-
-export interface BrowserSessionFactory {
-  open(
-    account: AccountRecord,
-    options: { headless: boolean },
-  ): Promise<BrowserSession>;
-}
-
-export class PlaywrightBrowserSessionFactory implements BrowserSessionFactory {
-  async open(
-    account: AccountRecord,
-    options: { headless: boolean },
-  ): Promise<BrowserSession> {
-    await mkdir(account.browserDataDir, { recursive: true, mode: 0o700 });
-    const context = await chromium.launchPersistentContext(
-      account.browserDataDir,
-      { headless: options.headless, channel: "chrome" },
+export async function withBrowserSession<T>(
+  account: AccountRecord,
+  headless: boolean,
+  operation: (session: BrowserSession) => Promise<T>,
+): Promise<T> {
+  const current = browserScope.getStore();
+  if (current?.directory === account.browserDataDir && current.headless === headless) {
+    return operation(current.session);
+  }
+  const session = await openBrowserSession(account, headless);
+  try {
+    return await browserScope.run(
+      { directory: account.browserDataDir, headless, session },
+      () => operation(session),
     );
-    return new PlaywrightBrowserSession(context);
+  } finally {
+    await session.close();
   }
 }
 
-class PlaywrightBrowserSession implements BrowserSession {
-  constructor(private readonly context: BrowserContext) {}
+async function openBrowserSession(account: AccountRecord, headless: boolean): Promise<BrowserSession> {
+  await mkdir(account.browserDataDir, { recursive: true, mode: 0o700 });
+  const context = await chromium.launchPersistentContext(account.browserDataDir, { headless, channel: "chrome" });
+  const cookiePath = join(account.configDir, "session-cookies.json");
+  try {
+    const cookies = await readJsonFile<Parameters<BrowserContext["addCookies"]>[0]>(cookiePath);
+    if (cookies) await context.addCookies(cookies);
+    return new BrowserSession(context, cookiePath);
+  } catch (error) {
+    await context.close();
+    if (error instanceof SyntaxError) throw new Error("CLI 会话 Cookie 缓存格式无效");
+    throw error;
+  }
+}
+
+export class BrowserSession {
+  constructor(
+    private readonly context: BrowserContext,
+    private readonly cookiePath: string,
+  ) {}
 
   readonly request: FetchLike = async (input, init = {}) => {
     init.signal?.throwIfAborted();
@@ -68,9 +78,19 @@ class PlaywrightBrowserSession implements BrowserSession {
     return playwrightResponse(response);
   };
 
-  async page(): Promise<BrowserPageSession> {
-    const page = this.context.pages()[0] ?? (await this.context.newPage());
-    return new PlaywrightBrowserPageSession(page);
+  async page(): Promise<Page> {
+    return this.context.pages()[0] ?? this.context.newPage();
+  }
+
+  async login(url: string, isAuthenticated: (url: URL) => boolean): Promise<void> {
+    const page = await this.page();
+    await page.goto(url, { waitUntil: "domcontentloaded" });
+    await this.waitForLogin(isAuthenticated);
+  }
+
+  async waitForLogin(isAuthenticated: (url: URL) => boolean): Promise<void> {
+    // 用户在官方页面完成账号、扫码或验证码认证，CLI 等待成功落地。
+    await (await this.page()).waitForURL(isAuthenticated, { timeout: 180_000, waitUntil: "domcontentloaded" });
   }
 
   async clearCookies(): Promise<void> {
@@ -78,7 +98,11 @@ class PlaywrightBrowserSession implements BrowserSession {
   }
 
   async close(): Promise<void> {
-    await this.context.close();
+    try {
+      await writeJsonFile(this.cookiePath, (await this.context.cookies()).filter((cookie) => cookie.expires === -1));
+    } finally {
+      await this.context.close();
+    }
   }
 }
 
@@ -107,25 +131,8 @@ function playwrightResponse(response: APIResponse): FetchResponse {
     ok: response.ok(),
     status: response.status(),
     url: response.url(),
+    headers: new Headers(Object.entries(response.headers()).filter(([name]) => name.toLowerCase() !== "set-cookie")),
     text: () => response.text(),
+    arrayBuffer: async () => Uint8Array.from(await response.body()).buffer,
   };
-}
-
-class PlaywrightBrowserPageSession implements BrowserPageSession {
-  constructor(private readonly pageValue: Page) {}
-
-  async navigate(url: string): Promise<void> {
-    await this.pageValue.goto(url, { waitUntil: "domcontentloaded" });
-  }
-
-  currentUrl(): string {
-    return this.pageValue.url();
-  }
-
-  async waitForUrl(
-    predicate: (url: URL) => boolean,
-    timeoutMilliseconds: number,
-  ): Promise<void> {
-    await this.pageValue.waitForURL(predicate, { timeout: timeoutMilliseconds });
-  }
 }

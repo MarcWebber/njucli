@@ -1,13 +1,21 @@
 import type { SessionMetadata } from "../auth/types.js";
 import type {
+  GraduateExam,
+  GraduateGrade,
+  GraduatePlan,
+  GraduateSchedule,
+} from "../domains/academic/types.js";
+import type {
   CampusArticle,
   CampusArticlePage,
   CampusSource,
 } from "../domains/campus/types.js";
 import type {
   AcademicTerm,
+  CourseOfferingPage,
   CourseOccurrence,
   CourseSchedule,
+  GraduateCourse,
 } from "../domains/course/types.js";
 import type {
   LibraryBookDetail,
@@ -17,10 +25,25 @@ import type {
 } from "../domains/library/types.js";
 import type {
   SportsBookingSummary,
+  SportsReservationLink,
   SportsSlotSchedule,
   SportsVenueSiteSummary,
 } from "../domains/sports/types.js";
-import type { DoctorResult, SourceResult, TodayResult } from "../app/services.js";
+import type {
+  EHallApplicationPage,
+  EHallService,
+  EHallServiceLink,
+  EHallTaskPage,
+} from "../domains/ehall/types.js";
+import type {
+  SoftSeAssignment,
+  SoftSeCourse,
+  SoftSeCoursePage,
+  SoftSeCourseSummary,
+  SoftSeGrade,
+  SoftSeLink,
+} from "../domains/softse/types.js";
+import type { DoctorResult, TodayResult } from "../app/services.js";
 
 const NONE = "无";
 
@@ -66,6 +89,139 @@ export function termsText(terms: AcademicTerm[]): string {
 
 export function termText(term: AcademicTerm): string {
   return `${term.name}\t${term.id}`;
+}
+
+export function courseOfferingsText(page: CourseOfferingPage): string {
+  if (page.items.length === 0) return NONE;
+  return page.items.map((course) => {
+    const teachers = course.teachers.join("、") || "教师待定";
+    return `${course.courseCode}\t${course.name}（${course.className}）\t${teachers}\t${course.campus}\t${course.schedule}\t剩余 ${course.remaining}/${course.capacity}\t${course.classId}`;
+  }).join("\n");
+}
+
+export function selectedCoursesText(courses: GraduateCourse[]): string {
+  if (courses.length === 0) return NONE;
+  return courses.map((course) => {
+    const teachers = course.teachers.join("、") || "教师待定";
+    return `${course.courseCode}\t${course.name}（${course.className}）\t${teachers}\t${course.campus}\t${course.schedule}\t${course.classId}`;
+  }).join("\n");
+}
+
+export function graduateGradesText(grades: GraduateGrade[]): string {
+  if (grades.length === 0) return NONE;
+  return grades.map((grade) =>
+    `${grade.term ?? "学期未知"}\t${grade.courseCode}\t${grade.courseName}\t${grade.credits ?? "-"}\t${grade.score ?? "未公布"}\t${grade.passed === null ? "" : grade.passed ? "通过" : "未通过"}`
+  ).join("\n");
+}
+
+export function graduateExamsText(exams: GraduateExam[]): string {
+  if (exams.length === 0) return NONE;
+  return exams.map((exam) => {
+    const time = [exam.date, exam.startsAt && exam.endsAt
+      ? `${exam.startsAt}-${exam.endsAt}`
+      : exam.startsAt].filter(Boolean).join(" ") || "时间未公布";
+    return `${exam.kind === "exam" ? "考试" : "考查"}\t${exam.courseCode ?? ""}\t${exam.courseName}\t${time}\t${exam.location ?? "地点未公布"}\t${exam.seat ?? ""}`;
+  }).join("\n");
+}
+
+export function graduateScheduleText(schedule: GraduateSchedule): string {
+  if (schedule.courses.length === 0) return `${schedule.term.name}\n${NONE}`;
+  return [
+    `学期：${schedule.term.name}`,
+    ...schedule.courses.map((course) =>
+      `${course.courseCode}\t${course.courseName}\t${course.teachers.join("、") || "教师待定"}\t${course.timePlace ?? `星期 ${course.weekday ?? "-"} / 节次 ${course.period ?? "-"}`}\t${course.location ?? ""}`
+    ),
+  ].join("\n");
+}
+
+export function graduatePlanText(plan: GraduatePlan): string {
+  const requirements = plan.requirements.map((item) =>
+    `要求\t${item.category}\t${item.minimumCredits ?? "-"}-${item.maximumCredits ?? "-"} 学分`
+  );
+  const courses = plan.courses.map((course) =>
+    `${course.courseCode}\t${course.courseName}\t${course.category ?? ""}\t${course.credits ?? "-"} 学分\t${course.suggestedTerm ?? ""}`
+  );
+  return [
+    `${plan.name ?? "培养方案"}\t${plan.planId}`,
+    ...requirements,
+    ...courses,
+  ].join("\n");
+}
+
+export function ehallServicesText(services: EHallService[]): string {
+  if (services.length === 0) return NONE;
+  return services.map((service) =>
+    `${service.available ? "可用" : "无权限"}\t${service.name}\t${service.appId}`
+  ).join("\n");
+}
+
+export function ehallTasksText(page: EHallTaskPage): string {
+  if (page.items.length === 0) return NONE;
+  return page.items.map((task) =>
+    `${task.subject}\t${task.node ?? task.status ?? ""}\t${task.author ?? ""}\t${task.time ?? ""}`
+  ).join("\n");
+}
+
+export function ehallApplicationsText(page: EHallApplicationPage): string {
+  if (page.items.length === 0) return NONE;
+  return page.items.map((item) =>
+    `${item.subject}\t${item.node ?? ""}\t${item.startedAt ?? ""}`
+  ).join("\n");
+}
+
+export function ehallServiceLinkText(link: EHallServiceLink): string {
+  return `应用 ID：${link.appId}\n官方入口：${link.url}`;
+}
+
+export function softSeCoursesText(courses: SoftSeCourseSummary[]): string {
+  if (courses.length === 0) return NONE;
+  return courses.map((course) =>
+    `${course.name}\t${course.courseId}`
+  ).join("\n");
+}
+
+export function softSeCoursePageText(page: SoftSeCoursePage): string {
+  return softSeCoursesText(page.items);
+}
+
+export function softSeCourseText(course: SoftSeCourse): string {
+  const sections = course.sections.flatMap((section) => [
+    `[${section.name}]`,
+    ...section.activities.map((activity) =>
+      `${activity.type}\t${activity.name}\t${activity.activityId}`
+    ),
+  ]);
+  return [course.name, ...sections].join("\n");
+}
+
+export function softSeAssignmentsText(assignments: SoftSeAssignment[]): string {
+  if (assignments.length === 0) return NONE;
+  return assignments.map((assignment) =>
+    `${assignment.dueAt ?? "无截止时间"}\t${assignment.submissionStatus}\t${assignment.name}\t课程 ${assignment.courseId}\t作业 ${assignment.activityId}`
+  ).join("\n");
+}
+
+export function softSeAssignmentText(assignment: SoftSeAssignment): string {
+  return [
+    `${assignment.name}\t${assignment.activityId}`,
+    `提交：${assignment.submissionStatus ?? "未知"}`,
+    `评分：${assignment.gradingStatus ?? "未知"}`,
+    `截止：${assignment.dueAt ?? "未设置"}`,
+    assignment.instructions,
+    ...assignment.attachments.map((file) => `附件：${file.name}\t${file.url}`),
+    ...assignment.submittedFiles.map((file) => `已交文件：${file.name}\t${file.url}`),
+  ].join("\n");
+}
+
+export function softSeGradesText(grades: SoftSeGrade[]): string {
+  if (grades.length === 0) return NONE;
+  return grades.map((grade) =>
+    `${grade.item}\t${grade.grade ?? "-"}\t${grade.percentage ?? ""}\t${grade.feedback ?? ""}`
+  ).join("\n");
+}
+
+export function softSeLinkText(link: SoftSeLink): string {
+  return `作业活动 ID：${link.activityId}\n官方提交页：${link.url}`;
 }
 
 export function scheduleText(schedule: CourseSchedule): string {
@@ -169,15 +325,23 @@ export function sportsBookingsText(bookings: SportsBookingSummary[]): string {
 
 export function sportsBookingText(booking: SportsBookingSummary): string {
   const place = [booking.campus, booking.venue, booking.site].filter(Boolean).join("/") || "地点未知";
-  return `${booking.reservationDate}\t${place}\t${booking.status}\t${booking.bookingId}`;
+  return `${booking.reservationDate}\t${booking.reservationDetail ?? ""}\t${place}\t${booking.status}\t${booking.bookingId}`;
+}
+
+export function sportsReservationLinkText(link: SportsReservationLink): string {
+  return [
+    `预约日期：${link.date}（需在页面选择）`,
+    `场地 ID：${link.venueSiteId}`,
+    `继续预约：${link.url}`,
+  ].join("\n");
 }
 
 export function todayText(result: TodayResult): string {
   return [
     `日期：${result.date}`,
-    `课程：${sourceState(result.course)}`,
-    `借阅：${sourceState(result.library)}`,
-    `体育预约：${sourceState(result.sports)}`,
+    `课程：${result.course.length} 项`,
+    `借阅：${result.library.length} 项`,
+    `体育预约：${result.sports.length} 项`,
   ].join("\n");
 }
 
@@ -186,12 +350,6 @@ export function doctorText(result: DoctorResult): string {
     `${check.ok ? "OK" : "FAIL"}\t${check.name}${check.code ? `\t${check.code}` : ""}`
   );
   return [`账号：${result.account}`, ...checks].join("\n");
-}
-
-function sourceState(result: SourceResult<unknown>): string {
-  if (!result.ok) return `失败 (${result.error.code})`;
-  if (Array.isArray(result.data)) return `${result.data.length} 项`;
-  return "成功";
 }
 
 function reservationStateText(state: SportsSlotSchedule["slots"][number]["spaces"][number]["state"]): string {

@@ -2,7 +2,6 @@ import { AppError } from "../../core/errors.js";
 import type { FetchLike, FetchResponse } from "../../core/types.js";
 import { urlHostname } from "../../core/url.js";
 import {
-  COURSE_CONTRACT,
   COURSE_URLS,
   courseRowSchema,
   pageEnvelopeSchema,
@@ -21,6 +20,7 @@ const SCHEDULE_ACTION = "cxxszhxqkb";
 /** The single remote client for the EHall undergraduate timetable contract. */
 export class EHallTimetableClient {
   private preparation: Promise<void> | undefined;
+  private term: Promise<TermRow> | undefined;
 
   constructor(private readonly fetch: FetchLike) {}
 
@@ -34,7 +34,11 @@ export class EHallTimetableClient {
     );
   }
 
-  async currentTerm(): Promise<TermRow> {
+  currentTerm(): Promise<TermRow> {
+    return this.term ??= this.readCurrentTerm();
+  }
+
+  private async readCurrentTerm(): Promise<TermRow> {
     await this.prepare();
     const rows = await this.postRows(
       COURSE_URLS.currentTerm,
@@ -99,34 +103,17 @@ export class EHallTimetableClient {
     action: string,
     rowSchema: import("zod").ZodType<T>,
   ): Promise<T[]> {
-    let value: unknown;
-    try {
-      value = JSON.parse(await response.text()) as unknown;
-    } catch (cause) {
-      throw this.schemaError("响应不是 JSON", cause);
+    const parsed = pageEnvelopeSchema(action, rowSchema).parse(
+      JSON.parse(await response.text()),
+    );
+    if (parsed.code !== "0") {
+      throw new Error(`课表服务返回业务错误 ${parsed.code}`);
     }
-    const parsed = pageEnvelopeSchema(action, rowSchema).safeParse(value);
-    if (!parsed.success) {
-      throw this.schemaError("响应字段不符合课表契约", parsed.error);
-    }
-    if (parsed.data.code !== "0") {
-      throw new AppError("REMOTE_UNAVAILABLE", `课表服务返回业务错误 ${parsed.data.code}`, {
-        details: { contract: COURSE_CONTRACT, code: parsed.data.code },
-      });
-    }
-    return parsed.data.datas[action]!.rows;
+    return parsed.datas[action]!.rows;
   }
 
   private async request(url: string, init?: RequestInit): Promise<FetchResponse> {
-    let response: FetchResponse;
-    try {
-      response = await this.fetch(url, init);
-    } catch (cause) {
-      throw new AppError("REMOTE_UNAVAILABLE", "无法连接南京大学课表服务", {
-        details: { contract: COURSE_CONTRACT },
-        cause,
-      });
-    }
+    const response = await this.fetch(url, init);
 
     const hostname = urlHostname(response.url);
     if (
@@ -140,17 +127,8 @@ export class EHallTimetableClient {
       });
     }
     if (!response.ok) {
-      throw new AppError("REMOTE_UNAVAILABLE", `课表服务返回 HTTP ${response.status}`, {
-        details: { contract: COURSE_CONTRACT, status: response.status },
-      });
+      throw new Error(`课表服务返回 HTTP ${response.status}`);
     }
     return response;
-  }
-
-  private schemaError(message: string, cause?: unknown): AppError {
-    return new AppError("REMOTE_SCHEMA_CHANGED", message, {
-      details: { contract: COURSE_CONTRACT },
-      cause,
-    });
   }
 }

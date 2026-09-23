@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 export const OPAC_BASE_URL = "https://opac.nju.edu.cn";
-export const OPAC_CONTRACT = "nju-huiwen-meta-local-v1";
 
 const nullableString = z.string().nullish();
 

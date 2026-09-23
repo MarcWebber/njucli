@@ -21,6 +21,12 @@ export function registerCampusCommands(
 ): Command {
   const campus = program.command("campus").description("查询校园公开信息");
 
+  addFormatOption(campus.command("canteens [query]").description("查询官方学生食堂目录和电话（非实时菜单）"))
+    .action(async (query: string | undefined, options: FormatOptions) => runCommand(runtime, options, async () => {
+      const data = await service.canteens(query);
+      return { data, text: [...data.items.map((item) => `${item.name}\t${item.phone}`), `来源：${data.sourceUrl}`].join("\n") };
+    }));
+
   addFormatOption(campus.command("sources").description("列出支持的信息源与栏目"))
     .action(async (options: FormatOptions) => runCommand(runtime, options, async () => {
       const data = service.sources();

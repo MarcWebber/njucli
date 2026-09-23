@@ -14,7 +14,6 @@ export interface ArticleListParserContext {
 
 export interface ArticleParserContext {
   source: CampusSource;
-  section: CampusSection;
   articleId: string;
   requestUrl: URL;
 }
@@ -28,9 +27,8 @@ export interface CampusSectionContract extends CampusSection {
   listUrl(page: number): URL;
 }
 
-export interface CampusSourceContract {
-  source: CampusSource;
-  sections: ReadonlyMap<string, CampusSectionContract>;
+export interface CampusSourceContract extends CampusSource {
+  sections: CampusSectionContract[];
   articlePathPattern: RegExp;
   parser: CampusSourceParser;
 }

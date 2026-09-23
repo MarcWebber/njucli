@@ -1,28 +1,20 @@
 import type { AuthCapability, SessionMetadata } from "../auth/types.js";
-import type {
-  CampusArticle,
-  CampusArticlePage,
-  CampusSource,
-} from "../domains/campus/types.js";
-import type {
-  AcademicTerm,
-  CourseOccurrence,
-  CourseSchedule,
-} from "../domains/course/types.js";
-import type {
-  LibraryBookDetail,
-  LibraryHolding,
-  LibraryLoan,
-  LibrarySearchField,
-  LibrarySearchPage,
-} from "../domains/library/types.js";
-import type {
-  SportsBookingSummary,
-  SportsSlotSchedule,
-  SportsVenueSiteSummary,
-} from "../domains/sports/types.js";
+import type { CampusClient } from "../domains/campus/client.js";
+import type { CampusSource } from "../domains/campus/types.js";
+import type { CourseService } from "../domains/course/service.js";
+import type { GraduateCourseSelectionClient } from "../domains/course/selection-client.js";
+import type { CourseOccurrence } from "../domains/course/types.js";
+import type { GraduateAcademicClient } from "../domains/academic/client.js";
+import type { EHallPortalClient } from "../domains/ehall/client.js";
+import type { NjuOpacClient } from "../domains/library/client.js";
+import type { LibraryLoan } from "../domains/library/types.js";
+import type { SportsBookingSummary, SportsReservationLink, SportsSlotSchedule, SportsVenueSiteSummary } from "../domains/sports/types.js";
+import type { SoftSeClient } from "../domains/softse/client.js";
+import type { TexClient } from "../domains/tex/client.js";
+import type { MailClient } from "../domains/mail/client.js";
 
 export interface NjuServices {
+  mail: Pick<MailClient, "bind" | "status" | "unbind" | "folders" | "list" | "search" | "read" | "download">;
   account: {
     current(): Promise<string>;
     list(): Promise<string[]>;
@@ -31,52 +23,52 @@ export interface NjuServices {
     remove(name: string): Promise<void>;
   };
   auth: {
-    capabilities(): AuthCapability[];
     status(capability?: AuthCapability): Promise<SessionMetadata[]>;
     login(capability?: AuthCapability): Promise<SessionMetadata>;
     refresh(capability?: AuthCapability): Promise<SessionMetadata[]>;
     logout(capability?: AuthCapability): Promise<AuthCapability[]>;
   };
-  campus: {
+  campus: Pick<CampusClient, "canteens" | "articles" | "article"> & {
     sources(): CampusSource[];
-    articles(source: string, section: string, page?: number): Promise<CampusArticlePage>;
-    article(source: string, section: string, articleId: string): Promise<CampusArticle>;
   };
-  course: {
-    terms(): Promise<AcademicTerm[]>;
-    currentTerm(): Promise<AcademicTerm>;
-    schedule(termId?: string): Promise<CourseSchedule>;
-    today(date?: string, termId?: string): Promise<CourseOccurrence[]>;
-    week(date?: string, termId?: string): Promise<CourseOccurrence[]>;
-    next(termId?: string): Promise<CourseOccurrence | null>;
-    export(path: string, termId?: string): Promise<{ path: string; eventCount: number }>;
+  course: Pick<CourseService, "terms" | "currentTerm" | "schedule" | "week" | "next"> &
+    Pick<GraduateCourseSelectionClient, "select" | "withdraw"> & {
+      today: CourseService["onDate"];
+      available: GraduateCourseSelectionClient["listAvailable"];
+      selected: GraduateCourseSelectionClient["listSelected"];
+      export(path: string, termId?: string): Promise<{ path: string; eventCount: number }>;
+    };
+  academic: Pick<GraduateAcademicClient, "grades" | "exams" | "schedule" | "plan">;
+  ehall: Pick<EHallPortalClient, "services" | "tasks" | "applications" | "serviceLink">;
+  softse: Pick<SoftSeClient, "courses" | "search" | "course" | "assignments" | "assignment" | "grades" | "enroll" | "submissionLink"> & {
+    download(activityId: string, fileName: string, path: string, submitted?: boolean): Promise<{ path: string; bytes: number }>;
   };
-  library: {
-    search(query: string, field?: LibrarySearchField, page?: number, pageSize?: number): Promise<LibrarySearchPage>;
-    book(bookId: string): Promise<LibraryBookDetail>;
-    holdings(bookId: string): Promise<LibraryHolding[]>;
-    loans(page?: number, pageSize?: number): Promise<LibraryLoan[]>;
+  tex: Pick<TexClient, "templates" | "projects" | "create" | "createFromTemplate" | "rename" | "log" | "files" | "read"> & {
+    download(projectKey: string, versionNo: string, path: string): Promise<{ path: string; bytes: number }>;
+    pdf(projectKey: string, versionNo: string, output: string): Promise<{ path: string; bytes: number }>;
+    compile(projectKey: string, versionNo: string, path: string, output: string): Promise<{ path: string; bytes: number }>;
+    write(projectKey: string, versionNo: string, path: string, inputLocalPath: string): Promise<{ path: string; bytes: number }>;
+    upload(projectKey: string, versionNo: string, inputLocalPath: string): Promise<{ fileKey: string; path: string; bytes: number }>;
   };
+  library: Pick<NjuOpacClient, "search" | "book" | "holdings" | "loans">;
   sports: {
     venues(sportTypeId?: string): Promise<SportsVenueSiteSummary[]>;
     venue(venueSiteId: string): Promise<SportsVenueSiteSummary>;
     slots(venueSiteId: string, date: string): Promise<SportsSlotSchedule>;
     bookings(page?: number, size?: number): Promise<SportsBookingSummary[]>;
     booking(bookingId: string): Promise<SportsBookingSummary>;
+    reservationLink(venueSiteId: string, date: string): Promise<SportsReservationLink>;
+    cancellationLink(bookingId: string): Promise<{ url: string; bookingId: string }>;
   };
   today(date?: string): Promise<TodayResult>;
   doctor(): Promise<DoctorResult>;
 }
 
-export type SourceResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; error: { code: string; message: string } };
-
 export interface TodayResult {
   date: string;
-  course: SourceResult<CourseOccurrence[]>;
-  library: SourceResult<LibraryLoan[]>;
-  sports: SourceResult<SportsBookingSummary[]>;
+  course: CourseOccurrence[];
+  library: LibraryLoan[];
+  sports: SportsBookingSummary[];
 }
 
 export interface DoctorResult {

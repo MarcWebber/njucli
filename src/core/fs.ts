@@ -1,5 +1,5 @@
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { dirname, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 
 export async function readJsonFile<T>(path: string): Promise<T | undefined> {
@@ -24,4 +24,10 @@ export async function writeJsonFile(
 
 export async function removePath(path: string): Promise<void> {
   await rm(path, { recursive: true, force: true });
+}
+
+export async function saveFile(path: string, content: string | Uint8Array): Promise<{ path: string; bytes: number }> {
+  const target = resolve(path);
+  await writeFile(target, content, { mode: 0o600 });
+  return { path: target, bytes: Buffer.byteLength(content) };
 }

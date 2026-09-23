@@ -22,7 +22,10 @@ const contracts = {
 } satisfies Record<CampusSourceId, CampusSourceContract>;
 
 export function listCampusSources(): CampusSource[] {
-  return CAMPUS_SOURCE_IDS.map((id) => contracts[id].source);
+  return CAMPUS_SOURCE_IDS.map((key) => {
+    const { id, name, origin, sections } = contracts[key];
+    return { id, name, origin, sections: sections.map(({ id, name, url }) => ({ id, name, url })) };
+  });
 }
 
 export function getCampusSourceContract(source: string): CampusSourceContract {

@@ -8,7 +8,7 @@ const parser = createHtmlSourceParser({
     link: ".news_title a",
     date: ".news_date",
     next: ".wp_paging a.next[href]",
-    readDate: (_$, item) => {
+    readDate: (item) => {
       const monthAndDay = item.find(".news_year").first().text().trim();
       const year = item.find(".news_days").first().text().trim();
       return `${year}-${monthAndDay}`;

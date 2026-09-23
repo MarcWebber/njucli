@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-export const COURSE_CONTRACT = "nju-ehall-wdkb-v1";
-
 export const COURSE_URLS = {
   app: "https://ehall.nju.edu.cn/appShow?appId=4770397878132218",
   index:

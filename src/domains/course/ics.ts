@@ -1,12 +1,9 @@
-import type { CourseOccurrence, CourseSchedule } from "./types.js";
-import type { CourseService } from "./service.js";
+import type { CourseOccurrence } from "./types.js";
 
 export function scheduleToIcs(
-  service: CourseService,
-  schedule: CourseSchedule,
+  occurrences: CourseOccurrence[],
   generatedAt = new Date(),
 ): string {
-  const occurrences = service.expand(schedule);
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",

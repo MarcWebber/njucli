@@ -70,6 +70,7 @@ const bookingSummarySchema = z
     venueName: optionalStringSchema,
     siteName: optionalStringSchema,
     reservationDate: z.string().min(1),
+    reservationDateDetail: optionalStringSchema,
     orderStatus: z.union([z.literal(1), z.literal(2)]),
   });
 
@@ -82,6 +83,7 @@ const bookingDetailSchema = z
   .object({
     orderInfo: z.object({
       reservationDate: z.string().min(1),
+      reservationDateDetail: optionalStringSchema,
       orderStatus: z.union([z.literal(1), z.literal(2)]),
     }),
     venueInfoBean: z
@@ -93,31 +95,19 @@ const bookingDetailSchema = z
   });
 
 export function unwrapSportsEnvelope(value: unknown, path: string): unknown {
-  const envelope = parseSchema(envelopeSchema, value, `${path} envelope`);
+  const envelope = envelopeSchema.parse(value);
   if (envelope.code === 200) return envelope.data;
-
-  const code = envelope.code === 401 || envelope.code === 403
-    ? "AUTH_EXPIRED"
-    : envelope.code === 429
-      ? "RATE_LIMITED"
-      : "REMOTE_UNAVAILABLE";
-  throw new AppError(
-    code,
-    envelope.message ?? `体育场馆接口返回错误码 ${envelope.code}`,
-    {
-      ...(code === "AUTH_EXPIRED"
-        ? {
-            hint: "运行 njucli auth login sports 重新登录",
-            authCommand: "njucli auth login sports",
-          }
-        : {}),
-      details: { path, remoteCode: envelope.code },
-    },
-  );
+  if (envelope.code === 401 || envelope.code === 403) {
+    throw new AppError("AUTH_EXPIRED", "体育场馆登录已失效", {
+      hint: "运行 njucli auth login sports",
+      authCommand: "njucli auth login sports",
+    });
+  }
+  throw new Error(envelope.message ?? `体育场馆接口错误 ${envelope.code}: ${path}`);
 }
 
 export function parseVenueCatalog(value: unknown): SportsVenueSiteSummary[] {
-  const data = parseSchema(venueCatalogSchema, value, "sports venues");
+  const data = venueCatalogSchema.parse(value);
   const sites = Object.values(data.venueSiteInfo)
     .flat()
     .map(toVenueSite)
@@ -127,27 +117,23 @@ export function parseVenueCatalog(value: unknown): SportsVenueSiteSummary[] {
 }
 
 export function parseVenueDetail(value: unknown): SportsVenueSiteSummary {
-  return toVenueSite(parseSchema(venueSiteSchema, value, "sports venue"));
+  return toVenueSite(venueSiteSchema.parse(value));
 }
 
 export function parseSlotSchedule(
   value: unknown,
   date: string,
 ): SportsSlotSchedule {
-  const data = parseSchema(slotScheduleSchema, value, "sports slots");
+  const data = slotScheduleSchema.parse(value);
   const spaces = data.reservationDateSpaceInfo[date] ?? [];
   const slots = data.spaceTimeInfo.map((time) => {
     const timeId = idString(time.id);
     const parsedSpaces: SportsSlotSchedule["slots"][number]["spaces"] = [];
 
-    for (const [spaceIndex, space] of spaces.entries()) {
+    for (const space of spaces) {
       const rawCell = space[timeId];
       if (rawCell === undefined) continue;
-      const cell = parseSchema(
-        reservationCellSchema,
-        rawCell,
-        `sports slots.${date}.${spaceIndex}.${timeId}`,
-      );
+      const cell = reservationCellSchema.parse(rawCell);
       parsedSpaces.push({
         name: space.spaceName,
         state: mapReservationStatus(cell.reservationStatus),
@@ -171,7 +157,7 @@ export function parseSlotSchedule(
 }
 
 export function parseBookingPage(value: unknown): SportsBookingSummary[] {
-  const data = parseSchema(bookingPageSchema, value, "sports bookings");
+  const data = bookingPageSchema.parse(value);
   return data.content.map(toBookingSummary);
 }
 
@@ -179,13 +165,14 @@ export function parseBookingDetail(
   value: unknown,
   requestedBookingId: string,
 ): SportsBookingSummary {
-  const data = parseSchema(bookingDetailSchema, value, "sports booking");
+  const data = bookingDetailSchema.parse(value);
   return {
     bookingId: requestedBookingId,
     campus: data.venueInfoBean.campusName,
     venue: data.venueInfoBean.venueName,
     site: data.venueInfoBean.siteName,
     reservationDate: data.orderInfo.reservationDate,
+    reservationDetail: data.orderInfo.reservationDateDetail ?? null,
     status: mapOrderStatus(data.orderInfo.orderStatus),
   };
 }
@@ -234,6 +221,7 @@ function toBookingSummary(
     venue: data.venueName ?? null,
     site: data.siteName ?? null,
     reservationDate: data.reservationDate,
+    reservationDetail: data.reservationDateDetail ?? null,
     status: mapOrderStatus(data.orderStatus),
   };
 }
@@ -254,17 +242,4 @@ function compareVenueSites(
     left.venue.localeCompare(right.venue, "zh-CN") ||
     left.name.localeCompare(right.name, "zh-CN") ||
     left.siteId.localeCompare(right.siteId);
-}
-
-function parseSchema<T extends z.ZodType>(
-  schema: T,
-  value: unknown,
-  contract: string,
-): z.infer<T> {
-  const result = schema.safeParse(value);
-  if (result.success) return result.data;
-  throw new AppError("REMOTE_SCHEMA_CHANGED", `远端响应不符合 ${contract} 契约`, {
-    details: { contract },
-    cause: result.error,
-  });
 }

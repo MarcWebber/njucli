@@ -28,7 +28,7 @@ interface HtmlListSelectors {
   titleRemove?: string;
   date: string;
   next?: string;
-  readDate?: ($: CheerioAPI, item: ReturnType<CheerioAPI>) => string;
+  readDate?: (item: ReturnType<CheerioAPI>) => string;
 }
 
 interface HtmlArticleSelectors {
@@ -91,7 +91,7 @@ function parseHtmlArticleList(
     if (selectors.titleRemove) titleClone.find(selectors.titleRemove).remove();
     const title = normalizeInlineText(titleElement.attr("title") ?? titleClone.text());
     const dateText = selectors.readDate
-      ? selectors.readDate($, item)
+      ? selectors.readDate(item)
       : item.find(selectors.date).first().text();
 
     if (!href || !title) {
@@ -213,11 +213,9 @@ export function schemaChanged(
   source: CampusSourceId,
   contract: string,
   missing: string,
-  cause?: unknown,
 ): AppError {
   return new AppError("REMOTE_SCHEMA_CHANGED", `${source} 的页面结构与 ${contract} 契约不一致`, {
     details: { source, contract, missing },
-    ...(cause === undefined ? {} : { cause }),
   });
 }
 

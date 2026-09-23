@@ -8,7 +8,7 @@ import {
   resolveListedArticleUrl,
   schemaChanged,
 } from "../parser-utils.js";
-import { defineCampusSource, sameDocumentForEmbeddedPages } from "../source-definition.js";
+import { defineCampusSource } from "../source-definition.js";
 import type { CampusArticlePage, CampusArticleSummary } from "../types.js";
 
 const firstPage = "https://zcc.nju.edu.cn/sy/tzzhxx/index.html";
@@ -22,7 +22,7 @@ export const assetManagementSource = defineCampusSource({
       id: "notifications",
       name: "通知公告",
       path: "/sy/tzzhxx/index.html",
-      listUrl: (page) => sameDocumentForEmbeddedPages(firstPage, page),
+      listUrl: () => new URL(firstPage),
     },
   ],
   articlePathPattern: /^\/sy\/tzzhxx\/\d{8}\/i\d+\.html$/,
@@ -40,8 +40,9 @@ export const assetManagementSource = defineCampusSource({
 
 function parseAssetArticles(html: string, context: ArticleListParserContext): CampusArticlePage {
   const pages = parseAssignedJson(html, "var dataList=", "var pagesData=");
-  const embeddedPageCount = Array.isArray(pages) ? pages.length : 0;
-  const pageData = Array.isArray(pages) ? pages[context.page - 1] : undefined;
+  if (!Array.isArray(pages)) throw schemaChanged("asset-management", "article-list", "dataList array");
+  const embeddedPageCount = pages.length;
+  const pageData = pages[context.page - 1];
   if (!pageData) {
     throw new AppError("INVALID_INPUT", `asset-management 页面只公开了前 ${embeddedPageCount} 页数据`);
   }
@@ -81,12 +82,8 @@ function parseAssignedJson(html: string, startMarker: string, endMarker: string)
   const start = html.indexOf(startMarker);
   const end = start < 0 ? -1 : html.indexOf(endMarker, start + startMarker.length);
   if (start < 0 || end < 0) throw schemaChanged("asset-management", "article-list", startMarker);
-  try {
-    const serialized = html.slice(start + startMarker.length, end).replace(/;\s*$/, "").trim();
-    return JSON.parse(serialized) as unknown;
-  } catch (cause) {
-    throw schemaChanged("asset-management", "article-list", `${startMarker} JSON`, cause);
-  }
+  const serialized = html.slice(start + startMarker.length, end).replace(/;\s*$/, "").trim();
+  return JSON.parse(serialized) as unknown;
 }
 
 function readPageTotal(value: unknown): number {

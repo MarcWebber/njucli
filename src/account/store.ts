@@ -60,13 +60,6 @@ export class AccountStore {
       });
     }
 
-    if (!registry.accounts.includes(registry.current)) {
-      throw new AppError(
-        "ACCOUNT_NOT_FOUND",
-        `当前账号不存在: ${registry.current}`,
-        { hint: "运行 njucli account use <name>" },
-      );
-    }
     return this.paths(registry.current);
   }
 
@@ -100,7 +93,7 @@ export class AccountStore {
     return this.paths(validatedName);
   }
 
-  async remove(name: string): Promise<void> {
+  async remove(name: string, clearCredentials: (account: AccountRecord) => Promise<void>): Promise<void> {
     const validatedName = validateAccountName(name);
     const registry = await this.readRegistry();
     if (!registry.accounts.includes(validatedName)) {
@@ -117,9 +110,10 @@ export class AccountStore {
     }
 
     const accounts = registry.accounts.filter((account) => account !== validatedName);
+    const paths = this.paths(validatedName);
+    await clearCredentials(paths);
     await this.writeRegistry({ ...registry, accounts });
 
-    const paths = this.paths(validatedName);
     await removePath(paths.configDir);
     await removePath(dirname(paths.browserDataDir));
   }
@@ -141,13 +135,7 @@ export class AccountStore {
   }
 
   private async readRegistry(): Promise<AccountRegistry> {
-    let value: unknown;
-    try {
-      value = await readJsonFile<unknown>(this.registryPath);
-    } catch (error) {
-      throw new AppError("INVALID_INPUT", "账号索引无法读取", { cause: error });
-    }
-
+    const value = await readJsonFile<unknown>(this.registryPath);
     if (value === undefined) return emptyRegistry();
     if (!isAccountRegistry(value)) {
       throw new AppError("INVALID_INPUT", "账号索引格式无效", {

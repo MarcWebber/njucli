@@ -1,16 +1,10 @@
-export interface Clock {
-  now(): Date;
-}
-
-export const systemClock: Clock = {
-  now: () => new Date(),
-};
-
 export interface FetchResponse {
   ok: boolean;
   status: number;
   url: string;
+  headers: Pick<Headers, "get">;
   text(): Promise<string>;
+  arrayBuffer(): Promise<ArrayBuffer>;
 }
 
 export type FetchLike = (
