@@ -1,5 +1,4 @@
 import { AppError } from "../../../core/errors.js";
-import { isRecord } from "../../../core/guards.js";
 import type { ArticleListParserContext } from "../contracts.js";
 import {
   encodeArticleId,
@@ -25,7 +24,6 @@ export const assetManagementSource = defineCampusSource({
       listUrl: () => new URL(firstPage),
     },
   ],
-  articlePathPattern: /^\/sy\/tzzhxx\/\d{8}\/i\d+\.html$/,
   parser: {
     parseArticles: parseAssetArticles,
     parseArticle: (html, context) =>
@@ -39,29 +37,17 @@ export const assetManagementSource = defineCampusSource({
 });
 
 function parseAssetArticles(html: string, context: ArticleListParserContext): CampusArticlePage {
-  const pages = parseAssignedJson(html, "var dataList=", "var pagesData=");
-  if (!Array.isArray(pages)) throw schemaChanged("asset-management", "article-list", "dataList array");
+  const pages = parseAssignedJson(html, "var dataList=", "var pagesData=") as {
+    infolist: { title: string; url: string; daytime: string }[];
+  }[];
   const embeddedPageCount = pages.length;
   const pageData = pages[context.page - 1];
   if (!pageData) {
     throw new AppError("INVALID_INPUT", `asset-management 页面只公开了前 ${embeddedPageCount} 页数据`);
   }
-  if (!isRecord(pageData) || !Array.isArray(pageData.infolist)) {
-    throw schemaChanged("asset-management", "article-list", "infolist array");
-  }
-
-  const paging = parseAssignedJson(html, "var pagesData=", "var pageTotal=");
-  const pageTotal = readPageTotal(paging);
+  const { pageTotal } = parseAssignedJson(html, "var pagesData=", "var pageTotal=") as { pageTotal: number };
   const items: CampusArticleSummary[] = [];
-  pageData.infolist.forEach((raw, index) => {
-    if (
-      !isRecord(raw) ||
-      typeof raw.title !== "string" ||
-      typeof raw.url !== "string" ||
-      typeof raw.daytime !== "string"
-    ) {
-      throw schemaChanged("asset-management", "article-list", `item ${index + 1}`);
-    }
+  pageData.infolist.forEach((raw) => {
     const articleUrl = resolveListedArticleUrl(raw.url, context.requestUrl, context.source);
     if (!articleUrl) return;
     items.push({
@@ -84,15 +70,4 @@ function parseAssignedJson(html: string, startMarker: string, endMarker: string)
   if (start < 0 || end < 0) throw schemaChanged("asset-management", "article-list", startMarker);
   const serialized = html.slice(start + startMarker.length, end).replace(/;\s*$/, "").trim();
   return JSON.parse(serialized) as unknown;
-}
-
-function readPageTotal(value: unknown): number {
-  if (!isRecord(value)) {
-    throw schemaChanged("asset-management", "article-list", "pagesData.pageTotal");
-  }
-  const pageTotal = value.pageTotal;
-  if (typeof pageTotal !== "number" || !Number.isSafeInteger(pageTotal) || pageTotal < 1) {
-    throw schemaChanged("asset-management", "article-list", "numeric pagesData.pageTotal");
-  }
-  return pageTotal;
 }

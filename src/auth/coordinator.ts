@@ -1,13 +1,8 @@
 import type { AccountRecord } from "../account/types.js";
 import { AppError } from "../core/errors.js";
-import { AUTH_DEPENDENCIES, dependsOn, orderCapabilities } from "./capabilities.js";
+import { AUTH_DEPENDENCIES, dependsOn } from "./capabilities.js";
 import type { SessionStore } from "./session-store.js";
-import {
-  AUTH_CAPABILITIES,
-  type AuthCapability,
-  type AuthSessionDriver,
-  type SessionMetadata,
-} from "./types.js";
+import { AUTH_CAPABILITIES, type AuthCapability, type AuthSessionDriver, type SessionMetadata } from "./types.js";
 
 export class AuthCoordinator {
   constructor(private readonly options: {
@@ -15,163 +10,56 @@ export class AuthCoordinator {
     sessions: SessionStore;
   }) {}
 
-  capabilities(): AuthCapability[] {
-    return [...AUTH_CAPABILITIES];
-  }
-
-  async login(
-    account: AccountRecord,
-    capability: AuthCapability = "sso",
-  ): Promise<SessionMetadata> {
-    for (const dependency of AUTH_DEPENDENCIES[capability]) {
-      await this.login(account, dependency);
-    }
-    const valid = await this.options.drivers[capability].login(account);
-    const metadata = await this.save(account, capability, valid);
-    requireValid(capability, metadata.status, "login");
+  async login(account: AccountRecord, capability: AuthCapability = "sso"): Promise<SessionMetadata> {
+    for (const dependency of AUTH_DEPENDENCIES[capability]) await this.ensureSession(account, dependency);
+    const metadata = await this.save(account, capability, await this.options.drivers[capability].login(account));
+    if (metadata.status !== "valid") throw new AppError("AUTH_REQUIRED", `${capability} 登录未完成`);
     return metadata;
   }
 
-  async status(
-    account: AccountRecord,
-    capability?: AuthCapability,
-  ): Promise<SessionMetadata[]> {
-    if (capability) {
-      return [await this.probeOne(account, capability)];
-    }
-    const configured = await this.options.sessions.list(account);
+  async status(account: AccountRecord, capability?: AuthCapability): Promise<SessionMetadata[]> {
+    const targets = capability ? [capability] : (await this.options.sessions.list(account)).map((s) => s.capability);
     const result: SessionMetadata[] = [];
-    for (const current of orderCapabilities(configured.map((session) => session.capability))) {
-      result.push(await this.probeOne(account, current));
-    }
+    for (const target of targets) result.push(await this.save(account, target, await this.probe(account, target)));
     return result;
   }
 
-  async refresh(
-    account: AccountRecord,
-    capability?: AuthCapability,
-  ): Promise<SessionMetadata[]> {
-    if (capability) {
-      return [await this.refreshOne(account, capability)];
-    }
-
-    const configured = await this.options.sessions.list(account);
-    const targets = configured.filter((session) => session.status !== "logged-out").map((session) => session.capability);
-    const ordered = orderCapabilities(targets);
-
+  async refresh(account: AccountRecord, capability?: AuthCapability): Promise<SessionMetadata[]> {
+    const targets = capability ? [capability] : (await this.options.sessions.list(account)).map((s) => s.capability);
     const result: SessionMetadata[] = [];
-    for (const target of ordered) result.push(await this.refreshOne(account, target));
+    for (const target of targets) result.push(await this.ensureSession(account, target));
     return result;
   }
 
-  async logout(
-    account: AccountRecord,
-    capability?: AuthCapability,
-  ): Promise<AuthCapability[]> {
-    const configured = await this.options.sessions.list(account);
-    const targets = new Set<AuthCapability>();
-    if (capability) {
-      targets.add(capability);
-      for (const session of configured) {
-        if (dependsOn(session.capability, capability)) targets.add(session.capability);
-      }
-    } else {
-      targets.add("sso");
-      for (const session of configured) targets.add(session.capability);
+  async logout(account: AccountRecord, capability?: AuthCapability): Promise<AuthCapability[]> {
+    const targets = AUTH_CAPABILITIES.filter((target) => !capability || target === capability || dependsOn(target, capability)).reverse();
+    for (const target of targets) {
+      await this.options.drivers[target].logout?.(account);
+      await this.options.sessions.put(account, { capability: target, status: "logged-out" });
     }
-
-    const ordered = orderCapabilities(targets).reverse();
-    const errors: unknown[] = [];
-    for (const target of ordered) {
-      const driver = this.options.drivers[target];
-      try {
-        await driver.logout?.(account);
-      } catch (error) {
-        errors.push(error);
-      } finally {
-        await this.options.sessions.put(account, { capability: target, status: "logged-out" });
-      }
-    }
-    if (errors.length > 0) throw errors[0];
-    return ordered;
+    return targets;
   }
 
-  async ensureSession(
-    account: AccountRecord,
-    capability: AuthCapability,
-    probe?: () => Promise<boolean>,
-  ): Promise<SessionMetadata> {
-    const current = await this.options.sessions.get(account, capability);
-    if (current?.status === "logged-out") throw authRequired(capability, false);
-    return this.refreshOne(account, capability, probe);
-  }
-
-  private async refreshOne(
-    account: AccountRecord,
-    capability: AuthCapability,
-    probe?: () => Promise<boolean>,
-  ): Promise<SessionMetadata> {
-    const metadata = await this.observe(account, capability, probe);
-    requireValid(capability, metadata.status, "refresh");
+  async ensureSession(account: AccountRecord, capability: AuthCapability, probe?: () => Promise<boolean>): Promise<SessionMetadata> {
+    if (await this.probe(account, capability, probe)) return this.save(account, capability, true);
+    const metadata = await this.login(account, capability);
+    // Some probes also initialize the per-command client or access token.
+    if (probe && !await probe()) throw new AppError("AUTH_REQUIRED", `${capability} 登录后会话仍不可用`);
     return metadata;
   }
 
-  private async probeOne(
-    account: AccountRecord,
-    capability: AuthCapability,
-  ): Promise<SessionMetadata> {
-    const current = await this.options.sessions.get(account, capability);
-    if (current?.status === "logged-out") return current;
-    return this.observe(account, capability);
-  }
-
-  private async observe(
-    account: AccountRecord, capability: AuthCapability,
-    probe: () => Promise<boolean> = () => this.options.drivers[capability].probe(account),
-  ): Promise<SessionMetadata> {
-    let observation: boolean;
+  private async probe(account: AccountRecord, capability: AuthCapability, probe = () => this.options.drivers[capability].probe(account)): Promise<boolean> {
     try {
-      observation = await probe();
+      return await probe();
     } catch (error) {
-      if (!(error instanceof AppError) || !["AUTH_REQUIRED", "AUTH_EXPIRED", "AUTH_REFRESH_FAILED"].includes(error.code)) throw error;
-      observation = false;
+      if (error instanceof AppError && error.code.startsWith("AUTH_")) return false;
+      throw error;
     }
-    return this.save(account, capability, observation);
   }
 
-  private async save(
-    account: AccountRecord,
-    capability: AuthCapability,
-    observation: boolean,
-  ): Promise<SessionMetadata> {
-    const metadata: SessionMetadata = { capability, status: observation ? "valid" : "expired" };
+  private async save(account: AccountRecord, capability: AuthCapability, valid: boolean): Promise<SessionMetadata> {
+    const metadata: SessionMetadata = { capability, status: valid ? "valid" : "expired" };
     await this.options.sessions.put(account, metadata);
     return metadata;
   }
-}
-
-function requireValid(
-  capability: AuthCapability,
-  status: SessionMetadata["status"],
-  operation: "login" | "refresh",
-): void {
-  if (status === "valid") return;
-  if (operation === "login") throw authRequired(capability, status === "expired");
-  throw new AppError("AUTH_REFRESH_FAILED", `认证会话刷新后仍不可用: ${capability}`, {
-    hint: authLoginCommand(capability),
-    authCommand: authLoginCommand(capability),
-  });
-}
-
-function authRequired(capability: AuthCapability, expired: boolean): AppError {
-  const command = authLoginCommand(capability);
-  return new AppError(
-    expired ? "AUTH_EXPIRED" : "AUTH_REQUIRED",
-    `${capability} 认证会话${expired ? "已失效" : "不存在"}`,
-    { hint: command, authCommand: command },
-  );
-}
-
-function authLoginCommand(capability: AuthCapability): string {
-  return capability === "sso" ? "njucli auth login" : `njucli auth login ${capability}`;
 }

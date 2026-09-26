@@ -12,6 +12,7 @@ import { registerCourseCommands } from "./course.js";
 import { registerEHallCommands } from "./ehall.js";
 import { registerLibraryCommands } from "./library.js";
 import { registerMailCommands } from "./mail.js";
+import { registerSoftwareCommands } from "./software.js";
 import { registerSportsCommands } from "./sports.js";
 import { registerSoftSeCommands } from "./softse.js";
 import { registerTexCommands } from "./tex.js";
@@ -34,6 +35,7 @@ export function createCli(services: NjuServices, runtime: CommandRuntime): Comma
     registerEHallCommands(program, services.ehall, runtime),
     registerLibraryCommands(program, services.library, runtime),
     registerMailCommands(program, services.mail, runtime),
+    registerSoftwareCommands(program, services.software, runtime),
     registerSportsCommands(program, services.sports, runtime),
     registerSoftSeCommands(program, services.softse, runtime),
     registerTexCommands(program, services.tex, runtime),

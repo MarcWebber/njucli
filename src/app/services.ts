@@ -1,4 +1,4 @@
-import type { AuthCapability, SessionMetadata } from "../auth/types.js";
+import type { AuthCapability, AuthCredentials, SessionMetadata } from "../auth/types.js";
 import type { CampusClient } from "../domains/campus/client.js";
 import type { CampusSource } from "../domains/campus/types.js";
 import type { CourseService } from "../domains/course/service.js";
@@ -11,10 +11,14 @@ import type { LibraryLoan } from "../domains/library/types.js";
 import type { SportsBookingSummary, SportsReservationLink, SportsSlotSchedule, SportsVenueSiteSummary } from "../domains/sports/types.js";
 import type { SoftSeClient } from "../domains/softse/client.js";
 import type { TexClient } from "../domains/tex/client.js";
-import type { MailClient } from "../domains/mail/client.js";
+import type { MailClient, MailBinding } from "../domains/mail/client.js";
+import type { SoftwareClient } from "../domains/software/client.js";
 
 export interface NjuServices {
-  mail: Pick<MailClient, "bind" | "status" | "unbind" | "folders" | "list" | "search" | "read" | "download">;
+  software: Pick<SoftwareClient, "list" | "show" | "download">;
+  mail: Pick<MailClient, "accounts" | "use" | "status" | "unbind" | "folders" | "list" | "search" | "read" | "download"> & {
+    bind(credentials?: MailBinding): ReturnType<MailClient["bind"]>;
+  };
   account: {
     current(): Promise<string>;
     list(): Promise<string[]>;
@@ -24,7 +28,7 @@ export interface NjuServices {
   };
   auth: {
     status(capability?: AuthCapability): Promise<SessionMetadata[]>;
-    login(capability?: AuthCapability): Promise<SessionMetadata>;
+    login(capability?: AuthCapability, credentials?: AuthCredentials): Promise<SessionMetadata>;
     refresh(capability?: AuthCapability): Promise<SessionMetadata[]>;
     logout(capability?: AuthCapability): Promise<AuthCapability[]>;
   };

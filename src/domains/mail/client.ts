@@ -1,12 +1,14 @@
 import { ImapFlow, type FetchMessageObject } from "imapflow";
 import { simpleParser } from "mailparser";
-import { z } from "zod";
+import { unlink } from "node:fs/promises";
+import { join } from "node:path";
 
 import { AppError } from "../../core/errors.js";
-import { saveFile } from "../../core/fs.js";
+import { readJsonFile, saveFile, writeJsonFile } from "../../core/fs.js";
 
-const messageId = z.tuple([z.string(), z.string().min(1), z.string().regex(/^\d+$/), z.number().int().positive()]);
-type Credentials = { address: string; password: string };
+export type MailCredentials = { address: string; password: string };
+export type MailBinding = { address?: string; password: string };
+interface MailAccounts { current: string | null; mailboxes: MailCredentials[] }
 
 export interface MailQuery {
   folder?: string | undefined;
@@ -16,32 +18,56 @@ export interface MailQuery {
 }
 
 export class MailClient {
-  constructor(private readonly accountDirectory: string) {}
+  private readonly credentialsPath: string;
 
-  private async entry() {
-    const { AsyncEntry } = await import("@napi-rs/keyring");
-    return new AsyncEntry("njucli.mail", this.accountDirectory, { linux: { store: "secret-service" } });
+  constructor(accountDirectory: string) {
+    this.credentialsPath = join(accountDirectory, "mail.json");
   }
 
-  private async credentials(): Promise<Credentials | null> {
-    const value = await (await this.entry()).getPassword();
-    return value ? JSON.parse(value) as Credentials : null;
+  private async saved(): Promise<MailAccounts> {
+    return await readJsonFile<MailAccounts>(this.credentialsPath) ?? { current: null, mailboxes: [] };
   }
 
   async bind(address: string, password: string) {
     const credentials = { address: address.trim(), password };
     await this.connect(credentials, async (client) => { await client.mailboxOpen("INBOX", { readOnly: true }); });
-    await (await this.entry()).setPassword(JSON.stringify(credentials));
+    const saved = await this.saved();
+    await writeJsonFile(this.credentialsPath, {
+      current: credentials.address,
+      mailboxes: [...saved.mailboxes.filter((mailbox) => mailbox.address !== credentials.address), credentials],
+    });
     return { bound: true, address: credentials.address };
   }
 
-  async status() {
-    const credentials = await this.credentials();
-    return { bound: credentials !== null, address: credentials?.address ?? null };
+  async accounts() {
+    const saved = await this.saved();
+    return saved.mailboxes.map(({ address }) => ({ address, current: address === saved.current }));
   }
 
-  async unbind() {
-    return { removed: await (await this.entry()).deletePassword() };
+  async use(address: string) {
+    const saved = await this.saved();
+    if (!saved.mailboxes.some((mailbox) => mailbox.address === address)) throw new AppError("NOT_FOUND", `邮箱尚未绑定：${address}`);
+    await writeJsonFile(this.credentialsPath, { ...saved, current: address });
+    return { address };
+  }
+
+  async status() {
+    const saved = await this.saved();
+    return { bound: saved.mailboxes.length > 0, address: saved.current };
+  }
+
+  async unbind(address?: string) {
+    const saved = await this.saved();
+    const target = address ?? saved.current;
+    const mailboxes = saved.mailboxes.filter((mailbox) => mailbox.address !== target);
+    const removed = mailboxes.length !== saved.mailboxes.length;
+    if (removed) {
+      if (!mailboxes.length) await unlink(this.credentialsPath);
+      else await writeJsonFile(this.credentialsPath, {
+        current: saved.current === target ? mailboxes[0]!.address : saved.current, mailboxes,
+      });
+    }
+    return { removed };
   }
 
   async folders() {
@@ -95,25 +121,25 @@ export class MailClient {
   }
 
   private async message(id: string) {
-    const [address, folder, validity, uid] = messageId.parse(JSON.parse(Buffer.from(id, "base64url").toString("utf8")));
-    return this.session(async (client, currentAddress) => {
-      if (address !== currentAddress) throw new AppError("INVALID_INPUT", "邮件标识不属于当前绑定的邮箱");
+    const [address, folder, validity, uid] = JSON.parse(Buffer.from(id, "base64url").toString("utf8")) as [string, string, string, number];
+    return this.session(async (client) => {
       const mailbox = await client.mailboxOpen(folder, { readOnly: true });
       if (String(mailbox.uidValidity) !== validity) throw new AppError("NOT_FOUND", "邮件夹标识已变化，请重新查询邮件列表");
       const row = await client.fetchOne(uid, { source: true, envelope: true, flags: true }, { uid: true });
       if (!row || !row.source) throw new AppError("NOT_FOUND", "邮件已移走或删除，请重新查询邮件列表");
       const parsed = await simpleParser(row.source, { skipTextToHtml: true, skipImageLinks: true });
       return { row, parsed };
-    });
+    }, address);
   }
 
-  private async session<T>(operation: (client: ImapFlow, address: string) => Promise<T>): Promise<T> {
-    const credentials = await this.credentials();
-    if (!credentials) throw new AppError("AUTH_REQUIRED", "尚未绑定校园邮箱", { authCommand: "njucli mail bind" });
+  private async session<T>(operation: (client: ImapFlow, address: string) => Promise<T>, address?: string): Promise<T> {
+    const saved = await this.saved();
+    const credentials = saved.mailboxes.find((mailbox) => mailbox.address === (address ?? saved.current));
+    if (!credentials) throw new AppError("AUTH_REQUIRED", `邮箱尚未绑定：${address ?? saved.current ?? "请运行 mail bind"}`, { authCommand: "njucli mail bind" });
     return this.connect(credentials, (client) => operation(client, credentials.address));
   }
 
-  private async connect<T>(credentials: Credentials, operation: (client: ImapFlow) => Promise<T>): Promise<T> {
+  private async connect<T>(credentials: MailCredentials, operation: (client: ImapFlow) => Promise<T>): Promise<T> {
     const client = new ImapFlow({
       host: "imap.exmail.qq.com", port: 993, secure: true,
       auth: { user: credentials.address, pass: credentials.password },

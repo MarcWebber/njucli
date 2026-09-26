@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { basename, resolve } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
 import { AccountStore } from "../account/store.js";
@@ -9,18 +9,16 @@ import {
   withBrowserSession,
 } from "../auth/browser-session.js";
 import { AuthCoordinator } from "../auth/coordinator.js";
-import { SoftSeBrowserSessionDriver } from "../auth/drivers/softse-browser.js";
-import { SsoBrowserSessionDriver } from "../auth/drivers/sso-browser.js";
-import { SelectionBrowserSessionDriver } from "../auth/drivers/selection-browser.js";
-import { TexBrowserSessionDriver } from "../auth/drivers/tex-browser.js";
+import { softSeSessionDriver } from "../auth/drivers/softse-browser.js";
+import { ssoSessionDriver } from "../auth/drivers/sso-browser.js";
+import { selectionSessionDriver } from "../auth/drivers/selection-browser.js";
+import { texSessionDriver } from "../auth/drivers/tex-browser.js";
 import { SessionStore } from "../auth/session-store.js";
 import { exchangeSportsAccessToken } from "../auth/sports-token.js";
-import type { AuthCapability } from "../auth/types.js";
+import { AUTH_CAPABILITIES, type AuthCapability, type AuthCredentials } from "../auth/types.js";
 import { parseCampusDate } from "../core/dates.js";
 import { AppError, asAppError } from "../core/errors.js";
-import { saveFile } from "../core/fs.js";
-import type { FetchLike } from "../core/types.js";
-import { urlHostname } from "../core/url.js";
+import { readJsonFile, saveFile, writeJsonFile } from "../core/fs.js";
 import { CampusClient } from "../domains/campus/client.js";
 import { listCampusSources } from "../domains/campus/sources/registry.js";
 import { GraduateAcademicClient } from "../domains/academic/client.js";
@@ -31,7 +29,8 @@ import { CourseService } from "../domains/course/service.js";
 import { EHallPortalClient } from "../domains/ehall/client.js";
 import { NjuOpacClient } from "../domains/library/client.js";
 import { MailClient } from "../domains/mail/client.js";
-import { OPAC_BASE_URL } from "../domains/library/contract.js";
+import { bindMail } from "../domains/mail/bind.js";
+import { SoftwareClient } from "../domains/software/client.js";
 import { SportsClient } from "../domains/sports/client.js";
 import { SoftSeClient } from "../domains/softse/client.js";
 import { TexClient } from "../domains/tex/client.js";
@@ -40,12 +39,12 @@ import type { DoctorResult, NjuServices, TodayResult } from "./services.js";
 
 const EHALL_URL = "https://ehall.nju.edu.cn/new/index.html";
 const VPN_TEST_URL = "https://www-nju-edu-cn-s.atrust.nju.edu.cn/";
-const OPAC_WEBVPN_BASE_URL = webVpnUrl(OPAC_BASE_URL);
+const OPAC_WEBVPN_BASE_URL = "https://opac-nju-edu-cn.atrust.nju.edu.cn";
 
 export function createProductionServices(): NjuServices {
   const accountStore = new AccountStore();
   const auth = createAuthCoordinator();
-  const campus = new CampusClient(nativeFetch);
+  const campus = new CampusClient(fetch);
   const mail = async () => new MailClient((await accountStore.current()).configDir);
 
   const withBrowser = async <T>(
@@ -54,7 +53,7 @@ export function createProductionServices(): NjuServices {
     probe?: (session: BrowserSession) => Promise<boolean>,
   ): Promise<T> => {
     const account = await accountStore.current();
-    return withBrowserSession(account, capability !== "tex", async (session) => {
+    return withBrowserSession(account, false, async (session) => {
       await auth.ensureSession(account, capability, probe && (() => probe(session)));
       return operation(session);
     });
@@ -103,10 +102,27 @@ export function createProductionServices(): NjuServices {
   };
 
   const services: NjuServices = {
+    software: new SoftwareClient(),
     mail: {
-      bind: async (address, password) => (await mail()).bind(address, password),
+      bind: async (credentials) => {
+        const account = await accountStore.current();
+        const client = new MailClient(account.configDir);
+        if (credentials) {
+          const username = credentials.address ?? (await readJsonFile<AuthCredentials>(join(account.configDir, "auth.json")))?.username;
+          if (!username) throw new AppError("INVALID_INPUT", "请提供 --address 或先保存统一认证账号");
+          return client.bind(username.includes("@") ? username : `${username}@smail.nju.edu.cn`, credentials.password);
+        }
+        const status = await client.status();
+        if (status.bound) {
+          await client.folders();
+          return { bound: true, address: status.address! };
+        }
+        return withBrowserSession(account, false, (session) => bindMail(session, client));
+      },
+      accounts: async () => (await mail()).accounts(),
+      use: async (address) => (await mail()).use(address),
       status: async () => (await mail()).status(),
-      unbind: async () => (await mail()).unbind(),
+      unbind: async (address) => (await mail()).unbind(address),
       folders: async () => (await mail()).folders(),
       list: async (options) => (await mail()).list(options),
       search: async (query, options) => (await mail()).search(query, options),
@@ -118,13 +134,20 @@ export function createProductionServices(): NjuServices {
       list: async () => (await accountStore.list()).map((account) => account.name),
       add: async (name) => (await accountStore.add(name)).name,
       use: async (name) => (await accountStore.use(name)).name,
-      remove: (name) => accountStore.remove(name, async (account) => {
-        await new MailClient(account.configDir).unbind();
-      }),
+      remove: (name) => accountStore.remove(name),
     },
     auth: {
       status: async (capability) => auth.status(await accountStore.current(), capability),
-      login: async (capability) => auth.login(await accountStore.current(), capability),
+      login: async (capability, credentials) => {
+        const account = await accountStore.current();
+        const path = join(account.configDir, "auth.json");
+        const previous = await readJsonFile<AuthCredentials>(path);
+        if (credentials) await writeJsonFile(path, credentials);
+        return withBrowserSession(account, false, async (session) => {
+          if (credentials && previous?.username !== credentials.username) await session.clearCookies();
+          return auth.login(account, capability);
+        });
+      },
       refresh: async (capability) => auth.refresh(await accountStore.current(), capability),
       logout: async (capability) => auth.logout(await accountStore.current(), capability),
     },
@@ -166,7 +189,7 @@ export function createProductionServices(): NjuServices {
         client.tasks(kind, page, pageSize)),
       applications: (state, page, pageSize) => withEHall((client) =>
         client.applications(state, page, pageSize)),
-      serviceLink: (appId) => new EHallPortalClient(nativeFetch).serviceLink(appId),
+      serviceLink: (appId) => new EHallPortalClient(fetch).serviceLink(appId),
     },
     softse: {
       courses: () => withSoftSe((client) => client.courses()),
@@ -265,9 +288,14 @@ export function createProductionServices(): NjuServices {
     doctor: async () => {
       const account = await accountStore.current();
       const checks: DoctorResult["checks"] = [];
-      checks.push(await httpCheck(nativeFetch, "nju-home", "https://www.nju.edu.cn/"));
       try {
-        await new NjuOpacClient(nativeFetch).probe();
+        const response = await fetch("https://www.nju.edu.cn/");
+        checks.push({ name: "nju-home", ok: response.ok, status: response.status });
+      } catch (error) {
+        checks.push({ name: "nju-home", ok: false, code: "REMOTE_UNAVAILABLE", message: asAppError(error).message });
+      }
+      try {
+        await new NjuOpacClient(fetch).probe();
         checks.push({ name: "opac-direct", ok: true });
       } catch (error) {
         const appError = asAppError(error);
@@ -280,7 +308,7 @@ export function createProductionServices(): NjuServices {
       }
       return {
         account: account.name,
-        authCapabilities: auth.capabilities(),
+        authCapabilities: [...AUTH_CAPABILITIES],
         checks,
       };
     },
@@ -289,7 +317,7 @@ export function createProductionServices(): NjuServices {
 }
 
 function createAuthCoordinator(): AuthCoordinator {
-  const probeEhall = (account: AccountRecord): Promise<boolean> =>
+  const restoreEhallSession = (account: AccountRecord): Promise<boolean> =>
     withBrowserSession(account, true, async (session) => {
       const client = new EHallPortalClient(session.request);
       if (await client.hasSession()) return true;
@@ -310,7 +338,7 @@ function createAuthCoordinator(): AuthCoordinator {
   const probeVpn = (account: AccountRecord): Promise<boolean> =>
     withBrowserSession(account, true, async (session) => {
       const response = await session.request(VPN_TEST_URL);
-      return response.ok && urlHostname(response.url) === new URL(VPN_TEST_URL).hostname;
+      return response.ok && new URL(response.url).hostname === new URL(VPN_TEST_URL).hostname;
     });
   const probeOpac = (account: AccountRecord): Promise<boolean> =>
     withBrowserSession(account, true, async (session) => {
@@ -321,11 +349,11 @@ function createAuthCoordinator(): AuthCoordinator {
   return new AuthCoordinator({
     sessions: new SessionStore(),
     drivers: {
-      sso: new SsoBrowserSessionDriver(),
-      selection: new SelectionBrowserSessionDriver(),
-      softse: new SoftSeBrowserSessionDriver(),
-      tex: new TexBrowserSessionDriver(),
-      ehall: { login: probeEhall, probe: probeEhall },
+      sso: ssoSessionDriver,
+      selection: selectionSessionDriver,
+      softse: softSeSessionDriver,
+      tex: texSessionDriver,
+      ehall: { login: restoreEhallSession, probe: restoreEhallSession },
       timetable: { login: probeTimetable, probe: probeTimetable },
       sports: { login: probeSports, probe: probeSports },
       vpn: { login: interactiveVpnLogin, probe: probeVpn },
@@ -370,24 +398,3 @@ async function interactiveOpacLogin(
     }
   });
 }
-
-function webVpnUrl(value: string): string {
-  const url = new URL(value);
-  url.hostname = `${url.hostname.replaceAll("-", "--").replaceAll(".", "-")}.atrust.nju.edu.cn`;
-  return url.origin;
-}
-
-async function httpCheck(
-  fetch: FetchLike,
-  name: string,
-  url: string,
-): Promise<DoctorResult["checks"][number]> {
-  try {
-    const response = await fetch(url, { method: "GET" });
-    return { name, ok: response.ok, status: response.status };
-  } catch (error) {
-    return { name, ok: false, code: "REMOTE_UNAVAILABLE", message: asAppError(error).message };
-  }
-}
-
-const nativeFetch: FetchLike = async (input, init) => globalThis.fetch(input, init);

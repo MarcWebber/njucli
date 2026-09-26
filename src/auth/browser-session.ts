@@ -1,5 +1,5 @@
 import { mkdir } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { AsyncLocalStorage } from "node:async_hooks";
 
 import {
@@ -11,12 +11,12 @@ import {
 
 import type { AccountRecord } from "../account/types.js";
 import { AppError } from "../core/errors.js";
+import type { AuthCredentials } from "./types.js";
 import { readJsonFile, writeJsonFile } from "../core/fs.js";
 import type { FetchLike, FetchResponse } from "../core/types.js";
 
 const browserScope = new AsyncLocalStorage<{
   directory: string;
-  headless: boolean;
   session: BrowserSession;
 }>();
 
@@ -26,13 +26,13 @@ export async function withBrowserSession<T>(
   operation: (session: BrowserSession) => Promise<T>,
 ): Promise<T> {
   const current = browserScope.getStore();
-  if (current?.directory === account.browserDataDir && current.headless === headless) {
+  if (current?.directory === account.browserDataDir) {
     return operation(current.session);
   }
   const session = await openBrowserSession(account, headless);
   try {
     return await browserScope.run(
-      { directory: account.browserDataDir, headless, session },
+      { directory: account.browserDataDir, session },
       () => operation(session),
     );
   } finally {
@@ -41,7 +41,7 @@ export async function withBrowserSession<T>(
 }
 
 async function openBrowserSession(account: AccountRecord, headless: boolean): Promise<BrowserSession> {
-  await mkdir(account.browserDataDir, { recursive: true, mode: 0o700 });
+  await mkdir(account.browserDataDir, { recursive: true });
   const context = await chromium.launchPersistentContext(account.browserDataDir, { headless, channel: "chrome" });
   const cookiePath = join(account.configDir, "session-cookies.json");
   try {
@@ -50,7 +50,6 @@ async function openBrowserSession(account: AccountRecord, headless: boolean): Pr
     return new BrowserSession(context, cookiePath);
   } catch (error) {
     await context.close();
-    if (error instanceof SyntaxError) throw new Error("CLI 会话 Cookie 缓存格式无效");
     throw error;
   }
 }
@@ -62,15 +61,18 @@ export class BrowserSession {
   ) {}
 
   readonly request: FetchLike = async (input, init = {}) => {
-    init.signal?.throwIfAborted();
     const options: NonNullable<
       Parameters<BrowserContext["request"]["fetch"]>[1]
     > = {
       failOnStatusCode: false,
     };
     if (init.method !== undefined) options.method = init.method;
-    if (init.headers !== undefined) options.headers = requestHeaders(init.headers);
-    const data = requestData(init.body);
+    if (init.headers !== undefined) {
+      const headers: Record<string, string> = {};
+      new Headers(init.headers).forEach((value, name) => { headers[name] = value; });
+      options.headers = headers;
+    }
+    const data = init.body as string | undefined;
     if (data !== undefined) options.data = data;
     if (init.redirect === "manual") options.maxRedirects = 0;
 
@@ -84,13 +86,32 @@ export class BrowserSession {
 
   async login(url: string, isAuthenticated: (url: URL) => boolean): Promise<void> {
     const page = await this.page();
-    await page.goto(url, { waitUntil: "domcontentloaded" });
-    await this.waitForLogin(isAuthenticated);
+    try {
+      await page.goto(url, { waitUntil: "domcontentloaded" });
+    } catch (error) {
+      if (!(error instanceof Error) || !error.message.includes("net::ERR_ABORTED")) throw error;
+    }
+    try {
+      await this.completeLogin(isAuthenticated);
+    } catch (error) {
+      if (error instanceof Error && error.name === "TimeoutError") {
+        throw new AppError("USER_ACTION_REQUIRED", "学校登录尚未完成，请重新执行命令并在官方页面完成验证");
+      }
+      throw error;
+    }
   }
 
-  async waitForLogin(isAuthenticated: (url: URL) => boolean): Promise<void> {
-    // 用户在官方页面完成账号、扫码或验证码认证，CLI 等待成功落地。
-    await (await this.page()).waitForURL(isAuthenticated, { timeout: 180_000, waitUntil: "domcontentloaded" });
+  async completeLogin(isAuthenticated: (url: URL) => boolean, timeout = 180_000): Promise<void> {
+    const page = await this.page();
+    const credentials = await readJsonFile<AuthCredentials>(join(dirname(this.cookiePath), "auth.json"));
+    if (credentials && new URL(page.url()).hostname === "authserver.nju.edu.cn") {
+      await page.locator("#userNameLogin_a").click();
+      const form = page.locator("#pwdFromId:visible");
+      await form.locator('input[name="username"]').fill(credentials.username);
+      await form.locator('#password').fill(credentials.password);
+      await form.locator("#login_submit").click();
+    }
+    await page.waitForURL(isAuthenticated, { timeout, waitUntil: "commit" });
   }
 
   async clearCookies(): Promise<void> {
@@ -104,26 +125,6 @@ export class BrowserSession {
       await this.context.close();
     }
   }
-}
-
-function requestHeaders(headers: HeadersInit): Record<string, string> {
-  const result: Record<string, string> = {};
-  new Headers(headers).forEach((value, name) => {
-    if (name.toLowerCase() === "cookie") {
-      throw new AppError(
-        "INVALID_INPUT",
-        "browser session request 不接受手工 Cookie header",
-      );
-    }
-    result[name] = value;
-  });
-  return result;
-}
-
-function requestData(body: RequestInit["body"]): string | undefined {
-  if (body === undefined || body === null) return undefined;
-  if (typeof body === "string") return body;
-  throw new AppError("INVALID_INPUT", "browser session request 只接受字符串 body");
 }
 
 function playwrightResponse(response: APIResponse): FetchResponse {

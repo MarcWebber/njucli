@@ -32,9 +32,6 @@
     "dev": "tsx src/cli.ts"
   },
   "dependencies": {
-    "@inquirer/input": "^4.3.0",
-    "@inquirer/password": "^4.0.23",
-    "@napi-rs/keyring": "^2.1.0",
     "@modelcontextprotocol/sdk": "^1.17.5",
     "cheerio": "^1.1.2",
     "commander": "^14.0.1",

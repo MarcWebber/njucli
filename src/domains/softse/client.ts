@@ -58,11 +58,11 @@ export class SoftSeClient {
   }
 
   async course(courseIdInput: string): Promise<SoftSeCourse> {
-    const courseId = numericId(courseIdInput, "courseId");
-    const { $, response } = await this.page(`/course/view.php?id=${courseId}`);
+    const courseId = courseIdInput.trim();
+    const { $, response } = await this.page(`/course/view.php?id=${encodeURIComponent(courseId)}`);
     if (new URL(response.url).pathname === "/enrol/index.php") {
       throw new AppError("USER_ACTION_REQUIRED", "尚未加入该 SoftSE 课程", {
-        hint: `运行 njucli softse enroll ${courseId} --yes，或在官方页面完成选课`,
+        hint: `运行 njucli softse enroll ${courseId}，或在官方页面完成选课`,
       });
     }
     return parseCourse($, response.url, courseId);
@@ -86,8 +86,8 @@ export class SoftSeClient {
   }
 
   async assignment(activityIdInput: string): Promise<SoftSeAssignment> {
-    const activityId = numericId(activityIdInput, "activityId");
-    const { $, response } = await this.page(`/mod/assign/view.php?id=${activityId}`);
+    const activityId = activityIdInput.trim();
+    const { $, response } = await this.page(`/mod/assign/view.php?id=${encodeURIComponent(activityId)}`);
     const name = text($("#region-main h2").first());
     if (!name || $(".submissionstatustable").length !== 1) {
       throw new Error("SoftSE 页面不是学生作业状态页");
@@ -138,21 +138,17 @@ export class SoftSeClient {
       .filter((file) => file.name === fileName);
     if (candidates.length !== 1) throw new AppError("NOT_FOUND", "没有找到唯一匹配的作业文件");
     const url = new URL(candidates[0]!.url);
-    if (url.origin !== SOFTSE_BASE_URL || !url.pathname.startsWith("/pluginfile.php/")) {
-      throw new Error("作业文件不是 SoftSE 官方附件地址");
-    }
     url.searchParams.set("forcedownload", "1");
     const response = await this.request(url.toString());
-    if (!new URL(response.url).pathname.startsWith("/pluginfile.php/") ||
-        !/^attachment(?:;|$)/i.test(response.headers.get("content-disposition") ?? "")) {
+    if (!/^attachment(?:;|$)/i.test(response.headers.get("content-disposition") ?? "")) {
       throw new Error("SoftSE 未返回附件，未保存文件");
     }
     return new Uint8Array(await response.arrayBuffer());
   }
 
   async grades(courseIdInput: string): Promise<SoftSeGrade[]> {
-    const courseId = numericId(courseIdInput, "courseId");
-    const { $ } = await this.page(`/grade/report/index.php?id=${courseId}`);
+    const courseId = courseIdInput.trim();
+    const { $ } = await this.page(`/grade/report/index.php?id=${encodeURIComponent(courseId)}`);
     const items: SoftSeGrade[] = [];
     $("table.user-grade tbody tr").each((_, row) => {
       const current = $(row);
@@ -172,8 +168,8 @@ export class SoftSeClient {
   }
 
   async enroll(courseIdInput: string, enrolmentKey?: string): Promise<SoftSeCourseSummary> {
-    const courseId = numericId(courseIdInput, "courseId");
-    const { $, response } = await this.page(`/enrol/index.php?id=${courseId}`);
+    const courseId = courseIdInput.trim();
+    const { $, response } = await this.page(`/enrol/index.php?id=${encodeURIComponent(courseId)}`);
     const form = $("form").filter((_, element) =>
       $(element).find('input[name="instance"], input[name="sesskey"]').length === 2
     ).first();
@@ -200,12 +196,12 @@ export class SoftSeClient {
       headers: { "content-type": "application/x-www-form-urlencoded" },
       body: body.toString(),
     });
-    const membership = await this.page(`/enrol/index.php?id=${courseId}`);
+    const membership = await this.page(`/enrol/index.php?id=${encodeURIComponent(courseId)}`);
     const detail = parseCourse(membership.$, membership.response.url, courseId);
     return {
       courseId,
       name: detail.name,
-      url: new URL(`/course/view.php?id=${courseId}`, SOFTSE_BASE_URL).toString(),
+      url: new URL(`/course/view.php?id=${encodeURIComponent(courseId)}`, SOFTSE_BASE_URL).toString(),
     };
   }
 
@@ -230,34 +226,18 @@ export class SoftSeClient {
   }
 
   private async request(path: string, init?: RequestInit): Promise<FetchResponse> {
-    let url = new URL(path, SOFTSE_BASE_URL);
-    for (let redirects = 0; ; redirects++) {
-      if (url.origin !== SOFTSE_BASE_URL) throw new Error("拒绝向 SoftSE 之外的地址发送请求");
-      const response = await this.fetch(url, { ...init, redirect: "manual" });
-      const redirected = [301, 302, 303, 307, 308].includes(response.status);
-      const location = redirected ? response.headers.get("location") : null;
-      if (redirected && !location) throw new Error("SoftSE 重定向缺少目标地址");
-      const target = new URL(location ?? response.url, url);
-      if (target.hostname === "authserver.nju.edu.cn" ||
-          (target.origin === SOFTSE_BASE_URL && target.pathname === "/login/index.php") ||
-          response.status === 401 || response.status === 403) {
-        throw new AppError("AUTH_REQUIRED", "SoftSE 会话未登录或已经失效", {
-          hint: "运行 njucli auth login softse",
-          authCommand: "njucli auth login softse",
-        });
-      }
-      if (target.origin !== SOFTSE_BASE_URL) throw new Error("SoftSE 返回了站外地址，已停止请求");
-      if (!redirected) {
-        if (!response.ok) throw new Error(`SoftSE 返回 HTTP ${response.status}`);
-        return response;
-      }
-      if (redirects >= 5) throw new Error("SoftSE 重定向过多");
-      if (init?.method === "POST" && (response.status === 307 || response.status === 308)) {
-        throw new Error("SoftSE 要求重发表单，已停止；请先在官方页面确认结果");
-      }
-      url = target;
-      if (response.status === 303 || (init?.method === "POST" && (response.status === 301 || response.status === 302))) init = undefined;
+    const url = new URL(path, SOFTSE_BASE_URL);
+    const response = await this.fetch(url, { ...init, redirect: init?.method === "POST" ? "manual" : "follow" });
+    if (init?.method === "POST" && [301, 302, 303].includes(response.status)) {
+      return this.request(new URL(response.headers.get("location")!, url).href);
     }
+    const target = new URL(response.url);
+    if (target.hostname === "authserver.nju.edu.cn" || target.pathname === "/login/index.php" ||
+        response.status === 401 || response.status === 403) {
+      throw new AppError("AUTH_REQUIRED", "SoftSE 会话未登录或已经失效", { authCommand: "njucli auth login softse" });
+    }
+    if (!response.ok) throw new Error(`SoftSE 返回 HTTP ${response.status}`);
+    return response;
   }
 }
 
@@ -320,18 +300,11 @@ function text(element: ReturnType<CheerioAPI>): string {
 }
 
 function absolute(value: string | undefined, base: string): string {
-  if (!value) throw new Error("SoftSE 页面链接缺少 href");
-  return new URL(value, base).toString();
+  return new URL(value!, base).toString();
 }
 
 function queryId(url: string, name: string): string {
-  return numericId(new URL(url).searchParams.get(name) ?? "", name);
-}
-
-function numericId(value: string, name: string): string {
-  const normalized = value.trim();
-  if (!/^\d+$/.test(normalized)) throw new AppError("INVALID_INPUT", `${name} 必须是数字 ID`);
-  return normalized;
+  return new URL(url).searchParams.get(name)!;
 }
 
 function assignmentDate(value: string | undefined): string | null {

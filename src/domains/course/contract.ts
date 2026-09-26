@@ -1,5 +1,3 @@
-import { z } from "zod";
-
 export const COURSE_URLS = {
   app: "https://ehall.nju.edu.cn/appShow?appId=4770397878132218",
   index:
@@ -16,55 +14,25 @@ export const COURSE_URLS = {
     "https://ehallapp.nju.edu.cn/jwapp/sys/wdkb/modules/xskcb/cxxszhxqkb.do",
 } as const;
 
-const integerFromRemote = z.coerce.number().int();
-const optionalString = z.string().nullish();
+export interface TermRow {
+  DM: string;
+  MC: string;
+}
 
-export const termRowSchema = z.object({
-  DM: z.string().min(1),
-  MC: z.string().min(1),
-});
+export interface TermDateRow {
+  XN: string;
+  XQ: string;
+  XQKSRQ: string;
+}
 
-export const termDateRowSchema = z.object({
-  XN: z.string().min(1),
-  XQ: z.string().min(1),
-  XQKSRQ: z.string().min(10),
-});
-
-export const courseRowSchema = z.object({
-  JXBID: z.string().min(1),
-  KCM: z.string().min(1),
-  SKJS: optionalString,
-  JASMC: optionalString,
-  XXXQDM_DISPLAY: optionalString,
-  KSJC: integerFromRemote,
-  JSJC: integerFromRemote,
-  SKXQ: integerFromRemote,
-  SKZC: z.string().regex(/^[01]+$/),
-});
-
-export type TermRow = z.infer<typeof termRowSchema>;
-export type TermDateRow = z.infer<typeof termDateRowSchema>;
-export type CourseRow = z.infer<typeof courseRowSchema>;
-
-export function pageEnvelopeSchema<T extends z.ZodType>(
-  action: string,
-  row: T,
-): z.ZodType<{
-  code: string;
-  datas: Record<string, { rows: z.infer<T>[] }>;
-}> {
-  return z.object({
-    code: z.coerce.string(),
-    datas: z.record(
-      z.string(),
-      z.object({
-        rows: z.array(row),
-      }),
-    ).refine((datas) => action in datas, {
-      message: `response is missing datas.${action}`,
-    }),
-  }) as z.ZodType<{
-    code: string;
-    datas: Record<string, { rows: z.infer<T>[] }>;
-  }>;
+export interface CourseRow {
+  JXBID: string;
+  KCM: string;
+  SKJS?: string | null;
+  JASMC?: string | null;
+  XXXQDM_DISPLAY?: string | null;
+  KSJC: number;
+  JSJC: number;
+  SKXQ: number;
+  SKZC: string;
 }

@@ -9,6 +9,5 @@ export const graduateAdmissionSource = defineCampusSource({
     { id: "master", name: "硕士最新通知", path: "/47863/list.htm" },
     { id: "doctoral", name: "博士最新通知", path: "/47865/list.htm" },
   ],
-  articlePathPattern: /^\/[0-9a-f]{2}\/[0-9a-f]{2}\/c\d+a\d+\/page\.htm$/i,
   parser: standardWebPlusParser,
 });

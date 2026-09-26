@@ -1,4 +1,3 @@
-import { z } from "zod";
 import { load } from "cheerio";
 
 import { AppError } from "../../core/errors.js";
@@ -8,32 +7,23 @@ import type { TexFile, TexProject, TexProjectPage } from "./types.js";
 
 export const TEX_BASE_URL = "https://tex.nju.edu.cn";
 
-const versionSchema = z.string().min(1);
-const projectSchema = z.object({
-  projectKey: z.string().min(1),
-  projectName: z.string(),
-  selectedVersion: z.object({
-    versionNo: versionSchema,
-  }),
-});
+interface ProjectRow {
+  projectKey: string;
+  projectName: string;
+  selectedVersion: { versionNo: string };
+}
 
-const pageSchema = z.object({
-  list: z.array(projectSchema),
-  pinnedList: z.array(projectSchema),
-  hasMore: z.boolean(),
-});
+interface FileRow {
+  fileKey: string;
+  filePath: string;
+  isDir: boolean;
+  fileType?: string;
+}
 
-const envelopeSchema = z.object({
-  status: z.object({ code: z.number() }),
-  result: z.unknown().optional(),
-});
-
-const filesSchema = z.array(z.object({
-  fileKey: z.string().min(1),
-  filePath: z.string(),
-  isDir: z.boolean(),
-  fileType: z.unknown().optional(),
-}));
+interface CompileResult {
+  logUrl: string;
+  pdfUrl?: string;
+}
 
 export class TexClient {
   constructor(private readonly fetch: FetchLike) {}
@@ -58,7 +48,8 @@ export class TexClient {
       sortBy: "updateAt",
       getType: "all",
     });
-    const result = pageSchema.parse(await texRequest(this.fetch, `/api/project?${params}`));
+    const result = await texRequest<{ list: ProjectRow[]; pinnedList: ProjectRow[]; hasMore: boolean }>(
+      this.fetch, `/api/project?${params}`);
     const items = new Map<string, TexProject>();
     for (const row of [...result.list, ...result.pinnedList]) {
       const versionNo = row.selectedVersion.versionNo;
@@ -76,11 +67,10 @@ export class TexClient {
 
   async create(nameInput: string): Promise<TexProject> {
     const name = requiredText(nameInput, "项目名称");
-    const result = await texRequest(this.fetch, "/api/project", {
+    const { projectKey } = await texRequest<{ projectKey: string }>(this.fetch, "/api/project", {
       method: "POST",
       body: JSON.stringify({ projectName: name }),
     });
-    const { projectKey } = z.object({ projectKey: z.string().min(1) }).parse(result);
     return this.readback(projectKey, name);
   }
 
@@ -94,14 +84,10 @@ export class TexClient {
   }
 
   async createFromTemplate(templateKey: string): Promise<TexProject> {
-    const result = await texRequest(this.fetch, "/api/project/byTemplate", {
+    const created = await texRequest<{ projectKey: string; versionNo: string }>(this.fetch, "/api/project/byTemplate", {
       method: "POST",
       body: JSON.stringify({ key: templateKey, isGuide: false }),
     });
-    const created = z.object({
-      projectKey: z.string().min(1),
-      versionNo: versionSchema,
-    }).parse(result);
     return this.readback(created.projectKey, undefined, created.versionNo);
   }
 
@@ -135,7 +121,7 @@ export class TexClient {
     if (errors.length > 0) {
       throw new AppError("REMOTE_UNAVAILABLE", "TeX 编译失败，未下载旧 PDF", { details: { errors } });
     }
-    z.object({ pdfUrl: z.string().min(1) }).parse(result);
+    if (!(result as CompileResult).pdfUrl) throw new Error("TeX 编译结果没有 PDF");
     const params = new URLSearchParams({ projectKey, versionNo });
     const response = await texResponse(this.fetch, `/api/project/pdf/download?${params}`, {
       headers: { accept: "application/pdf" },
@@ -148,10 +134,7 @@ export class TexClient {
   }
 
   private async resultLog(result: unknown): Promise<string> {
-    const { logUrl } = z.object({ logUrl: z.url() }).parse(result);
-    if (new URL(logUrl).origin !== "https://latex-file.texpageusercontent.com") {
-      throw new Error("TeX 编译日志返回未确认的文件主机");
-    }
+    const { logUrl } = result as CompileResult;
     const response = await this.fetch(logUrl, { headers: { accept: "text/plain" } });
     if (!response.ok) throw new Error(`TeX 日志 HTTP ${response.status}`);
     if (response.headers.get("content-type")?.split(";")[0]?.trim() !== "text/plain") {
@@ -200,7 +183,7 @@ export class TexClient {
 
   private async fileRows(projectKey: string, versionNo: string) {
     const params = new URLSearchParams({ projectKey, versionNo });
-    return filesSchema.parse(await texRequest(this.fetch, `/api/project/files?${params}`));
+    return texRequest<FileRow[]>(this.fetch, `/api/project/files?${params}`);
   }
 
   private async readback(projectKey: string, name?: string, versionNo?: string): Promise<TexProject> {
@@ -215,16 +198,16 @@ export class TexClient {
   }
 }
 
-export async function texRequest(fetch: FetchLike, path: string, init?: RequestInit): Promise<unknown> {
+export async function texRequest<T = unknown>(fetch: FetchLike, path: string, init?: RequestInit): Promise<T> {
   const response = await texResponse(fetch, path, init);
   if (response.headers.get("content-type")?.includes("text/html")) {
     throw new AppError("USER_ACTION_REQUIRED", "TeX 返回浏览器验证页面，未取得接口数据");
   }
-  return texResult(JSON.parse(await response.text()) as unknown);
+  return texResult<T>(JSON.parse(await response.text()));
 }
 
-export function texResult(value: unknown): unknown {
-  const envelope = envelopeSchema.parse(value);
+export function texResult<T = unknown>(value: unknown): T {
+  const envelope = value as { status: { code: number }; result: T };
   const code = envelope.status.code;
   if (code === 1003) throw new AppError("AUTH_REQUIRED", "TeX 登录态失效", { authCommand: "njucli auth login tex" });
   if (code === 1010) throw new AppError("USER_ACTION_REQUIRED", "TeX 要求二次身份验证", { authCommand: "njucli auth login tex" });

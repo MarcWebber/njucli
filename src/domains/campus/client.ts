@@ -1,6 +1,6 @@
+import { load } from "cheerio";
 import { AppError } from "../../core/errors.js";
-import type { FetchLike, FetchResponse } from "../../core/types.js";
-import { parseUrl } from "../../core/url.js";
+import type { FetchLike } from "../../core/types.js";
 import type { CampusSectionContract, CampusSourceContract } from "./contracts.js";
 import { decodeArticleId, schemaChanged } from "./parser-utils.js";
 import { getCampusSourceContract } from "./sources/registry.js";
@@ -39,28 +39,18 @@ export class CampusClient {
     const section = getSection(contract, sectionId);
     const requestUrl = section.listUrl(page);
     const html = await this.fetchHtml(requestUrl, contract, false);
-    const result = contract.parser.parseArticles(html, {
+    return contract.parser.parseArticles(html, {
       source: contract,
       section,
       requestUrl,
       page,
     });
-    for (const article of result.items) {
-      const articleUrl = new URL(article.url);
-      if (!contract.articlePathPattern.test(articleUrl.pathname)) {
-        throw schemaChanged(contract.id, "article-list", "source article path");
-      }
-    }
-    return result;
   }
 
   async article(source: string, sectionId: string, articleId: string): Promise<CampusArticle> {
     const contract = getCampusSourceContract(source);
     const section = getSection(contract, sectionId);
     const requestUrl = decodeArticleId(articleId, contract, section.id);
-    if (!contract.articlePathPattern.test(requestUrl.pathname)) {
-      throw new AppError("INVALID_INPUT", `文章 ID 不符合 ${contract.id} 的路径契约`);
-    }
 
     const html = await this.fetchHtml(requestUrl, contract, true);
     return contract.parser.parseArticle(html, {
@@ -83,7 +73,11 @@ export class CampusClient {
       },
     });
 
-    assertResponseStayedOnSource(response, contract);
+    if (new URL(response.url).hostname === "authserver.nju.edu.cn") {
+      throw new AppError("AUTH_REQUIRED", `${contract.name} 的该内容需要统一认证登录`, {
+        details: { source: contract.id, url: requestUrl.href },
+      });
+    }
     if (!response.ok) {
       if (notFoundIsKnown && response.status === 404) {
         throw new AppError("NOT_FOUND", "没有找到该校园文章", {
@@ -113,19 +107,3 @@ function getSection(contract: CampusSourceContract, sectionId: string): CampusSe
   }
   return section;
 }
-
-function assertResponseStayedOnSource(
-  response: FetchResponse,
-  contract: CampusSourceContract,
-): void {
-  const responseUrl = parseUrl(response.url);
-  if (!responseUrl) {
-    throw new AppError("REMOTE_UNAVAILABLE", `${contract.name} 返回了无效响应地址`);
-  }
-  if (responseUrl.protocol !== "https:" || responseUrl.host !== new URL(contract.origin).host) {
-    throw new AppError("REMOTE_UNAVAILABLE", `${contract.name} 将请求重定向到了非允许站点`, {
-      details: { source: contract.id, redirectedHost: responseUrl.hostname },
-    });
-  }
-}
-import { load } from "cheerio";

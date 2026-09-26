@@ -1,12 +1,7 @@
 import { AppError } from "../../core/errors.js";
 import type { FetchLike, FetchResponse } from "../../core/types.js";
-import { urlHostname } from "../../core/url.js";
 import {
   COURSE_URLS,
-  courseRowSchema,
-  pageEnvelopeSchema,
-  termDateRowSchema,
-  termRowSchema,
   type CourseRow,
   type TermDateRow,
   type TermRow,
@@ -30,7 +25,6 @@ export class EHallTimetableClient {
       COURSE_URLS.terms,
       TERMS_ACTION,
       new URLSearchParams({ "*order": "-DM" }),
-      termRowSchema,
     );
   }
 
@@ -40,11 +34,10 @@ export class EHallTimetableClient {
 
   private async readCurrentTerm(): Promise<TermRow> {
     await this.prepare();
-    const rows = await this.postRows(
+    const rows = await this.postRows<TermRow>(
       COURSE_URLS.currentTerm,
       CURRENT_TERM_ACTION,
       new URLSearchParams(),
-      termRowSchema,
     );
     const term = rows[0];
     if (!term) {
@@ -56,12 +49,12 @@ export class EHallTimetableClient {
   async listTermDates(): Promise<TermDateRow[]> {
     await this.prepare();
     const response = await this.request(COURSE_URLS.termDates);
-    return this.parseRows(response, TERM_DATES_ACTION, termDateRowSchema);
+    return this.parseRows<TermDateRow>(response, TERM_DATES_ACTION);
   }
 
   async listSchedule(termId: string): Promise<CourseRow[]> {
     await this.prepare();
-    return this.postRows(
+    const rows = await this.postRows<CourseRow>(
       COURSE_URLS.schedule,
       SCHEDULE_ACTION,
       new URLSearchParams({
@@ -69,8 +62,8 @@ export class EHallTimetableClient {
         pageSize: "999",
         pageNumber: "1",
       }),
-      courseRowSchema,
     );
+    return rows.map((row) => ({ ...row, KSJC: Number(row.KSJC), JSJC: Number(row.JSJC), SKXQ: Number(row.SKXQ) }));
   }
 
   private async prepare(): Promise<void> {
@@ -88,25 +81,24 @@ export class EHallTimetableClient {
     url: string,
     action: string,
     form: URLSearchParams,
-    rowSchema: import("zod").ZodType<T>,
   ): Promise<T[]> {
     const response = await this.request(url, {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded" },
       body: form.toString(),
     });
-    return this.parseRows(response, action, rowSchema);
+    return this.parseRows<T>(response, action);
   }
 
   private async parseRows<T>(
     response: FetchResponse,
     action: string,
-    rowSchema: import("zod").ZodType<T>,
   ): Promise<T[]> {
-    const parsed = pageEnvelopeSchema(action, rowSchema).parse(
-      JSON.parse(await response.text()),
-    );
-    if (parsed.code !== "0") {
+    const parsed = JSON.parse(await response.text()) as {
+      code: string | number;
+      datas: Record<string, { rows: T[] }>;
+    };
+    if (String(parsed.code) !== "0") {
       throw new Error(`课表服务返回业务错误 ${parsed.code}`);
     }
     return parsed.datas[action]!.rows;
@@ -115,7 +107,7 @@ export class EHallTimetableClient {
   private async request(url: string, init?: RequestInit): Promise<FetchResponse> {
     const response = await this.fetch(url, init);
 
-    const hostname = urlHostname(response.url);
+    const hostname = new URL(response.url).hostname;
     if (
       hostname === "authserver.nju.edu.cn" ||
       response.status === 401 ||

@@ -47,6 +47,6 @@ export async function runCommand<T>(
 function exitCodeFor(code: string): number {
   if (code === "INVALID_INPUT") return 2;
   if (code.startsWith("AUTH_") || code === "VPN_REQUIRED") return 3;
-  if (code === "USER_ACTION_REQUIRED" || code === "CONFIRMATION_REQUIRED") return 4;
+  if (code === "USER_ACTION_REQUIRED") return 4;
   return 1;
 }

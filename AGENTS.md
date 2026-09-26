@@ -14,11 +14,11 @@ NjuCLI 服务南京大学学生及其 AI 助手，围绕写作、邮件、上课
 | `src/app/production.ts` | 唯一生产装配点 |
 | `src/account/` | 本地账号及隔离目录 |
 | `src/auth/` | 认证依赖、浏览器登录交接、会话保存与恢复 |
-| `src/domains/` | campus、academic、course、ehall、library、mail、softse、tex、sports 的 client 与解析 |
+| `src/domains/` | campus、academic、course、ehall、library、mail、software、softse、tex、sports 的 client 与解析 |
 | `src/core/` | 文件、输入、日期、输出与脱敏函数 |
 | `src/mcp/` | 只读 MCP，调用相同业务方法 |
 | `tests/integration.test.mjs` | 少量本地集成测试 |
-| `skills/njucli-tex/` | 通过现有 CLI 完成写作的 Skill |
+| `skills/` | 通过现有 CLI 完成 统一认证、TeX 写作、邮箱操作与软件下载的 Skill |
 | `.codex-plugin/`、`.mcp.json` | 插件清单与本地 MCP 配置 |
 | `docs/` | 设计、接口契约和执行证据 |
 
@@ -34,14 +34,14 @@ NjuCLI 服务南京大学学生及其 AI 助手，围绕写作、邮件、上课
 - 分页和枚举在 CLI/MCP 入口校验一次；日期在输入或进入日历计算时校验；接口限制以远端契约为准。
 - 响应按已确认字段解析；字段别名、请求方式和路径变更同步到 `docs/interface-evidence.md`。
 - 普通网络、HTTP 和解析异常直接传到统一输出边界，后续动作由调用 Agent 决定。成功表示实际操作及必要回读已完成。
-- 本地下载与导出复用 `core/fs.ts` 的 `saveFile`，直接覆盖指定输出文件。新文件权限为 0600，已有文件保留原权限；会话配置使用原子写入。
+- 本地下载与导出复用 `core/fs.ts` 的 `saveFile`，支持文本、字节与异步字节流，直接覆盖指定输出文件。新文件权限为 0600，已有文件保留原权限；会话配置使用原子写入。
 - 面向用户的文档使用中文、正向描述，聚焦已有能力、使用前提、实际步骤和结果。接口证据与实网验证状态各自明确记录。
 
 ## 通用工具
 
 | 工具 | 用途与调用方 |
 | --- | --- |
-| `BrowserSession.login / waitForLogin` | 打开官方登录入口、等待账号/验证码/扫码认证完成；SSO、selection、SoftSE、WebVPN、TeX 复用 |
+| `BrowserSession.login / completeLogin` | 打开官方登录入口、等待账号/验证码/扫码认证完成；SSO、selection、SoftSE、WebVPN、TeX 复用 |
 | `AuthCoordinator.ensureSession` | 业务前检查与恢复目标会话，供读写业务共同调用 |
 | `SessionStore` | 保存 capability 和 valid/expired/logged-out 状态 |
 | `core/guards.ts` 的 `requiredText` | TeX、SoftSE、图书馆共用文本整理与空值检查 |
@@ -53,16 +53,18 @@ NjuCLI 服务南京大学学生及其 AI 助手，围绕写作、邮件、上课
 
 ## 认证与个人数据
 
-- capability 在静态依赖图与生产类型表中配齐。个人课表使用 `timetable`，研究生选课使用已确认的 `selection` 会话；SoftSE 和 TeX 分别使用 SSO 派生的 `softse`、`tex` 会话。
-- 每次业务执行前调用 `ensureSession`，认证与业务共享当前 context。主动退出状态由显式认证操作恢复；每个业务请求执行一次。
-- 验证码、扫码和其他人工挑战由用户在官方页面完成，CLI 等待真实成功条件。
-- 浏览器会话使用 CLI 专用目录。CLI 自有会话型 Cookie 原子保存至账号目录的 `session-cookies.json`，权限 0600；持久 Cookie 由 Chrome 管理。
-- 凭据仅进入本机授权的存储渠道；日志、仓库和交付记录保留脱敏结果。密码通过本机隐藏输入接收，个人业务数据保存在用户指定位置。
-- 邮箱使用官方 IMAP/TLS 与系统钥匙串，Linux 使用 Secret Service。专用密码在 `mail bind` 校验成功后保存；读取使用 EXAMINE/BODY.PEEK，保持已读状态；解绑及删除账号清理对应凭据。
+- capability 在静态依赖图与生产类型表中配齐。个人课表使用 `timetable`，研究生选课使用 `selection`；SoftSE 和 TeX 使用 SSO 派生的 `softse`、`tex`。
+- 每次业务前调用 `ensureSession`，探测失效时自动登录，认证与业务共享当前 context；每个业务请求执行一次。`logged-out` 只记录状态。
+- `auth login` 通过 `--username/--password` 或 `--credentials` 接收凭据，保存为 `auth.json` 的 `username/password`。`BrowserSession` 自动填写 authserver 官方账号登录表单；滑块支持 `skills/njucli-auth/scripts/login.mjs` 截图与坐标拖动，复用现有认证与会话保存；扫码由本人完成。
+- `mail bind` 通过 `--address/--password` 或 `--credentials` 接收邮箱凭据。省略地址时从统一认证 username 派生邮箱；显式地址独立保存。同一本地账号允许多个邮箱，`mail.json` 保存 `{ current, mailboxes: [{ address, password }] }`，通过 `mail accounts/use/unbind` 管理。
+- 两份凭据文件位于 `~/.config/njucli/accounts/<account>/`，由 `XDG_CONFIG_HOME` 覆盖根目录，权限 0600。日志、仓库和交付记录使用脱敏结果，个人业务数据保存在指定位置。
+- 浏览器使用 CLI 专用目录；会话型 Cookie 原子保存至账号目录的 `session-cookies.json`，权限 0600；持久 Cookie 由 Chrome 管理。
+- 无参数 `mail bind` 复用已存凭据校验；仅无凭据时打开官方浏览器向导，必要时开启 IMAP/SMTP，单次生成专用密码并交给 `MailClient.bind` 校验保存。
+- 日常邮箱查询使用官方 IMAP/TLS 与本地凭据，EXAMINE/BODY.PEEK 保持已读状态。列表、搜索与邮件夹使用当前邮箱；正文与附件按邮件 ID 使用对应邮箱。解绑删除指定或当前邮箱的本地凭据。
 
 ## 写操作与 TeX
 
-- 业务写入先明确具体目标、允许动作和材料，确认后提交一次，再通过稳定标识回读结果。接口与人工挑战条件依据真实契约。
+- 业务写入按命令指定的目标和材料提交一次，再通过稳定标识回读结果。接口与人工挑战条件依据真实契约。
 - 个人账号验证默认采用查询。远端写核对使用维护者明确授权的可撤销目标；授权按项目、动作和文件范围执行。
 - TeX 固定复用 CLI 专用可见 Chrome，通过控制台及 `user/info` 验证会话。文本写入交给原生编辑器处理协作协议，正文填写一次后读取核对；编辑前确认网站采用自动同步模式。
 - 编译点击一次，按 Socket.IO requestId 关联本次结果并检查原始日志；仅在本次编译成功后保存 PDF。
@@ -82,7 +84,7 @@ NjuCLI 服务南京大学学生及其 AI 助手，围绕写作、邮件、上课
 
 ## 测试流程
 
-自动测试限定为少量本地集成用例，使用 Node 内置 `node:test`。覆盖真实模块组合，测试数据就地构造，HTTP 指向本机模拟服务，文件放入临时目录并自动清理。浏览器与真实钥匙串由另行授权的实际使用核对。
+自动测试限定为少量本地集成用例，使用 Node 内置 `node:test`。覆盖真实模块组合，测试数据就地构造，HTTP 指向本机模拟服务，文件放入临时目录并自动清理。真实浏览器与 IMAP 通过实际使用核对。
 
 ```bash
 pnpm lint
@@ -92,7 +94,7 @@ node dist/cli.js campus sources --format json
 npm pack --dry-run
 ```
 
-`pnpm test` 先构建，再验证认证与文件存储、校园信息命令与解析、TeX 命令与 HTTP client。新增用例沿用这种轻量集成方式。
+`pnpm test` 先构建，再验证认证与文件存储、校园信息命令与解析、软件目录与流式下载、TeX 命令与 HTTP client、邮箱绑定命令与页面交接。邮箱用例隔离浏览器和 IMAP，覆盖本地凭据、多邮箱切换、默认地址派生、MIME 正文与附件。新增用例沿用这种轻量集成方式。
 
 源码/构建、本地集成、公开实网、认证实网分别记录。实网里程碑以对应 CLI 的真实结果与后置条件为依据；实网核对按当轮任务和授权范围进行。
 

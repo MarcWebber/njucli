@@ -10,3 +10,8 @@ coverage/
 !.env.example
 session-cookies.json
 sessions.json
+mail.json
+mail-credentials.json
+auth.json
+.pnpm-store/
+auth-credentials.json

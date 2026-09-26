@@ -2,7 +2,6 @@ import type { Command } from "commander";
 
 import type { NjuServices } from "../app/services.js";
 import { addFormatOption, runCommand, type CommandRuntime, type FormatOptions } from "../core/command.js";
-import { requireConfirmation } from "../core/confirmation.js";
 import type { TexProject } from "../domains/tex/types.js";
 import { optionalPositiveInteger } from "./options.js";
 
@@ -36,26 +35,20 @@ export function registerTexCommands(
       };
     }));
 
-  addFormatOption(tex.command("create <name>").description("新建空白 TeX 项目并核对创建结果")
-    .option("--yes", "确认创建项目"))
-    .action(async (name: string, options: FormatOptions & { yes?: boolean }) => runCommand(runtime, options, async () => {
-      requireConfirmation(options.yes === true);
+  addFormatOption(tex.command("create <name>").description("新建空白 TeX 项目并核对创建结果"))
+    .action(async (name: string, options: FormatOptions) => runCommand(runtime, options, async () => {
       const data = await service.create(name);
       return { data, text: projectText(data) };
     }));
 
-  addFormatOption(tex.command("from-template <template-key>").description("按模板新建 TeX 项目并核对创建结果")
-    .option("--yes", "确认按模板创建项目"))
-    .action(async (templateKey: string, options: FormatOptions & { yes?: boolean }) => runCommand(runtime, options, async () => {
-      requireConfirmation(options.yes === true);
+  addFormatOption(tex.command("from-template <template-key>").description("按模板新建 TeX 项目并核对创建结果"))
+    .action(async (templateKey: string, options: FormatOptions) => runCommand(runtime, options, async () => {
       const data = await service.createFromTemplate(templateKey);
       return { data, text: projectText(data) };
     }));
 
-  addFormatOption(tex.command("rename <project-key> <name>").description("重命名 TeX 项目并核对修改结果")
-    .option("--yes", "确认重命名项目"))
-    .action(async (projectKey: string, name: string, options: FormatOptions & { yes?: boolean }) => runCommand(runtime, options, async () => {
-      requireConfirmation(options.yes === true);
+  addFormatOption(tex.command("rename <project-key> <name>").description("重命名 TeX 项目并核对修改结果"))
+    .action(async (projectKey: string, name: string, options: FormatOptions) => runCommand(runtime, options, async () => {
       const data = await service.rename(projectKey, name);
       return { data, text: projectText(data) };
     }));
@@ -88,10 +81,8 @@ export function registerTexCommands(
 
   addFormatOption(tex.command("compile <project-key> <file-path>").description("编译指定 LaTeX 文件并下载 PDF，替换指定输出文件")
     .requiredOption("--version <version-no>", "projects 返回的版本号")
-    .requiredOption("--output <path>", "PDF 保存路径")
-    .option("--yes", "确认发起编译"))
-    .action(async (projectKey: string, filePath: string, options: FormatOptions & { version: string; output: string; yes?: boolean }) => runCommand(runtime, options, async () => {
-      requireConfirmation(options.yes === true);
+    .requiredOption("--output <path>", "PDF 保存路径"))
+    .action(async (projectKey: string, filePath: string, options: FormatOptions & { version: string; output: string }) => runCommand(runtime, options, async () => {
       const data = await service.compile(projectKey, options.version, filePath, options.output);
       return { data, text: `${data.path}\t${data.bytes} bytes` };
     }));
@@ -112,19 +103,15 @@ export function registerTexCommands(
 
   addFormatOption(tex.command("write <project-key> <file-path>").description("用本地 UTF-8 正文替换项目文件并核对保存结果")
     .requiredOption("--version <version-no>", "projects 返回的版本号")
-    .requiredOption("--input <local-path>", "本地 UTF-8 文件路径")
-    .option("--yes", "确认替换文件正文"))
-    .action(async (projectKey: string, filePath: string, options: FormatOptions & { version: string; input: string; yes?: boolean }) => runCommand(runtime, options, async () => {
-      requireConfirmation(options.yes === true);
+    .requiredOption("--input <local-path>", "本地 UTF-8 文件路径"))
+    .action(async (projectKey: string, filePath: string, options: FormatOptions & { version: string; input: string }) => runCommand(runtime, options, async () => {
       const data = await service.write(projectKey, options.version, filePath, options.input);
       return { data, text: `${data.path}\t${data.bytes} bytes` };
     }));
 
   addFormatOption(tex.command("upload <project-key> <local-file>").description("上传单个文件到项目根目录，同名文件直接替换并核对内容")
-    .requiredOption("--version <version-no>", "projects 返回的版本号")
-    .option("--yes", "确认上传指定文件并替换同名文件"))
-    .action(async (projectKey: string, localFile: string, options: FormatOptions & { version: string; yes?: boolean }) => runCommand(runtime, options, async () => {
-      requireConfirmation(options.yes === true);
+    .requiredOption("--version <version-no>", "projects 返回的版本号"))
+    .action(async (projectKey: string, localFile: string, options: FormatOptions & { version: string }) => runCommand(runtime, options, async () => {
       const data = await service.upload(projectKey, options.version, localFile);
       return { data, text: `${data.path}\t${data.fileKey}\t${data.bytes} bytes` };
     }));

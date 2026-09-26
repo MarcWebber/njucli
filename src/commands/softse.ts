@@ -2,7 +2,6 @@ import type { Command } from "commander";
 
 import type { NjuServices } from "../app/services.js";
 import { addFormatOption, runCommand, type CommandRuntime, type FormatOptions } from "../core/command.js";
-import { requireConfirmation } from "../core/confirmation.js";
 import { optionalPositiveInteger } from "./options.js";
 import {
   softSeAssignmentsText,
@@ -16,10 +15,6 @@ import {
 
 interface PageOptions extends FormatOptions {
   page?: string;
-}
-
-interface MutationOptions extends FormatOptions {
-  yes?: boolean;
 }
 
 export function registerSoftSeCommands(
@@ -74,10 +69,8 @@ export function registerSoftSeCommands(
       return { data, text: softSeGradesText(data) };
     }));
 
-  addFormatOption(softse.command("enroll <course-id>").description("提交一次 SoftSE 自助选课")
-    .option("--yes", "确认加入课程"))
-    .action(async (courseId: string, options: MutationOptions) => runCommand(runtime, options, async () => {
-      requireConfirmation(options.yes === true);
+  addFormatOption(softse.command("enroll <course-id>").description("提交一次 SoftSE 自助选课"))
+    .action(async (courseId: string, options: FormatOptions) => runCommand(runtime, options, async () => {
       const data = await service.enroll(
         courseId,
         runtime.environment.NJUCLI_SOFTSE_ENROLMENT_KEY,

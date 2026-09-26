@@ -1,7 +1,6 @@
 import { load, type CheerioAPI } from "cheerio";
 
 import { AppError } from "../../core/errors.js";
-import { parseUrl } from "../../core/url.js";
 import type {
   ArticleListParserContext,
   ArticleParserContext,
@@ -163,32 +162,16 @@ export function parsePublishedOn(value: string, source: CampusSourceId, contract
   return normalized;
 }
 
-function resolveOfficialUrl(value: string, base: URL, source: CampusSource): URL {
-  const url = parseUrl(value, base);
-  if (!url) throw schemaChanged(source.id, "article-link", "valid URL");
-
-  if (url.host !== new URL(source.origin).host) {
-    throw schemaChanged(source.id, "article-link", "allowlisted host");
-  }
+function resolveUrl(value: string, base: URL): URL {
+  const url = new URL(value, base);
   url.protocol = "https:";
-  url.username = "";
-  url.password = "";
   url.hash = "";
   return url;
 }
 
-export function resolveListedArticleUrl(
-  value: string,
-  base: URL,
-  source: CampusSource,
-): URL | null {
-  const url = parseUrl(value, base);
-  if (!url) throw schemaChanged(source.id, "article-link", "valid URL");
-  if (url.protocol !== "http:" && url.protocol !== "https:") {
-    throw schemaChanged(source.id, "article-link", "HTTP URL");
-  }
-  if (url.host !== new URL(source.origin).host) return null;
-  return resolveOfficialUrl(value, base, source);
+export function resolveListedArticleUrl(value: string, base: URL, source: CampusSource): URL | null {
+  const url = resolveUrl(value, base);
+  return url.host === new URL(source.origin).host ? url : null;
 }
 
 export function encodeArticleId(source: CampusSourceId, section: string, url: URL): string {
@@ -247,44 +230,16 @@ function extractAttachments(
   bodySelector: string,
   context: ArticleParserContext,
 ): CampusAttachment[] {
-  const attachments: CampusAttachment[] = [];
-  const seen = new Set<string>();
-
-  $(bodySelector)
-    .first()
-    .find("a[href]")
-    .each((_index, element) => {
-      const link = $(element);
-      const href = link.attr("href")?.trim();
-      if (!href || (!ATTACHMENT_PATH_PATTERN.test(href) && !ATTACHMENT_EXTENSION_PATTERN.test(href))) return;
-
-      const url = resolveOfficialUrl(href, context.requestUrl, context.source);
-      if (seen.has(url.href)) return;
-      seen.add(url.href);
-
-      const title = normalizeInlineText(link.attr("title") ?? link.text()) || decodeURIComponent(url.pathname.split("/").at(-1) ?? "附件");
-      attachments.push({
-        title,
-        url: url.href,
-      });
-    });
-
-  $(bodySelector)
-    .first()
-    .find("[pdfsrc]")
-    .each((_index, element) => {
-      const node = $(element);
-      const href = node.attr("pdfsrc")?.trim();
-      if (!href) return;
-      const url = resolveOfficialUrl(href, context.requestUrl, context.source);
-      if (seen.has(url.href)) return;
-      seen.add(url.href);
-      const title = normalizeInlineText(node.attr("id") ?? "") || decodeURIComponent(url.pathname.split("/").at(-1) ?? "附件");
-      attachments.push({
-        title,
-        url: url.href,
-      });
-    });
-
-  return attachments;
+  const attachments = new Map<string, CampusAttachment>();
+  $(bodySelector).first().find("a[href], [pdfsrc]").each((_index, element) => {
+    const node = $(element);
+    const pdf = node.attr("pdfsrc");
+    const href = pdf ?? node.attr("href")!;
+    if (!pdf && !ATTACHMENT_PATH_PATTERN.test(href) && !ATTACHMENT_EXTENSION_PATTERN.test(href)) return;
+    const url = resolveUrl(href, context.requestUrl);
+    const title = normalizeInlineText(pdf ? node.attr("id") ?? "" : node.attr("title") ?? node.text()) ||
+      decodeURIComponent(url.pathname.split("/").at(-1) ?? "附件");
+    if (!attachments.has(url.href)) attachments.set(url.href, { title, url: url.href });
+  });
+  return [...attachments.values()];
 }

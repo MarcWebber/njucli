@@ -1,4 +1,4 @@
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 
@@ -14,20 +14,23 @@ export async function readJsonFile<T>(path: string): Promise<T | undefined> {
 export async function writeJsonFile(
   path: string,
   value: unknown,
-  mode = 0o600,
 ): Promise<void> {
-  await mkdir(dirname(path), { recursive: true, mode: 0o700 });
+  await mkdir(dirname(path), { recursive: true });
   const temporaryPath = `${path}.${randomUUID()}.tmp`;
-  await writeFile(temporaryPath, `${JSON.stringify(value, null, 2)}\n`, { mode });
+  await writeFile(temporaryPath, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
   await rename(temporaryPath, path);
 }
 
-export async function removePath(path: string): Promise<void> {
-  await rm(path, { recursive: true, force: true });
-}
-
-export async function saveFile(path: string, content: string | Uint8Array): Promise<{ path: string; bytes: number }> {
+export async function saveFile(path: string, content: string | Uint8Array | AsyncIterable<Uint8Array>): Promise<{ path: string; bytes: number }> {
   const target = resolve(path);
-  await writeFile(target, content, { mode: 0o600 });
-  return { path: target, bytes: Buffer.byteLength(content) };
+  let bytes = 0;
+  const chunks = typeof content === "string" || content instanceof Uint8Array ? [content] : content;
+  async function* counted() {
+    for await (const chunk of chunks) {
+      bytes += Buffer.byteLength(chunk);
+      yield chunk;
+    }
+  }
+  await writeFile(target, counted(), { mode: 0o600 });
+  return { path: target, bytes };
 }

@@ -21,6 +21,5 @@ export const researchSource = defineCampusSource({
   name: "南京大学科学技术研究院",
   origin: "https://scit.nju.edu.cn",
   sections: [{ id: "notifications", name: "通知公告", path: "/10916/listm.htm" }],
-  articlePathPattern: /^\/[0-9a-f]{2}\/[0-9a-f]{2}\/c\d+a\d+\/pagem\.htm$/i,
   parser,
 });

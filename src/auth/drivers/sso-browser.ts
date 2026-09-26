@@ -1,5 +1,4 @@
 import type { AccountRecord } from "../../account/types.js";
-import { parseUrl } from "../../core/url.js";
 import {
   withBrowserSession,
 } from "../browser-session.js";
@@ -11,24 +10,24 @@ const LANDING_HOST = "ehall.nju.edu.cn";
 const LOGIN_URL = `https://${AUTH_HOST}/authserver/login?service=${encodeURIComponent(LANDING_URL)}`;
 const LOGOUT_URL = `https://${AUTH_HOST}/authserver/logout`;
 
-export class SsoBrowserSessionDriver implements AuthSessionDriver {
+export const ssoSessionDriver = {
   login(account: AccountRecord): Promise<boolean> {
     return withBrowserSession(account, false, async (session) => {
-      await session.login(LOGIN_URL, (url) => isLandingPage(url.href));
+      await session.login(LOGIN_URL, isLandingPage);
       return true;
     });
-  }
+  },
 
   probe(account: AccountRecord): Promise<boolean> {
     return withBrowserSession(account, true, async (session) => {
       const page = await session.page();
       await page.goto(LOGIN_URL, { waitUntil: "domcontentloaded" });
-      const url = parseUrl(page.url());
-      if (url?.hostname === AUTH_HOST) return false;
-      if (!isLandingPage(page.url())) throw new Error("SSO 状态探测返回了未知页面");
+      const url = new URL(page.url());
+      if (url.hostname === AUTH_HOST) return false;
+      if (!isLandingPage(url)) throw new Error("SSO 状态探测返回了未知页面");
       return true;
     });
-  }
+  },
 
   logout(account: AccountRecord): Promise<void> {
     return withBrowserSession(account, true, async (session) => {
@@ -39,10 +38,9 @@ export class SsoBrowserSessionDriver implements AuthSessionDriver {
         await session.clearCookies();
       }
     });
-  }
-}
+  },
+} satisfies AuthSessionDriver;
 
-function isLandingPage(value: string): boolean {
-  const url = parseUrl(value);
-  return url?.hostname === LANDING_HOST && url.pathname === new URL(LANDING_URL).pathname;
+function isLandingPage(url: URL): boolean {
+  return url.hostname === LANDING_HOST && url.pathname === new URL(LANDING_URL).pathname;
 }

@@ -1,15 +1,7 @@
 import { AppError } from "../../core/errors.js";
 import { requiredText } from "../../core/guards.js";
 import type { FetchLike, FetchResponse } from "../../core/types.js";
-import { urlHostname } from "../../core/url.js";
-import {
-  OPAC_BASE_URL,
-  bookInfoEnvelopeSchema,
-  holdingSchema,
-  holdingsEnvelopeSchema,
-  loansEnvelopeSchema,
-  searchEnvelopeSchema,
-} from "./contract.js";
+import { OPAC_BASE_URL, type BookRow, type HoldingRow, type LoanRow } from "./contract.js";
 import type {
   LibraryBookDetail,
   LibraryBookSummary,
@@ -37,7 +29,7 @@ export class NjuOpacClient {
     pageSize = 20,
   ): Promise<LibrarySearchPage> {
     const normalizedQuery = requiredText(query, "query");
-    const value = await this.json("/meta-local/opac/search/", {
+    const data = await this.json<{ actualTotal: number; dataList: BookRow[] }>("/meta-local/opac/search/", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -56,42 +48,35 @@ export class NjuOpacClient {
         pageSize,
       }),
     });
-    const parsed = searchEnvelopeSchema.parse(value);
-    assertBusinessCode(parsed.code, parsed.msg, "search");
     return {
-      total: parsed.data.actualTotal,
-      items: parsed.data.dataList.map(mapBookSummary),
+      total: Number(data.actualTotal),
+      items: data.dataList.map(mapBookSummary),
     };
   }
 
   async holdings(bookId: string): Promise<LibraryHolding[]> {
     const id = requiredText(bookId, "bookId");
-    const value = await this.json(
+    const data = await this.json<{ holdings: string }>(
       `/meta-local/opac/bibs/${encodeURIComponent(id)}/holdings`,
     );
-    const parsed = holdingsEnvelopeSchema.parse(value);
-    assertBusinessCode(parsed.code, parsed.msg, "holdings");
-    const rows = holdingSchema.array().parse(JSON.parse(parsed.data.holdings));
+    const rows = JSON.parse(data.holdings) as HoldingRow[];
     return rows.map((row) => ({
       callNumber: row.callNo,
       library: clean(row.library),
       location: row.location,
       shelfMark: clean(row.shelfMark),
       status: row.status,
-      available: row.itemsAvailable > 0,
+      available: Number(row.itemsAvailable) > 0,
     }));
   }
 
   async book(bookId: string): Promise<LibraryBookDetail> {
     const id = requiredText(bookId, "bookId");
-    const [value, holdings] = await Promise.all([
-      this.json(`/meta-local/opac/bibs/${encodeURIComponent(id)}/infos`),
+    const [data, holdings] = await Promise.all([
+      this.json<{ map: { baseInfo: { map: { title: string; author?: string | null } } } }>(`/meta-local/opac/bibs/${encodeURIComponent(id)}/infos`),
       this.holdings(id),
     ]);
-    const parsed = bookInfoEnvelopeSchema.parse(value);
-    assertBusinessCode(parsed.code, parsed.msg, "book-info");
-
-    const base = parsed.data.map.baseInfo.map;
+    const base = data.map.baseInfo.map;
     return {
       bookId: id,
       title: base.title,
@@ -104,17 +89,17 @@ export class NjuOpacClient {
   }
 
   async loans(page = 1, pageSize = 50): Promise<LibraryLoan[]> {
-    const value = await this.json(
-      `/meta-local/opac/users/loans?page=${page}&pageSize=${pageSize}`,
-    );
-    const parsed = loansEnvelopeSchema.parse(value);
-    assertBusinessCode(parsed.code, parsed.msg, "loans");
-    return parsed.data.map(mapLoan);
+    const rows = await this.json<LoanRow[]>(`/meta-local/opac/users/loans?page=${page}&pageSize=${pageSize}`);
+    return rows.map(mapLoan);
   }
 
-  private async json(path: string, init?: RequestInit): Promise<unknown> {
+  private async json<T>(path: string, init?: RequestInit): Promise<T> {
     const response = await this.request(path, init);
-    return JSON.parse(await response.text()) as unknown;
+    const result = JSON.parse(await response.text()) as { code: string | number; msg?: string; data: T };
+    const code = Number(result.code);
+    if (code === 401 || code === 403) throw opacAuthRequired();
+    if (code !== 0 && code !== 200) throw new Error(result.msg || `图书馆请求失败 (${code}): ${path}`);
+    return result.data;
   }
 
   private async request(path: string, init?: RequestInit): Promise<FetchResponse> {
@@ -129,7 +114,7 @@ export class NjuOpacClient {
       }
       throw opacAuthRequired();
     }
-    if (response.status === 401 || urlHostname(response.url) === "authserver.nju.edu.cn") {
+    if (response.status === 401 || new URL(response.url).hostname === "authserver.nju.edu.cn") {
       throw opacAuthRequired();
     }
     if (!response.ok) {
@@ -139,31 +124,23 @@ export class NjuOpacClient {
   }
 }
 
-function mapBookSummary(row: import("zod").infer<typeof import("./contract.js").searchBookSchema>): LibraryBookSummary {
+function mapBookSummary(row: BookRow): LibraryBookSummary {
   return {
-    bookId: row.bibId,
+    bookId: String(row.bibId),
     title: row.title,
     author: clean(row.author),
     callNumbers: row.callno ?? [],
-    totalCopies: row.itemCount,
-    availableCopies: row.circCount,
+    totalCopies: Number(row.itemCount),
+    availableCopies: Number(row.circCount),
   };
 }
 
-function mapLoan(row: import("zod").infer<typeof import("./contract.js").loanSchema>): LibraryLoan {
+function mapLoan(row: LoanRow): LibraryLoan {
   return {
     title: row.title,
     dueOn: row.dueDate.slice(0, 10),
-    overdue: row.isOverdue !== 0,
+    overdue: Number(row.isOverdue) !== 0,
   };
-}
-
-function assertBusinessCode(code: number, message: string | null | undefined, action: string): void {
-  if (code === 0 || code === 200) return;
-  if (code === 401 || code === 403) {
-    throw opacAuthRequired();
-  }
-  throw new Error(message?.trim() || `图书馆 ${action} 请求失败 (${code})`);
 }
 
 function opacAuthRequired(): AppError {

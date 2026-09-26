@@ -25,11 +25,6 @@ export function parseAuthCapability(value: string): AuthCapability {
   return value as AuthCapability;
 }
 
-export function orderCapabilities(capabilities: Iterable<AuthCapability>): AuthCapability[] {
-  const requested = new Set(capabilities);
-  return AUTH_CAPABILITIES.filter((capability) => requested.has(capability));
-}
-
 export function dependsOn(
   capability: AuthCapability,
   ancestor: AuthCapability,

@@ -1,14 +1,9 @@
-import { mkdir } from "node:fs/promises";
+import { mkdir, rm } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
-
 import { AppError } from "../core/errors.js";
-import { readJsonFile, removePath, writeJsonFile } from "../core/fs.js";
-import { isRecord } from "../core/guards.js";
+import { readJsonFile, writeJsonFile } from "../core/fs.js";
 import type { AccountRecord } from "./types.js";
-
-const DEFAULT_ACCOUNT = "default";
-const ACCOUNT_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 
 interface AccountRegistry {
   current: string | null;
@@ -16,173 +11,62 @@ interface AccountRegistry {
 }
 
 export class AccountStore {
-  private readonly configRoot: string;
-  private readonly dataRoot: string;
-  private readonly selectedByEnvironment: string | null;
-  private readonly registryPath: string;
-
-  constructor(options: {
-    configRoot?: string;
-    dataRoot?: string;
-    env?: Readonly<Record<string, string | undefined>>;
-  } = {}) {
-    const env = options.env ?? process.env;
-    const home = homedir();
-    this.configRoot = options.configRoot ?? join(env.XDG_CONFIG_HOME || join(home, ".config"), "njucli");
-    this.dataRoot = options.dataRoot ?? join(env.XDG_DATA_HOME || join(home, ".local", "share"), "njucli");
-    this.registryPath = join(this.configRoot, "accounts.json");
-
-    const selected = env.NJUCLI_ACCOUNT?.trim();
-    this.selectedByEnvironment = selected ? validateAccountName(selected) : null;
-  }
+  private readonly configRoot = join(process.env.XDG_CONFIG_HOME || join(homedir(), ".config"), "njucli");
+  private readonly dataRoot = join(process.env.XDG_DATA_HOME || join(homedir(), ".local", "share"), "njucli");
+  private readonly selected = process.env.NJUCLI_ACCOUNT?.trim() || undefined;
+  private readonly registryPath = join(this.configRoot, "accounts.json");
 
   async current(): Promise<AccountRecord> {
     const registry = await this.readRegistry();
-
-    if (this.selectedByEnvironment) {
-      if (!registry.accounts.includes(this.selectedByEnvironment)) {
-        throw new AppError(
-          "ACCOUNT_NOT_FOUND",
-          `NJUCLI_ACCOUNT 指定的账号不存在: ${this.selectedByEnvironment}`,
-          { hint: `运行 njucli account add ${this.selectedByEnvironment}` },
-        );
-      }
-      return this.paths(this.selectedByEnvironment);
-    }
-
-    if (registry.accounts.length === 0) {
-      return this.addToRegistry(registry, DEFAULT_ACCOUNT);
-    }
-
-    if (!registry.current) {
-      throw new AppError("ACCOUNT_NOT_FOUND", "账号索引没有设置当前账号", {
-        hint: "运行 njucli account use <name>",
-      });
-    }
-
-    return this.paths(registry.current);
+    if (this.selected) return this.existing(registry, this.selected);
+    if (!registry.accounts.length) return this.add("default");
+    return this.paths(registry.current ?? registry.accounts[0]!);
   }
 
   async list(): Promise<AccountRecord[]> {
-    const registry = await this.readRegistry();
-    return registry.accounts
-      .slice()
-      .sort((left, right) => left.localeCompare(right, "en"))
-      .map((account) => this.paths(account));
+    return (await this.readRegistry()).accounts.sort().map((name) => this.paths(name));
   }
 
   async add(name: string): Promise<AccountRecord> {
-    const validatedName = validateAccountName(name);
+    name = name.trim();
+    if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(name)) throw new AppError("INVALID_INPUT", "账号名应为 1–64 个字母、数字、点、下划线或连字符，以字母或数字开头");
     const registry = await this.readRegistry();
-    if (registry.accounts.includes(validatedName)) {
-      throw new AppError("ACCOUNT_EXISTS", `账号已存在: ${validatedName}`);
-    }
-    return this.addToRegistry(registry, validatedName);
+    if (registry.accounts.includes(name)) throw new AppError("ACCOUNT_EXISTS", `账号已存在: ${name}`);
+    const account = this.paths(name);
+    await mkdir(account.configDir, { recursive: true });
+    await mkdir(account.browserDataDir, { recursive: true });
+    await writeJsonFile(this.registryPath, { current: name, accounts: [...registry.accounts, name] });
+    return account;
   }
 
   async use(name: string): Promise<AccountRecord> {
-    const validatedName = validateAccountName(name);
     const registry = await this.readRegistry();
-    if (!registry.accounts.includes(validatedName)) {
-      throw new AppError("ACCOUNT_NOT_FOUND", `账号不存在: ${validatedName}`, {
-        hint: `运行 njucli account add ${validatedName}`,
-      });
-    }
-
-    await this.writeRegistry({ ...registry, current: validatedName });
-    return this.paths(validatedName);
+    const account = this.existing(registry, name.trim());
+    await writeJsonFile(this.registryPath, { ...registry, current: account.name });
+    return account;
   }
 
-  async remove(name: string, clearCredentials: (account: AccountRecord) => Promise<void>): Promise<void> {
-    const validatedName = validateAccountName(name);
+  async remove(name: string): Promise<void> {
     const registry = await this.readRegistry();
-    if (!registry.accounts.includes(validatedName)) {
-      throw new AppError("ACCOUNT_NOT_FOUND", `账号不存在: ${validatedName}`);
-    }
-
-    if (
-      this.selectedByEnvironment === validatedName ||
-      registry.current === validatedName
-    ) {
-      throw new AppError("ACCOUNT_IN_USE", `不能删除当前账号: ${validatedName}`, {
-        hint: "先运行 njucli account use <other-name>",
-      });
-    }
-
-    const accounts = registry.accounts.filter((account) => account !== validatedName);
-    const paths = this.paths(validatedName);
-    await clearCredentials(paths);
-    await this.writeRegistry({ ...registry, accounts });
-
-    await removePath(paths.configDir);
-    await removePath(dirname(paths.browserDataDir));
-  }
-
-  private async addToRegistry(
-    registry: AccountRegistry,
-    name: string,
-  ): Promise<AccountRecord> {
-    const paths = this.paths(name);
-
-    await mkdir(paths.configDir, { recursive: true, mode: 0o700 });
-    await mkdir(paths.browserDataDir, { recursive: true, mode: 0o700 });
-
-    await this.writeRegistry({
-      current: name,
-      accounts: [...registry.accounts, name],
+    const account = this.existing(registry, name.trim());
+    const accounts = registry.accounts.filter((entry) => entry !== account.name);
+    await rm(account.configDir, { recursive: true, force: true });
+    await rm(dirname(account.browserDataDir), { recursive: true, force: true });
+    await writeJsonFile(this.registryPath, {
+      accounts, current: registry.current === account.name ? accounts[0] ?? null : registry.current,
     });
-    return paths;
   }
 
   private async readRegistry(): Promise<AccountRegistry> {
-    const value = await readJsonFile<unknown>(this.registryPath);
-    if (value === undefined) return emptyRegistry();
-    if (!isAccountRegistry(value)) {
-      throw new AppError("INVALID_INPUT", "账号索引格式无效", {
-        details: { path: this.registryPath },
-      });
-    }
-    return value;
+    return await readJsonFile<AccountRegistry>(this.registryPath) ?? { current: null, accounts: [] };
   }
 
-  private async writeRegistry(registry: AccountRegistry): Promise<void> {
-    await writeJsonFile(this.registryPath, registry);
+  private existing(registry: AccountRegistry, name: string): AccountRecord {
+    if (!registry.accounts.includes(name)) throw new AppError("ACCOUNT_NOT_FOUND", `账号不存在: ${name}`);
+    return this.paths(name);
   }
 
   private paths(name: string): AccountRecord {
-    return {
-      name,
-      configDir: join(this.configRoot, "accounts", name),
-      browserDataDir: join(this.dataRoot, "accounts", name, "browser"),
-    };
+    return { name, configDir: join(this.configRoot, "accounts", name), browserDataDir: join(this.dataRoot, "accounts", name, "browser") };
   }
-}
-
-function validateAccountName(name: string): string {
-  const normalized = name.trim();
-  if (!ACCOUNT_NAME_PATTERN.test(normalized)) {
-    throw new AppError(
-      "INVALID_INPUT",
-      "账号名只能包含字母、数字、点、下划线和连字符，且最长 64 个字符",
-    );
-  }
-  return normalized;
-}
-
-function emptyRegistry(): AccountRegistry {
-  return { current: null, accounts: [] };
-}
-
-function isAccountRegistry(value: unknown): value is AccountRegistry {
-  if (!isRecord(value)) return false;
-  if (!(value.current === null || typeof value.current === "string")) return false;
-  if (!Array.isArray(value.accounts)) return false;
-
-  const names = new Set<string>();
-  for (const account of value.accounts) {
-    if (typeof account !== "string" || !ACCOUNT_NAME_PATTERN.test(account) || names.has(account)) return false;
-    names.add(account);
-  }
-
-  return value.current === null || names.has(value.current);
 }

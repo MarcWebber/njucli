@@ -13,26 +13,26 @@ AI 负责撰写、修改和排版；`njucli tex` 负责官方平台上的读写�
 
 读取可以使用已注册的 `tex_projects`、`tex_templates`、`tex_files`、`tex_read`、`tex_log` MCP 工具。写入使用 CLI；仅支持 MCP、不能执行本机命令的宿主暂时只能读取。
 
-认证提示按 CLI JSON 返回的 `auth_command` 处理。账号输入、验证码或扫码由用户在 CLI 专用 Chrome 的官方页面完成，程序统一等待认证成功落地，等待上限为 3 分钟；随后由 TeX 的 `user/info` 核对会话。同一账号的命令串行执行，共用该账号的浏览器目录。
+首次使用 `njucli auth login tex --username "统一认证账号" --password "统一认证密码"`，或以 `--credentials` 导入含 `username/password` 的 JSON。本地账号目录的 `auth.json` 以 0600 权限保存凭据，后续会话失效时自动登录。CLI 自动填写官方表单，验证码或扫码由本人完成；随后由 TeX 的 `user/info` 核对会话。同一账号的命令串行执行，共用专用浏览器目录。
 
 ## 项目与正文
 
 从 `njucli tex projects --format json` 的 `data.items` 取得 `projectKey`、`versionNo`；从 `files` 的 `data` 数组取得 `path`、`fileKey`。读正文使用 `fileKey`，写正文和编译使用 `path`，两者不能互换。对新论文先确认标题、学位层次和适用模板；`templates` 的模板不等于学校当前认可的毕业论文规范。
 
-新项目使用 `njucli tex create "论文标题" --yes --format json`；按模板创建时，先用 `templates --format json` 查询真实 `key`，再运行 `njucli tex from-template TEMPLATE_KEY --yes --format json`。两者从返回的 `data` 获取新项目和版本，不借用示例标识。
+新项目使用 `njucli tex create "论文标题" --format json`；按模板创建时，先用 `templates --format json` 查询真实 `key`，再运行 `njucli tex from-template TEMPLATE_KEY --format json`。两者从返回的 `data` 获取新项目和版本，不借用示例标识。
 
 常用写作链路：读取目标源文件 → 在本地修改 UTF-8 正文 → `write` 保存已有文件，或 `upload` 添加新文件 → `compile` → 检查 PDF。修改已有项目时，可用 `download PROJECT --version VERSION --output ./source.zip` 保存源码副本，输出路径由用户指定。使用用户提供或可核实的研究内容、数据与参考文献；不编造实验、引用或已完成的研究结论。
 
 ```bash
 njucli tex files PROJECT --version VERSION --format json
 njucli tex read PROJECT FILE_KEY --version VERSION --format json
-njucli tex write PROJECT main.tex --version VERSION --input ./main.tex --yes --format json
-njucli tex upload PROJECT ./chapter-introduction.tex --version VERSION --yes --format json
-njucli tex compile PROJECT main.tex --version VERSION --output ./paper.pdf --yes --format json
+njucli tex write PROJECT main.tex --version VERSION --input ./main.tex --format json
+njucli tex upload PROJECT ./chapter-introduction.tex --version VERSION --format json
+njucli tex compile PROJECT main.tex --version VERSION --output ./paper.pdf --format json
 njucli tex log PROJECT --version VERSION --format json
 ```
 
-示例大写标识必须替换成查询结果。`write` 替换整个目标文本文件；修改前读取原文，保留任务之外的内容。用户授权了明确项目和写作任务后才能传 `--yes`；插件安装本身不是写入授权。
+示例大写标识必须替换成查询结果。`write` 替换整个目标文本文件；修改前读取原文，保留任务之外的内容。按用户指定项目和写作任务直接执行。
 
 ## 插图与引用
 

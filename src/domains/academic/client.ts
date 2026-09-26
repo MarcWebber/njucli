@@ -1,5 +1,4 @@
 import { AppError } from "../../core/errors.js";
-import { isRecord } from "../../core/guards.js";
 import type { FetchLike, FetchResponse } from "../../core/types.js";
 import type {
   GraduateExam,
@@ -54,11 +53,7 @@ export class GraduateAcademicClient {
   async exams(termId?: string): Promise<GraduateExam[]> {
     const studentId = await this.studentId();
     await this.prepare("exams");
-    const termsValue = await this.json(this.url("exams", "modules/ksxxck/getXnxqList.do"));
-    if (!isRecord(termsValue) || !Array.isArray(termsValue.datas) || !termsValue.datas.every(isRecord)) {
-      throw schemaChanged("考试学期列表");
-    }
-    const terms = termsValue.datas;
+    const { datas: terms } = await this.json<{ datas: Row[] }>(this.url("exams", "modules/ksxxck/getXnxqList.do"));
     const selectedTerm = termId?.trim() || value(terms[0], "DM");
     if (!selectedTerm) throw new AppError("NOT_FOUND", "没有可查询的考试学期");
     const common = [
@@ -128,7 +123,7 @@ export class GraduateAcademicClient {
         "facx",
         new URLSearchParams({ DM: planId }),
       ),
-      this.post(
+      this.post<{ falxdykclbxfyqResults: Row[] }[]>(
         "plan",
         "modules/pyfaxq/wdFacxPyfakclbxfyqcx.do",
         new URLSearchParams({ FADM: planId }),
@@ -150,7 +145,7 @@ export class GraduateAcademicClient {
       name: value(header, "FAMC"),
       gradeYear: value(header, "NJDM"),
       departmentCode: value(header, "YXDM"),
-      requirements: planRequirements(requirementValue).map((row) => ({
+      requirements: requirementValue[0]!.falxdykclbxfyqResults.map((row) => ({
         category: required(row, "KCLBDM_DISPLAY"),
         minimumCredits: numberValue(row, "ZDXF"),
         maximumCredits: numberValue(row, "ZGXF"),
@@ -193,10 +188,7 @@ export class GraduateAcademicClient {
     await this.prepare("schedule");
     const url = this.url("schedule", "wdkcb/initXsxx.do");
     url.search = new URLSearchParams({ XH: "" }).toString();
-    const result = await this.json(url);
-    if (!isRecord(result) || !Array.isArray(result.data) || !isRecord(result.data[0])) {
-      throw schemaChanged("研究生身份");
-    }
+    const result = await this.json<{ data: Row[] }>(url);
     return required(result.data[0], "XH");
   }
 
@@ -212,11 +204,12 @@ export class GraduateAcademicClient {
     action: string,
     form: URLSearchParams,
   ): Promise<Row[]> {
-    return this.post(app, path, form).then((value) => rows(value, action));
+    return this.post<{ datas: Record<string, { rows: Row[] }> }>(app, path, form)
+      .then((value) => value.datas[action]!.rows);
   }
 
-  private async post(app: AppName, path: string, form: URLSearchParams): Promise<unknown> {
-    return this.json(this.url(app, path), {
+  private async post<T>(app: AppName, path: string, form: URLSearchParams): Promise<T> {
+    return this.json<T>(this.url(app, path), {
       method: "POST",
       headers: {
         "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
@@ -230,9 +223,9 @@ export class GraduateAcademicClient {
     return new URL(`${APPS[app].root}/${path}`, BASE);
   }
 
-  private async json(url: string | URL, init?: RequestInit): Promise<unknown> {
+  private async json<T>(url: string | URL, init?: RequestInit): Promise<T> {
     const response = await this.request(url, init);
-    return JSON.parse(await response.text()) as unknown;
+    return JSON.parse(await response.text()) as T;
   }
 
   private async request(url: string | URL, init?: RequestInit): Promise<FetchResponse> {
@@ -281,26 +274,6 @@ function condition(name: string, current: string | null): Row {
   };
 }
 
-function rows(input: unknown, action: string): Row[] {
-  if (!isRecord(input) || !isRecord(input.datas) || !isRecord(input.datas[action])) {
-    throw schemaChanged(action);
-  }
-  const value = input.datas[action].rows;
-  if (!Array.isArray(value) || !value.every(isRecord)) throw schemaChanged(action);
-  return value;
-}
-
-function planRequirements(input: unknown): Row[] {
-  if (!Array.isArray(input) || !isRecord(input[0])) {
-    throw schemaChanged("培养方案学分要求");
-  }
-  const value = input[0].falxdykclbxfyqResults;
-  if (!Array.isArray(value) || !value.every(isRecord)) {
-    throw schemaChanged("falxdykclbxfyqResults");
-  }
-  return value;
-}
-
 function required(row: Row | undefined, key: string): string {
   const result = value(row, key);
   if (result === null) throw schemaChanged(key);
@@ -310,26 +283,19 @@ function required(row: Row | undefined, key: string): string {
 function value(row: Row | undefined, key: string): string | null {
   const current = row?.[key];
   if (current === null || current === undefined || current === "") return null;
-  if (typeof current !== "string" && typeof current !== "number" && typeof current !== "boolean") {
-    throw schemaChanged(key);
-  }
   return String(current).trim() || null;
 }
 
 function numberValue(row: Row | undefined, key: string): number | null {
   const current = value(row, key);
   if (current === null) return null;
-  const parsed = Number(current);
-  if (!Number.isFinite(parsed)) throw schemaChanged(key);
-  return parsed;
+  return Number(current);
 }
 
 function booleanValue(row: Row | undefined, key: string): boolean | null {
   const current = value(row, key);
   if (current === null) return null;
-  if (current === "1" || current === "true") return true;
-  if (current === "0" || current === "false") return false;
-  throw schemaChanged(key);
+  return current === "1" || current === "true";
 }
 
 function split(input: string | null): string[] {

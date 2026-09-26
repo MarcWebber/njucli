@@ -1,5 +1,4 @@
 import { AppError } from "../../core/errors.js";
-import { isRecord } from "../../core/guards.js";
 import type { FetchLike, FetchResponse } from "../../core/types.js";
 import type {
   EHallApplicationPage,
@@ -34,47 +33,40 @@ export class EHallPortalClient {
   constructor(private readonly fetch: FetchLike) {}
 
   async hasSession(): Promise<boolean> {
-    const value = await this.json(new URL("jsonp/userInfo.json", PORTAL));
-    if (!isRecord(value) || typeof value.hasLogin !== "boolean") throw schemaChanged("hasLogin");
+    const value = await this.json<{ hasLogin: boolean }>(new URL("jsonp/userInfo.json", PORTAL));
     return value.hasLogin;
   }
 
   async services(query = ""): Promise<EHallService[]> {
     const url = new URL("jsonp/ywtb/onlineYwtbApps", PORTAL);
     url.search = new URLSearchParams({ searchKeyword: query.trim(), labels: "" }).toString();
-    const value = await this.json(url);
-    if (!isRecord(value) || value.result !== "success" || !Array.isArray(value.data) || !value.data.every(isRecord)) {
-      throw schemaChanged("服务目录");
-    }
+    const value = await this.json<{ result: string; data: Row[] }>(url);
+    if (value.result !== "success") throw new Error(`EHall 服务目录请求失败：${value.result}`);
     return value.data.map((row) => {
       const appId = required(row, "appId");
       return {
         appId,
         name: required(row, "appName"),
-        available: booleanField(row, "hasPermission"),
+        available: [true, 1, "1", "true"].includes(row.hasPermission as string | number | boolean),
         url: this.serviceLink(appId).url,
       };
     });
   }
 
   async tasks(kind: EHallTaskKind, page = 1, pageSize = 20): Promise<EHallTaskPage> {
-    const value = await this.postJson(
+    const value = await this.postJson<{ datas: Record<string, { taskData: Row[]; taskDataTotal: number }> }>(
       new URL("sys/taskCenter/taskNew/getTaskRestful.do", TASK_CENTER),
       { flag: TASK_FLAGS[kind], sourceWid: "", pageNumber: page, pageSize },
     );
     const action = TASK_ACTIONS[kind];
-    if (!isRecord(value) || !isRecord(value.datas) || !isRecord(value.datas[action])) {
-      throw schemaChanged(action);
-    }
-    const bucket = value.datas[action];
-    if (!Array.isArray(bucket.taskData) || !bucket.taskData.every(isRecord)) throw schemaChanged(action);
+    const bucket = value.datas[action]!;
     return {
       kind,
       page,
-      total: integer(bucket.taskDataTotal, "taskDataTotal"),
+      total: Number(bucket.taskDataTotal),
       items: bucket.taskData.map((row) => ({
         subject: required(row, "subject"),
-        count: optionalInteger(row.todoCount, "todoCount"),
+        count: row.todoCount == null || row.todoCount === "" ? null : Number(row.todoCount),
         priority: priority(row.priority),
         status: field(row, "processStatus"),
         node: field(row, "node_name"),
@@ -89,7 +81,7 @@ export class EHallPortalClient {
     page = 1,
     pageSize = 20,
   ): Promise<EHallApplicationPage> {
-    const value = await this.postJson(
+    const value = await this.postJson<{ datas: { rows: Row[]; totalSize: number } }>(
       new URL("sys/taskCenter/taskNew/queryProcessTrack.do", TASK_CENTER),
       {
         userId: Date.now(),
@@ -99,13 +91,10 @@ export class EHallPortalClient {
         pageSize,
       },
     );
-    if (!isRecord(value) || !isRecord(value.datas) || !Array.isArray(value.datas.rows) || !value.datas.rows.every(isRecord)) {
-      throw schemaChanged("queryProcessTrack");
-    }
     return {
       state,
       page,
-      total: integer(value.datas.totalSize, "totalSize"),
+      total: Number(value.datas.totalSize),
       items: value.datas.rows.map((row) => ({
         subject: required(row, "subject"),
         node: field(row, "nodeName"),
@@ -116,17 +105,14 @@ export class EHallPortalClient {
 
   serviceLink(appIdInput: string): EHallServiceLink {
     const appId = appIdInput.trim();
-    if (!/^\d+$/.test(appId)) {
-      throw new AppError("INVALID_INPUT", "appId 必须是数字 ID");
-    }
     return {
       appId,
-      url: new URL(`/appShow?appId=${appId}`, PORTAL).toString(),
+      url: new URL(`/appShow?${new URLSearchParams({ appId })}`, PORTAL).toString(),
     };
   }
 
-  private postJson(url: URL, body: object): Promise<unknown> {
-    return this.json(url, {
+  private postJson<T>(url: URL, body: object): Promise<T> {
+    return this.json<T>(url, {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -136,9 +122,9 @@ export class EHallPortalClient {
     });
   }
 
-  private async json(url: URL, init?: RequestInit): Promise<unknown> {
+  private async json<T>(url: URL, init?: RequestInit): Promise<T> {
     const response = await this.request(url, init);
-    return JSON.parse(await response.text()) as unknown;
+    return JSON.parse(await response.text()) as T;
   }
 
   private async request(url: URL, init?: RequestInit): Promise<FetchResponse> {
@@ -158,9 +144,6 @@ export class EHallPortalClient {
 function field(row: Row, key: string): string | null {
   const value = row[key];
   if (value === null || value === undefined || value === "") return null;
-  if (typeof value !== "string" && typeof value !== "number" && typeof value !== "boolean") {
-    throw schemaChanged(key);
-  }
   return String(value).trim() || null;
 }
 
@@ -168,23 +151,6 @@ function required(row: Row, key: string): string {
   const value = field(row, key);
   if (value === null) throw schemaChanged(key);
   return value;
-}
-
-function booleanField(row: Row, key: string): boolean {
-  const value = row[key];
-  if (value === true || value === 1 || value === "1" || value === "true") return true;
-  if (value === false || value === 0 || value === "0" || value === "false") return false;
-  throw schemaChanged(key);
-}
-
-function integer(value: unknown, key: string): number {
-  const result = Number(value);
-  if (!Number.isSafeInteger(result) || result < 0) throw schemaChanged(key);
-  return result;
-}
-
-function optionalInteger(value: unknown, key: string): number | null {
-  return value === null || value === undefined || value === "" ? null : integer(value, key);
 }
 
 function priority(value: unknown): string | null {

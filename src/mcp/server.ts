@@ -46,6 +46,13 @@ export function createMcpServer(services: NjuServices): McpServer {
       (args) => mcpRead(() => operation(args)));
   }
 
+  read("software_list", "查询南京大学正版软件目录。", { query: z.string().optional() },
+    ({ query }) => services.software.list(query),
+  );
+  read("software_show", "读取软件官方说明链接及安装包列表。", { id: z.string().min(1) },
+    ({ id }) => services.software.show(id),
+  );
+
   read("course_today", "List the signed-in student's courses on one date.",
     { date: CAMPUS_DATE.optional(), termId: OPTIONAL_TERM },
     ({ date, termId }) => services.course.today(date, termId),

@@ -37,6 +37,5 @@ export const njuSource = defineCampusSource({
       listUrl: (page) => firstPageOnly(firstPage, page),
     },
   ],
-  articlePathPattern: /^\/info\/\d+\/\d+\.htm$/,
   parser,
 });

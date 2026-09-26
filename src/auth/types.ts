@@ -24,3 +24,8 @@ export interface AuthSessionDriver {
   probe(account: AccountRecord): Promise<boolean>;
   logout?(account: AccountRecord): Promise<void>;
 }
+
+export interface AuthCredentials {
+  username: string;
+  password: string;
+}

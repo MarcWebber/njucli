@@ -1,26 +1,41 @@
-import input from "@inquirer/input";
-import password from "@inquirer/password";
 import type { Command } from "commander";
+import { readFile } from "node:fs/promises";
 
 import type { NjuServices } from "../app/services.js";
+import type { MailBinding } from "../domains/mail/client.js";
 import { addFormatOption, runCommand, type CommandRuntime, type FormatOptions } from "../core/command.js";
-import { requireConfirmation } from "../core/confirmation.js";
-import { AppError } from "../core/errors.js";
+import { requiredText } from "../core/guards.js";
 import { optionalPositiveInteger } from "./options.js";
 
 type ListOptions = FormatOptions & { folder?: string; unread?: boolean; limit?: string; before?: string };
 
 export function registerMailCommands(program: Command, service: NjuServices["mail"], runtime: CommandRuntime): Command {
   const mail = program.command("mail").description("绑定校园邮箱、查询邮件和下载附件（不修改已读状态）");
-  addFormatOption(mail.command("bind").description("在本机隐藏输入客户端专用密码，验证后存入系统钥匙串"))
-    .action((options: FormatOptions) => runCommand(runtime, options, async () => {
-      if (!process.stdin.isTTY) throw new AppError("USER_ACTION_REQUIRED", "请在本机交互终端运行 njucli mail bind");
-      const context = { output: process.stderr };
-      process.stderr.write("首次请在 https://mail.nju.edu.cn/ 的设置中开启 IMAP 并生成客户端专用密码。不要输入校园 SSO 密码。\n");
-      const address = await input({ message: "校园邮箱完整地址", validate: (value) => /^[^\s@]+@(?:smail\.)?nju\.edu\.cn$/i.test(value.trim()) || "请输入南大邮箱地址" }, context);
-      const secret = await password({ message: "客户端专用密码", validate: (value) => value.length > 0 || "请输入专用密码" }, context);
-      const data = await service.bind(address, secret);
+  addFormatOption(mail.command("bind").description("保存邮箱账号密码并验证 IMAP；已有凭据直接复用")
+    .option("--address <address>", "完整邮箱地址")
+    .option("--password <password>", "邮箱客户端专用密码")
+    .option("--credentials <path>", "含 address 和 password 的本地 JSON 文件"))
+    .action((options: FormatOptions & { address?: string; password?: string; credentials?: string }) => runCommand(runtime, options, async () => {
+      let credentials: MailBinding | undefined;
+      if (options.credentials) credentials = JSON.parse(await readFile(options.credentials, "utf8")) as MailBinding;
+      else if (options.address !== undefined || options.password !== undefined) credentials = {
+        ...(options.address ? { address: options.address } : {}),
+        password: requiredText(options.password ?? "", "--password"),
+      };
+      const data = await service.bind(credentials);
       return { data, text: `已绑定 ${data.address}，后续查询直接使用 IMAP` };
+    }));
+
+  addFormatOption(mail.command("accounts").description("列出当前本地账号绑定的全部邮箱"))
+    .action((options: FormatOptions) => runCommand(runtime, options, async () => {
+      const data = await service.accounts();
+      return { data, text: data.map((mailbox) => `${mailbox.current ? "* " : "  "}${mailbox.address}`).join("\n") || "尚未绑定邮箱" };
+    }));
+
+  addFormatOption(mail.command("use <address>").description("切换默认邮箱"))
+    .action((address: string, options: FormatOptions) => runCommand(runtime, options, async () => {
+      const data = await service.use(address);
+      return { data, text: `当前邮箱：${data.address}` };
     }));
 
   addFormatOption(mail.command("status").description("查看本机绑定信息，不连接邮箱"))
@@ -29,10 +44,9 @@ export function registerMailCommands(program: Command, service: NjuServices["mai
       return { data, text: data.bound ? `已绑定 ${data.address}` : "尚未绑定，运行 njucli mail bind" };
     }));
 
-  addFormatOption(mail.command("unbind").description("删除本机保存的邮箱凭据，不更改服务端设置").option("--yes", "确认解绑"))
-    .action((options: FormatOptions & { yes?: boolean }) => runCommand(runtime, options, async () => {
-      requireConfirmation(options.yes === true);
-      const data = await service.unbind();
+  addFormatOption(mail.command("unbind [address]").description("删除本机保存的邮箱凭据，不更改服务端设置"))
+    .action((address: string | undefined, options: FormatOptions) => runCommand(runtime, options, async () => {
+      const data = await service.unbind(address);
       return { data, text: data.removed ? "已删除本机邮箱凭据" : "没有已保存的邮箱凭据" };
     }));
 

@@ -1,6 +1,6 @@
 # 校园服务接口证据
 
-更新日期：2026-09-23（通用登录工具、文本输入复用与公开仓库信息）
+更新日期：2026-09-25（本地凭据、多邮箱管理与邮件读取）
 
 本文记录 NjuCLI V1 实际采用的入口、请求顺序、字段契约和证据等级。公开实现只用于发现公开站点协议；本仓库没有以第三方代码或 Git 历史为底座，也不授权绕过验证码、VPN 或访问控制。
 
@@ -25,7 +25,7 @@
 
 ## 统一身份认证
 
-交互登录共用 `BrowserSession.login / waitForLogin` 的可见页面与等待流程，站点 driver 决定成功地址和后续会话校验。SSO、selection、SoftSE、WebVPN 和 TeX 复用等待能力，验证码或扫码由用户在官方页面完成。此次为既有流程合并，远端证据沿用下方各自记录。
+登录共用 `BrowserSession.login / completeLogin` 的可见页面与等待流程。authserver 正式账号登录表单自动使用 `auth.json` 的 username/password；站点 driver 决定成功地址和会话校验。SSO、selection、SoftSE、WebVPN 和 TeX 复用等待能力，验证码或扫码由本人在官方页面完成。
 
 ### 已观察关系
 
@@ -51,13 +51,13 @@ sso -> vpn -> opac
 selection
 ```
 
-`selection` 是同一 account 浏览器目录中的独立站点会话，不是新的账号 Provider，也不声明未经证实的 SSO 依赖。登录由 account 隔离的 Playwright persistent context 承载。浏览器请求共享该 context 自己的 Cookie，但调用方不能手工注入 `Cookie` header，响应中的 `Set-Cookie` 也不会进入普通 DTO 或日志。CLI 自有会话型 Cookie 关闭前以 `0600` 权限原子保存到 account 配置目录的 `session-cookies.json`，下次启动恢复；持久 Cookie 由 Chromium 目录维护，不读取日常浏览器或延长服务端有效期。
+`selection` 使用同一 account 浏览器目录中的独立会话。登录和业务请求共用隔离的 Playwright persistent context。CLI 自有会话型 Cookie 以 0600 权限原子保存到 `session-cookies.json`，下次启动恢复；持久 Cookie 由 Chromium 目录维护。
 
-每次受保护业务执行前在线探测目标能力；缺失或 expired 的本地状态仍可尝试恢复，不以父级旧 metadata 阻断。metadata 只记录 capability/status，明确认证失败会记录 expired；`logged-out` 禁止业务命令和 status 自动恢复，指定能力的 `auth refresh` 可以显式恢复。SSO 根探针直接访问 `authserver/login?service=...`，核对既定 EHall 落地路径，不仅访问 EHall 首页。
+每次业务前在线探测目标能力，失效时自动登录并复用本地凭据。metadata 只记录 capability/status，`logged-out` 也允许后续业务登录。`auth status` 探测状态，`auth refresh` 检查并恢复会话。SSO 根探针访问 `authserver/login?service=...`，核对 EHall 落地路径。
 
-同一命令认证与业务在 `AsyncLocalStorage` 作用域内共用一个 context，统一关闭；没有时间缓存、后台 daemon、连接池或业务重放。全量 logout 始终包含 SSO，清理 CLI 自有 Cookie；远端注销失败仍进行本地清理、记录 logged-out，并返回失败，不报告远端注销成功。
+同一命令认证与业务在 `AsyncLocalStorage` 作用域内共用一个 context，结束后保存并关闭。全量 logout 包含 SSO，清理会话并记录 logged-out；本地账号密码保留供后续登录使用。
 
-体育 access token 只在当前命令执行期间使用。NjuCLI 不持久化一次性 `oauth_token`，不接收命令行密码，不把本地元数据文件存在当作在线登录成功，也不在写请求失败后重新登录并重放。
+体育 access token 只在当前命令期间使用。统一认证账号密码可通过命令参数或 JSON 导入本地。会话是否有效以在线探测为准，认证在业务之前完成，业务请求执行一次。
 
 页面导航和登录等待统一使用 `domcontentloaded`。SoftSE 的编译 CLI 跨进程、跨 15 分钟复用已验收；真实子会话过期重建未单独触发，其他能力不能随之升级。命令、时间和源码标识见[验收记录](design-v1.md#验收记录)。
 
@@ -207,7 +207,7 @@ GET /grade/report/index.php?id={courseId}
 
 `download` 使用本作业已列出的 `/pluginfile.php/...`，加 `forcedownload=1` 后读取二进制响应，并要求 `Content-Disposition: attachment`；否则不写文件。响应头/二进制由现有浏览器 transport 提供，不新增下载 Adapter。只允许同源跳转，表单响应的 307/308 不自动重发。本地保存替换指定输出文件；真实 CLI 下载尚待单独验收。
 
-自助选课页为 `/enrol/index.php?id={courseId}`。当前表单明确包含 `id`、`instance`、`sesskey`、动态 `_qf__...` 字段、可选 `enrolpassword` 与 `submitbutton`。实现不硬编码动态表单名，而是原样收集隐藏字段，要求 `--yes`，只 POST 一次，再 GET 选课页验证已加入关系。根据 [Moodle 3.10.8 官方选课页](https://github.com/moodle/moodle/blob/v3.10.8/enrol/index.php)，活跃成员会被重定向；实现要求最终为目标课程且章节结构有效，错误页和仅访客可读的课程不算成功。选课密钥只允许来自 `NJUCLI_SOFTSE_ENROLMENT_KEY`。该 mutation 尚未使用真实课程执行。
+自助选课页为 `/enrol/index.php?id={courseId}`。当前表单明确包含 `id`、`instance`、`sesskey`、动态 `_qf__...` 字段、可选 `enrolpassword` 与 `submitbutton`。实现不硬编码动态表单名，而是原样收集隐藏字段，只 POST 一次，再 GET 选课页验证已加入关系。根据 [Moodle 3.10.8 官方选课页](https://github.com/moodle/moodle/blob/v3.10.8/enrol/index.php)，活跃成员会被重定向；实现要求最终为目标课程且章节结构有效，错误页和仅访客可读的课程不算成功。选课密钥只允许来自 `NJUCLI_SOFTSE_ENROLMENT_KEY`。该 mutation 尚未使用真实课程执行。
 
 作业上传还需确认本站的 Moodle file-manager item ID、repository、文件大小/数量、multipart 上传参数与 readback。当前仅提供 `submission-link`，不上传文件，也不宣称已经提交。
 
@@ -223,7 +223,9 @@ GET /grade/report/index.php?id={courseId}
 
 2026-09-05，登录页实际加载 [njuLogin.c2e9cd.js](https://static.texpage.com/dist/nju/njuLogin.c2e9cd.js) 和 [base.85706d.js](https://static.texpage.com/dist/nju/base.85706d.js)。登录按钮仅导航 `/oauth/login`；学校授权后返回本站 `/oauth/callback`。不保存授权 code、state、Cookie 或回调完整 URL。
 
-2026-09-05 实网确认：同一 CLI 专用目录使用普通可见 Chrome，先访问 `/console` 后，`GET /api/user/info` 返回 `status.code=1`；使用无头 Chrome，即使先访问控制台仍得到安全校验 HTML。因此 `tex` 固定使用可见 Chrome，不自动切换 headless，不绕过校验或搬运日常/IAB 浏览器 Cookie。每次业务前只走 `/console` → 若落在登录页则 `/oauth/login` → `/api/user/info` 探针，与业务共用同一个 context。该 capability 依赖 `sso`，沿用 CLI 会话保存及退出规则。
+2026-09-05 实网确认：同一 CLI 专用目录使用普通可见 Chrome，先访问 `/console` 后，`GET /api/user/info` 返回 `status.code=1`；使用无头 Chrome，即使先访问控制台仍得到安全校验 HTML。因此 `tex` 固定使用可见 Chrome，不自动切换 headless，不绕过校验或搬运日常/IAB 浏览器 Cookie。每次业务前访问 `/console`，若落在登录页则进入 `/oauth/login`，等待回到 `/console` 后由 `/api/user/info` 核对。该 capability 依赖 `sso`，与业务共用同一个 context，沿用 CLI 会话保存及退出规则。
+
+2026-09-25 修复回跳等待：自动探测等待上限为 15 秒，显式登录为 3 分钟。URL 等待以导航提交为完成条件；`net::ERR_ABORTED` 或回跳等待超时不直接作为 TeX 鉴权结论，仍核对 `user/info`。共享登录入口遇到导航中断后继续等待指定落地页，其他网络及页面关闭错误保留。类型检查、构建、CLI 帮助和 9 项临时行为核对通过，未新增测试文件。编译后的 CLI 实际执行 `auth status tex` 返回 valid，`tex projects` 返回 8 个项目。没有清除真实会话或触发远端写入；自然过期后的自动恢复尚未实网验证。
 
 JSON 接口使用 `{ status: { code }, result }` envelope：`1` 为成功、`1003` 为登录失效、`1010` 为二次验证。HTML 不当作 JSON 成功；错误不触发业务重放。这些状态来自 [695 官方请求模块](https://static.texpage.com/dist/695.dd000b3124969bd596ec.js)，字符偏移约 126050；没有据可选 Authorization header 推断或提取个人 token。
 
@@ -266,7 +268,7 @@ CLI 不提取页面账号参数或上传凭据，不自行实现对象存储 SDK
 
 原生对象上传模块为 [754 官方模块](https://static.texpage.com/dist/754.61b142621fc56e55c622.js) 的模块 43680（约 29870 起）。其内部根据服务器的临时上传配置传输文件，CLI 不复制这套分支或打印配置。
 
-命令为 `tex upload <project-key> <local-file> --version <version-no> --yes`，只支持根目录单文件，同名文件默认替换，不支持文件夹或递归。新文件上传已取得 `nju-live-authenticated` 的 CLI 证据；同名替换根据官方前端接线，仍待单独授权和实网验收。上传、安装产物回读及编译结果见[验收记录](design-v1.md#验收记录)。
+命令为 `tex upload <project-key> <local-file> --version <version-no>`，只支持根目录单文件，同名文件默认替换，不支持文件夹或递归。新文件上传已取得 `nju-live-authenticated` 的 CLI 证据；同名替换根据官方前端接线，仍待单独授权和实网验收。上传、安装产物回读及编译结果见[验收记录](design-v1.md#验收记录)。
 
 ### 编译与日志
 
@@ -300,7 +302,7 @@ CLI 不提取页面账号参数或上传凭据，不自行实现对象存储 SDK
 https://yjsxk.nju.edu.cn/yjsxkapp/sys/xsxkapp/course_nju.html
 ```
 
-2026-09-05 核对的页面和研究生院选课通知均确认使用统一身份认证账号。选课站的登录页面自身包含账号、密码和验证码字段，并向本站登录接口提交；没有观察到 `authserver.nju.edu.cn` 的 CAS 跳转。因此生产装配只增加一个 `selection` session capability：它复用当前 account 的隔离浏览器目录，用户在学校页面手动完成登录和验证码，CLI 不接收这些值。
+2026-09-05 核对的页面和研究生院选课通知均确认使用统一身份认证账号。选课站的登录页面自身包含账号、密码和验证码字段，并向本站登录接口提交；没有观察到 `authserver.nju.edu.cn` 的 CAS 跳转。因此生产装配只增加一个 `selection` session capability：它复用当前 account 的隔离浏览器目录，本站登录和验证码由用户在官方页面完成；本地凭据自动填写目前接入 authserver 正式账号登录表单。
 
 登录成功后，CLI 以 `loadPublicInfo_course.do` 返回非空 `loginUserId` 和 `csrfToken` 作为在线 session 探针。退出使用页面给出的固定 `login/auth/logout.do` 地址。每次业务命令前都会执行该探针，不用本地 valid 状态跳过在线检查；本站失效后仍可能需要用户完成官方验证码，不能承诺由 CAS 自动恢复。
 
@@ -343,9 +345,9 @@ GET  /sys/xsxkapp/xsxkCourse/loadStdCourseInfo.do
 
 提交体只有教学班 ID `bjdm`、课程范围 `lx` 和当前 `csrfToken`；`plan` 对应 `lx=2`，`public` 对应 `lx=1`。`choiceCourse` 返回事务 ID 后，客户端最多读取 30 次官方异步结果；结果报告成功后，必须在已选课程中再次找到同一 `BJDM` 才返回成功。
 
-CLI 命令必须显式带 `--yes`。提交请求在网络错误、认证错误或结果不明时都不会自动重放；用户应运行 `course selected` 复核。MCP 不开放该 mutation。当前证据为 `nju-official-frontend`，尚未对真实课程执行写入，因此不能标记为 `nju-live-authenticated` mutation smoke。
+CLI 命令直接提交一次。提交请求在网络错误、认证错误或结果不明时都不会自动重放；用户应运行 `course selected` 复核。MCP 不开放该 mutation。当前证据为 `nju-official-frontend`，尚未对真实课程执行写入，因此不能标记为 `nju-live-authenticated` mutation smoke。
 
-退课契约来自已获取的官方 `courses.js` 中 `doCancelCourse`：`POST /sys/xsxkapp/xsxkCourse/cancelCourse.do`，参数 `bjdm`、`csrfToken`，同步返回 `code === 1` 表示成功。`course withdraw --yes` 固定执行已选课程确认目标、取当前 token、单次退课、已选课程确认消失；不复用选课异步结果轮询。真实退课未执行。
+退课契约来自已获取的官方 `courses.js` 中 `doCancelCourse`：`POST /sys/xsxkapp/xsxkCourse/cancelCourse.do`，参数 `bjdm`、`csrfToken`，同步返回 `code === 1` 表示成功。`course withdraw` 固定执行已选课程确认目标、取当前 token、单次退课、已选课程确认消失；不复用选课异步结果轮询。真实退课未执行。
 
 验证码只在官方页面由用户完成，不实现 OCR、绕过或命令行输入。V1 也不实现余量轮询抢课、重修课或资格校验入口。
 
@@ -476,11 +478,13 @@ V1 为八个 source 分别固定 HTTPS origin、section、列表 selector、详�
 
 ## 新契约准入
 
-后续每个远端契约至少需要当前官方页面或真实响应证据、一个明确的认证 capability 与单一 client。mutation 还必须有显式确认、唯一提交请求、人工挑战边界和 readback 标识。
+后续每个远端契约至少需要当前官方页面或真实响应证据、一个明确的认证 capability 与单一 client。mutation 需要明确目标、唯一提交请求、人工挑战条件和 readback 标识。
 
 交换项目、EHall 表单提交、SoftSE 文件上传、图书续借/预约和体育预约提交在满足上述条件前维持 `pending`，不注册空壳命令。研究生选课读取已经达到 `nju-live-authenticated`；研究生选退课与 SoftSE 自助选课写入仍需使用专门的可撤销目标完成受控 smoke，不能拿个人正式课程验证。
 
 ## 2026-09-21 核对与修正
+
+本节为历史记录：当时的钥匙串存储、参数限制和退出恢复行为已由 9 月 25 日的本地凭据实现替代，保留当日契约与验证结果。
 
 ### 邮箱
 
@@ -513,3 +517,96 @@ V1 为八个 source 分别固定 HTTPS origin、section、列表 selector、详�
 ### APP 探索
 
 [南大 APP 官方介绍](https://guide.nju.edu.cn/faq/33/06/c44791a537350/pagem.htm)确认课表、成绩、校园卡等服务；[鼓楼服务大厅](https://www.nju.edu.cn/xyfw/glfwdt.htm)列出校园卡余额、明细等在线能力。后续优先核实余额/消费流水、空闲教室等学生高频读取。此轮没有登录态下的 APP 请求证据，不据公开功能清单新增猜测 endpoint 或宣称已支持申请提交。
+
+## 正版软件下载（2026-09-25）
+
+公开只读入口：
+
+| 入口 | 已确认契约 |
+| --- | --- |
+| [南大软件目录](https://itsc.nju.edu.cn/zbrj/list.htm) | `.wp_listcolumn > .wp_column > a` 的软件栏目，15 项；软件 ID 由栏目名称规范化生成 |
+| [Adobe 说明](https://itsc.nju.edu.cn/adobe/list.htm)及其[离线下载页](https://itsc.nju.edu.cn/0e/53/c50138a593491/page.htm) | `.wp_articlecontent` 中的可见链接；32 个校内下载条目（主说明页 2 个，离线页 30 个），按 URL 去重 |
+| [Adobe CC 直接下载页](https://helpx.adobe.com/cn/download-install/apps/download-install-apps/creative-cloud-apps/download-creative-cloud-desktop-app-using-direct-links.html) | `table.dexter-Table a[href]` 中的可见下载链接，共 9 个；安装包区分平台与版本 |
+| [WPS 365](https://itsc.nju.edu.cn/WPS365/list.htm)、[MathType](https://itsc.nju.edu.cn/MathType/list.htm)、[Origin](https://itsc.nju.edu.cn/Origin_56479/list.htm) | 同一正文链接解析，分别得到 2、2、3 个校内安装包 |
+
+`software list` 返回 15 个学校栏目与单独的 `adobe-cc` 条目。`show` 分别返回说明链接和下载文件；`files[].id` 取 URL 最后两段，保留平台路径，避免 CC 不同架构的同名文件混淆。下载地址限定为页面提供的 `download.nju.edu.cn`、`ccmdl.adobe.com`、`ccmdls.adobe.com` HTTPS 链接。下载只保存文件，校园许可与安装按官方步骤完成。
+
+实网结果：源码 CLI 与本地 tarball 安装后的编译 CLI 均成功下载 `macarm64/ACCCx6_10_0_252_41.dmg`，返回 311,485,111 字节。源码 CLI 的落盘大小与服务端 Content-Length 一致，DMG 尾部 `koly` 标识与 0600 权限正确。临时安装目录与下载文件已清理；未运行安装程序。当前网络解析 `download.nju.edu.cn` 返回 ENOTFOUND，校内包完整下载仍需校园网或官方 VPN 验收。
+
+本地新增一个集成用例，覆盖目录过滤、链接去重、CC 架构 ID、流式下载、覆盖已有输出、HTML 响应拒绝及错误前保留原文件。类型检查与全部 5 个集成用例通过。
+
+同日较早的只读状态核对：`mail status` 返回 `bound:false`，当时尚未完成邮箱绑定；TeX `auth status/refresh` 均返回 valid，新进程读取 8 个项目；`auth status sso` 返回 expired。该结果证明现有 TeX 会话可复用，不能证明根会话已续期或永久免登录。NJU APP 仍处于公开入口调研层级。
+
+## 邮箱绑定向导（2026-09-24）
+
+通过官方邮箱已登录页面只读核对以下 DOM 和当前页面内联脚本，证据为 `nju-live-authenticated` 与 `nju-official-frontend`。此处为当日页面探测证据，没有生成凭据或保存设置。当前直接凭据绑定和实网读取结果见下方 9 月 25 日记录。
+
+| 环节 | 实际页面契约 |
+| --- | --- |
+| 登录 | `https://mail.nju.edu.cn/`；成功进入 `/cgi-bin/frame_html`；顶部 `#useraddr` 为完整邮箱地址 |
+| 设置 | 顶部“设置”链接；内容在 `iframe#mainFrame`；其中“客户端设置”进入客户端配置 |
+| IMAP | `input#openimap` 对应“开启IMAP/SMTP服务”；当前账号已勾选；POP 服务及收取选项是独立控件 |
+| 保存 | `a#sendbtn` 为“保存更改”；官方表单 `form#web_set` 使用 POST `/cgi-bin/setting4`，页面函数 `CheckInputCheckBox` 提交整张当前表单 |
+| 专用密码入口 | 顶部“微信绑定”进入 `setting4` 的 `setting_wx` 页面；“生成新密码”绑定 `addClientPwd` |
+| 生成 | 用户点击后，官方前端 POST `/cgi-bin/wx_token`，动作 `act=add_spwd`；请求带当前会话及安全校验字段，由页面负责生成 |
+| 一次性展示 | 前端成功条件为 `errcode == "0"`，从 `data.passwd` 构造弹窗中的 `input#authorCode`；同次响应还包含凭据记录 ID、用途与时间，登记到 `#wx_auth_table` |
+
+`domains/mail/bind.ts` 执行官方浏览器路径：登录 → 检查 IMAP → 必要时保存并回读 → 微信绑定 → 单次生成 → `MailClient.bind` 验证保存。无参数 `mail bind` 仅在没有本地邮箱凭据时使用此路径。点击前监听 POST `/cgi-bin/wx_token` 且表单 `act=add_spwd` 的本次响应，HTTP 成功且 `errcode == "0"` 时接收 `data.passwd`。IMAP 验证成功后保存到 `mail.json`。
+
+历史失败记录：2026-09-25 较早的两次浏览器绑定均在读取 `#authorCode` 弹窗时超时；其中一次已点击生成，但未确认远端生成结果，未完成 IMAP 验证或本机凭据保存。此后将接收方式改为监听官方响应。浏览器生成分支的实网闭环仍待验收；下方通过的是直接提供凭据的路径。
+
+## 本地凭据与邮箱读取（2026-09-25）
+
+`auth login [capability] --username <username> --password <password>` 或 `--credentials <json>` 将统一认证 username/password 保存到 `auth.json`。`BrowserSession` 在 authserver 正式账号表单自动填写并提交，后续业务探测失效时自动登录。此次实网已自动填写正确账号并提交，但官方滑块在 180 秒内未完成，SSO 登录未成功。
+
+`mail bind --address <address> --password <password>` 或 `--credentials <json>` 使用提供的邮箱凭据验证 IMAP 后保存。同一本地账号允许多个邮箱，`mail.json` 为 `{ current, mailboxes: [{ address, password }] }`。两份文件位于 `~/.config/njucli/accounts/<account>/`，支持 `XDG_CONFIG_HOME`，权限 0600。统一认证账号与邮箱地址独立；省略地址时使用 auth username 派生的 `username@smail.nju.edu.cn`，username 已为完整邮箱地址则直接使用。
+
+`mail accounts` 列出邮箱，`mail use <address>` 切换默认，`mail unbind [address]` 删除指定或当前邮箱。无参数 `mail bind` 复用已存凭据校验。`folders/list/search` 使用当前邮箱，`read/download` 使用邮件 ID 中对应的已绑定邮箱。日常读取通过 `imap.exmail.qq.com:993` TLS，使用 EXAMINE/BODY.PEEK 保持已读状态。
+
+| 验证层 | 实际结果 |
+| --- | --- |
+| 编译 CLI、真实 IMAP | `mail bind` 复用通过；6 个邮件夹；两页各 5 封且无重复；搜索命中；正文 410 字符；回读未读状态不变 |
+| 本地集成 | 7 个用例通过，包含多邮箱绑定与切换、默认地址派生、SSO 与邮箱独立、本地凭据保存、MIME 正文及附件 |
+| 实网附件 | 近期抽查无附件，尚未验证真实附件下载 |
+| 统一认证 | 已自动填表并提交，到达官方滑块；180 秒未完成人工挑战，登录未成功 |
+
+记录仅保留操作、数量与状态；个人邮箱、邮件内容和密码未写入仓库。
+
+## 代码精简与产物核对（2026-09-25）
+
+本轮开始时 `src/**/*.ts` 为 7,403 行，完成后为 6,637 行，净减少 766 行。统计以本轮开始时的工作区快照为基准，包含原有未提交修改；新增的本地凭据、自动登录和多邮箱代码也计入最终行数。
+
+认证协调器与账号索引直接读写本地数据；命令直接执行业务动作；领域响应使用已确认字段和就地 TypeScript 类型。体育独立解析器已合并至 client，清理了重复 schema、参数与重定向检查。业务状态码、文件格式、编译日志与写入回读继续用于确认实际结果。
+
+- `pnpm install --frozen-lockfile`、`pnpm lint`、7 项本地集成和 `git diff --check` 通过。
+- 临时本机 HTTP 核对体育预约字段归属、图书数字转换和嵌套 holdings JSON、研究生已选课程映射通过。
+- 编译 CLI 读取南大新闻列表 10 条，第一篇正文 2,187 字符；本科生院所选文章实际跳转统一认证，返回 `AUTH_REQUIRED`。
+- `npm pack --dry-run` 与实际 tarball 临时安装通过，清单 91 个文件；安装产物的帮助、邮箱绑定状态和真实邮件列表均通过。
+- MCP stdio 注册 36 个只读工具，`mail_list` 实网返回 1 封邮件。
+
+源码 SHA-256：`478920d4e4691d9c9b2500be8e5f0f9c2431b878163f321667886c781dd0d64a`。个人凭据与邮件内容未进入源码、文档或安装包。
+
+
+## 滑块与继续精简（2026-09-26）
+
+统一认证使用 CLI 专用 Chrome 和现有生产认证方法。临时脚本截图后，从滑块按钮中心执行鼠标按下、横向移动和松开；首次定位偏右失败，刷新图像后按新的拼图缺口距离拖动，官方页面验证通过并回跳办事大厅。成功结果来自 `auth.login` 的目标页面判定。
+
+- 新进程 `auth status sso --format json` 返回 `valid`，确认已保存会话可以恢复。
+- 新进程 `academic grades --format json` 返回 18 条；记录不保存成绩或身份内容。
+- 可复用路径收敛为 `skills/njucli-auth/scripts/login.mjs`（29 行），相对导入安装包中的生产模块。输入 `shot` 输出截图路径，输入 `drag x y dx` 按当前截图坐标拖动。登录完成后保存会话并退出。
+- 脚本复用已保存的凭据。截图通过 `saveFile` 写入系统临时目录，新文件权限 0600。
+
+源码本轮从 6,637 行降至 6,579 行，净减少 58 行；累计较最初 7,403 行减少 824 行。清理 AccountStore 未使用构造参数、SoftwareClient 测试专用 fetch 注入、日期未使用参数、URL 包装、无状态 driver 类、`capabilities`、`nativeFetch`、`httpCheck`、`webVpnUrl`、`removePath`，同时去掉 Cookie JSON 错误的重复包装和未使用 signal 检查。真实浏览器请求转换与领域状态判断继续承担对应生产职责。
+
+`pnpm lint`、构建和 7 项本地集成通过。本机 HTTP 测试在允许监听 127.0.0.1 的环境执行。源码 SHA-256：`013390ba00cc1b7d500acbd31a1d47c2df6c63f30b25299b504f4faaebbc5233`。
+
+
+## 第二邮箱实网验证（2026-09-26）
+
+为另一邮箱绑定用户新提供的客户端密码时，IMAP 返回认证失败，未改变旧邮箱凭据。通过临时请求观测确认：实际发送的完整地址符合用户截图，新密码与当轮输入相同，且与旧邮箱密码不同；正式服务器为 `imap.exmail.qq.com:993` TLS。
+
+在用户已登录的 Chrome 邮箱设置标签核对到目标账号的“开启 IMAP/SMTP 服务”未勾选。勾选并保存后，页面显示“设置保存成功”，回读开关为开启；同一组账号和新密码随即通过 CLI `mail bind --credentials`。此次设置操作使用官方 UI；没有复制用户浏览器 Cookie，日常查询仍使用 IMAP。
+
+新进程实测：两个邮箱分别保留，新邮箱为当前邮箱；保存的新密码与输入一致，`mail.json` 权限 0600；邮件夹 6 个，列表 3 封，正文 692 字符，读取前后未读状态相同。临时凭据文件与个人数据验证输出在完成后删除。此项验证了第二个真实邮箱的绑定和读取，浏览器自动生成客户端密码仍沿用此前未验收的状态。
+
+源码与 7 项本地集成通过；`git diff --check`、CLI 帮助、8 个校园源和 `npm pack --dry-run` 通过，打包清单为 92 个文件，含认证 Skill 与 29 行脚本。实际 tarball 安装到临时目录后，帮助、邮箱绑定状态和新邮箱 1 封列表读取通过，脚本相对导入路径保留。

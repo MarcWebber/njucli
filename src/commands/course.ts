@@ -2,7 +2,6 @@ import type { Command } from "commander";
 
 import type { NjuServices } from "../app/services.js";
 import { addFormatOption, runCommand, type CommandRuntime, type FormatOptions } from "../core/command.js";
-import { requireConfirmation } from "../core/confirmation.js";
 import { AppError } from "../core/errors.js";
 import type { CourseSelectionKind } from "../domains/course/types.js";
 import { optionalPositiveInteger } from "./options.js";
@@ -24,7 +23,6 @@ interface SelectionOptions extends FormatOptions {
   kind: string;
   page?: string;
   pageSize?: string;
-  yes?: boolean;
 }
 
 export function registerCourseCommands(
@@ -67,18 +65,14 @@ export function registerCourseCommands(
     }));
 
   addFormatOption(course.command("select <class-id>").description("提交一次研究生选课")
-    .option("--kind <kind>", "课程范围：plan 或 public", "public")
-    .option("--yes", "确认提交选课"))
+    .option("--kind <kind>", "课程范围：plan 或 public", "public"))
     .action(async (classId: string, options: SelectionOptions) => runCommand(runtime, options, async () => {
-      requireConfirmation(options.yes === true);
       const data = await service.select(classId, selectionKind(options.kind));
       return { data, text: selectedCoursesText([data]) };
     }));
 
-  addFormatOption(course.command("withdraw <class-id>").description("提交一次研究生退课")
-    .option("--yes", "确认退出已选课程"))
-    .action(async (classId: string, options: FormatOptions & { yes?: boolean }) => runCommand(runtime, options, async () => {
-      requireConfirmation(options.yes === true);
+  addFormatOption(course.command("withdraw <class-id>").description("提交一次研究生退课"))
+    .action(async (classId: string, options: FormatOptions) => runCommand(runtime, options, async () => {
       const data = await service.withdraw(classId);
       return { data, text: `已退课：${data.name}\t${data.classId}` };
     }));

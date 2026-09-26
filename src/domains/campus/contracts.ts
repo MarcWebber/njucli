@@ -29,6 +29,5 @@ export interface CampusSectionContract extends CampusSection {
 
 export interface CampusSourceContract extends CampusSource {
   sections: CampusSectionContract[];
-  articlePathPattern: RegExp;
   parser: CampusSourceParser;
 }

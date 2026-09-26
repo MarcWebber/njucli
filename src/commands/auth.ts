@@ -1,4 +1,7 @@
 import type { Command } from "commander";
+import { readFile } from "node:fs/promises";
+import type { AuthCredentials } from "../auth/types.js";
+import { requiredText } from "../core/guards.js";
 
 import type { NjuServices } from "../app/services.js";
 import { parseAuthCapability } from "../auth/capabilities.js";
@@ -18,9 +21,18 @@ export function registerAuthCommands(
       return { data, text: sessionsText(data) };
     }));
 
-  addFormatOption(auth.command("login [capability]").description("建立认证会话"))
-    .action(async (capability: string | undefined, options: FormatOptions) => runCommand(runtime, options, async () => {
-      const data = await service.login(parseCapability(capability));
+  addFormatOption(auth.command("login [capability]").description("保存账号密码并登录；后续自动使用本地凭据")
+    .option("--username <username>", "统一认证账号")
+    .option("--password <password>", "统一认证密码")
+    .option("--credentials <path>", "含 username 和 password 的 JSON 文件"))
+    .action(async (capability: string | undefined, options: FormatOptions & { username?: string; password?: string; credentials?: string }) => runCommand(runtime, options, async () => {
+      let credentials: AuthCredentials | undefined;
+      if (options.credentials) credentials = JSON.parse(await readFile(options.credentials, "utf8")) as AuthCredentials;
+      else if (options.username !== undefined || options.password !== undefined) credentials = {
+        username: requiredText(options.username ?? "", "--username"),
+        password: requiredText(options.password ?? "", "--password"),
+      };
+      const data = await service.login(parseCapability(capability), credentials);
       return { data, text: sessionsText([data]) };
     }));
 
