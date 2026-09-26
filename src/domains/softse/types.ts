@@ -9,6 +9,19 @@ export interface SoftSeCoursePage {
   items: SoftSeCourseSummary[];
 }
 
+export interface SoftSeParticipantPage {
+  courseId: string;
+  page: number;
+  nextPage: number | null;
+  items: Array<{
+    userId: string;
+    name: string;
+    url: string;
+    roles: string;
+    groups: string;
+  }>;
+}
+
 export interface SoftSeActivity {
   activityId: string;
   type: string;

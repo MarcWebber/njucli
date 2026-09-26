@@ -193,6 +193,8 @@ export function createProductionServices(): NjuServices {
     },
     softse: {
       courses: () => withSoftSe((client) => client.courses()),
+      catalog: () => withSoftSe((client) => client.catalog()),
+      participants: (courseId, page) => withSoftSe((client) => client.participants(courseId, page)),
       search: (query, page) => withSoftSe((client) => client.search(query, page)),
       course: (courseId) => withSoftSe((client) => client.course(courseId)),
       assignments: (courseId, pending) => withSoftSe((client) => client.assignments(courseId, pending)),

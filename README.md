@@ -8,15 +8,24 @@
 
 ## 快速开始
 
-准备 Node.js 20+ 和 pnpm 10.27.0。网页认证使用本机 Google Chrome，账号和密码保存在本地账号目录。当前验证环境为 macOS。
+当前通过 GitHub 的 `main` 分支下载源码并安装。准备 Node.js 20+ 和 pnpm 10.27.0（可用 `npm install --global pnpm@10.27.0` 安装）。网页认证使用本机 Google Chrome，账号和密码保存在本地账号目录。当前验证环境为 macOS。
 
 ```bash
-git clone https://github.com/MarcWebber/njucli.git
+git clone --branch main https://github.com/MarcWebber/njucli.git
 cd njucli
 pnpm install --frozen-lockfile
 pnpm build
 npm install --global .
 njucli --help
+```
+
+已安装后，在源码目录更新到远端最新版本：
+
+```bash
+git pull --ff-only origin main
+pnpm install --frozen-lockfile
+pnpm build
+npm install --global .
 ```
 
 先体验公开信息查询，再登录需要使用的服务：
@@ -43,7 +52,7 @@ njucli <领域> <动作> [目标] [选项]
 | **校园邮箱** `mail` | 本机绑定、邮件夹、未读列表、全文搜索、正文读取、附件下载、绑定管理 |
 | **研究生教务** `academic` | 成绩、考试安排、课表、培养方案 |
 | **课程** `course` | 本科课表、今日/本周课程、下一节课、ICS 导出；研究生可选/已选课程查询与选退课 |
-| **软件学院教学** `softse` | 课程搜索、课程活动、作业要求与状态、资料下载、成绩项、自助选课、官方作业提交页链接 |
+| **软件学院教学** `softse` | 全站可见课程目录、课程搜索、课程名单分页、课程活动、作业要求与状态、资料下载、成绩项、自助选课、官方作业提交页链接 |
 | **图书馆** `library` | 图书检索、详情、馆藏位置与可借状态、个人借阅 |
 | **体育** `sports` | 场馆、场地时段、余量、预约记录、官方预约及取消页面链接 |
 | **网上办事大厅** `ehall` | 服务目录、待办、办件进度、官方应用链接 |
@@ -111,10 +120,14 @@ njucli academic plan
 
 njucli auth login softse
 njucli softse courses
+njucli softse catalog --format json
+njucli softse participants 370 --page 1 --format json
 njucli softse assignments --pending
 njucli softse assignment ACTIVITY_ID
 njucli softse download ACTIVITY_ID "作业说明.pdf" --output ./作业说明.pdf
 ```
+
+`softse catalog` 逐一读取当前账号可见的课程分类与分页，按课程 ID 去重；`courses` 保持“我的课程”含义。`participants` 每页 20 个成员账号，返回页面显示名、Moodle 用户 ID、课程内资料链接、角色和小组，通过 `nextPage` 继续翻页，末页为 `null`。学生身份与学号的对应关系尚未实现；页面显示名由用户设置，资料页字段与学号的关系尚待验证。详见 [SoftSE Skill](skills/njucli-softse/SKILL.md)。
 
 `ACTIVITY_ID` 和附件名称取自作业查询结果。教务查询可使用 `--term` 指定学期。
 
@@ -161,7 +174,7 @@ NJUCLI_FORMAT=json njucli softse assignments --pending
 
 ### MCP 与 Skill
 
-`njucli mcp` 提供 36 个只读工具，CLI 与 MCP 共用业务实现。将以下配置加入支持本地 stdio MCP 的 AI 宿主：
+`njucli mcp` 提供 38 个只读工具，CLI 与 MCP 共用业务实现。将以下配置加入支持本地 stdio MCP 的 AI 宿主：
 
 ```json
 {

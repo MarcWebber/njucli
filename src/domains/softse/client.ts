@@ -13,9 +13,10 @@ import type {
   SoftSeFile,
   SoftSeGrade,
   SoftSeLink,
+  SoftSeParticipantPage,
 } from "./types.js";
 
-export const SOFTSE_BASE_URL = "https://selearning.nju.edu.cn";
+const SOFTSE_BASE_URL = "https://selearning.nju.edu.cn";
 
 export class SoftSeClient {
   constructor(private readonly fetch: FetchLike) {}
@@ -33,6 +34,67 @@ export class SoftSeClient {
     return [...courses.values()];
   }
 
+  async catalog(): Promise<SoftSeCourseSummary[]> {
+    const pending = new Set([new URL("/course/index.php", SOFTSE_BASE_URL).href]);
+    const courses = new Map<string, SoftSeCourseSummary>();
+    for (const url of pending) {
+      const { $, response } = await this.page(url);
+      const emptyCategory = $("body").attr("id") === "page-course-index-category" &&
+        $('#switchcategory select[name="categoryid"]').val() === new URL(url).searchParams.get("categoryid");
+      if (new URL(response.url).pathname !== "/course/index.php" ||
+          ($(".course_category_tree").length !== 1 && !emptyCategory)) {
+        throw new Error("SoftSE 返回的页面不是课程目录");
+      }
+      for (const course of courseSummaries($, response.url)) courses.set(course.courseId, course);
+      $(".course_category_tree .categoryname a[href], .course_category_tree .pagination a[href], .course_category_tree .paging-morelink a[href]")
+        .each((_, element) => {
+          const href = $(element).attr("href")!;
+          if (href.startsWith("#")) return;
+          const next = new URL(href, response.url);
+          if (next.origin !== SOFTSE_BASE_URL || next.pathname !== "/course/index.php") {
+            throw new Error("SoftSE 课程目录包含非目录链接");
+          }
+          next.hash = "";
+          if (next.searchParams.get("page") === "0") next.searchParams.delete("page");
+          next.searchParams.sort();
+          pending.add(next.href);
+        });
+    }
+    return [...courses.values()];
+  }
+
+  async participants(courseId: string, page = 1): Promise<SoftSeParticipantPage> {
+    const url = new URL("/user/index.php", SOFTSE_BASE_URL);
+    url.search = new URLSearchParams({ id: courseId, page: String(page - 1), perpage: "20" }).toString();
+    const { $, response } = await this.page(url.href);
+    const target = new URL(response.url);
+    if (target.pathname === "/enrol/index.php") {
+      throw new AppError("USER_ACTION_REQUIRED", "当前账号没有该课程的名单访问权限");
+    }
+    if (target.pathname !== "/user/index.php" || target.searchParams.get("id") !== courseId || $("#participants").length !== 1) {
+      throw new Error("SoftSE 未返回目标课程名单，或当前账号没有访问权限");
+    }
+    const items: SoftSeParticipantPage["items"] = [];
+    $("#participants tbody tr:not(.emptyrow)").each((_, element) => {
+      const row = $(element);
+      const link = row.find('th.c0 a[href*="/user/view.php"]').first();
+      const profile = new URL(link.attr("href") ?? "", response.url);
+      const userId = profile.searchParams.get("id");
+      const name = text(link);
+      if (profile.origin !== SOFTSE_BASE_URL || profile.pathname !== "/user/view.php" ||
+          profile.searchParams.get("course") !== courseId || !userId || !/^\d+$/.test(userId) || !name) {
+        throw new Error("SoftSE 课程名单行结构已变化");
+      }
+      items.push({ userId, name, url: profile.href, roles: text(row.find("td.c1")), groups: text(row.find("td.c2")) });
+    });
+    const nextPage = $(".pagination a[href]").toArray().some((element) => {
+      const next = new URL($(element).attr("href")!, response.url);
+      return next.origin === SOFTSE_BASE_URL && next.pathname === "/user/index.php" &&
+        next.searchParams.get("id") === courseId && next.searchParams.get("page") === String(page);
+    }) ? page + 1 : null;
+    return { courseId, page, nextPage, items };
+  }
+
   async search(queryInput: string, page = 1): Promise<SoftSeCoursePage> {
     const query = requiredText(queryInput, "query");
     const url = new URL("/course/search.php", SOFTSE_BASE_URL);
@@ -42,19 +104,7 @@ export class SoftSeClient {
       page: String(page - 1),
     }).toString();
     const { $, response } = await this.page(url.toString());
-    const items: SoftSeCourseSummary[] = [];
-    $(".coursebox").each((_, element) => {
-      const box = $(element);
-      const link = box.find('.coursename a[href*="/course/view.php?id="]').first();
-      if (link.length === 0) return;
-      const courseUrl = absolute(link.attr("href"), response.url);
-      items.push({
-        courseId: queryId(courseUrl, "id"),
-        name: text(link),
-        url: courseUrl,
-      });
-    });
-    return { page, items };
+    return { page, items: courseSummaries($, response.url) };
   }
 
   async course(courseIdInput: string): Promise<SoftSeCourse> {
@@ -241,6 +291,19 @@ export class SoftSeClient {
   }
 }
 
+function courseSummaries($: CheerioAPI, base: string): SoftSeCourseSummary[] {
+  return $(".coursebox").toArray().map((element) => {
+    const link = $(element).find('.coursename a[href*="/course/view.php"]').first();
+    const url = new URL(link.attr("href") ?? "", base);
+    const courseId = url.searchParams.get("id");
+    const name = text(link);
+    if (url.origin !== SOFTSE_BASE_URL || url.pathname !== "/course/view.php" || !courseId || !/^\d+$/.test(courseId) || !name) {
+      throw new Error("SoftSE 课程目录条目结构已变化");
+    }
+    return { courseId, name, url: url.href };
+  });
+}
+
 function parseCourse($: CheerioAPI, url: string, courseId: string): SoftSeCourse {
   if (new URL(url).pathname !== "/course/view.php" || queryId(url, "id") !== courseId ||
       $("li.section[data-sectionid]").length === 0) {
@@ -271,13 +334,9 @@ function parseCourse($: CheerioAPI, url: string, courseId: string): SoftSeCourse
     const sectionName = text(current.find(".sectionname").first()) || "未命名章节";
     sections.push({ name: sectionName, activities });
   });
-  const name = heading($);
+  const name = text($(".page-header-headings h1, #page-header h1, h1").first());
   if (!name) throw new Error("SoftSE 课程页缺少标题");
   return { courseId, name, sections };
-}
-
-function heading($: CheerioAPI): string {
-  return text($(".page-header-headings h1, #page-header h1, h1").first());
 }
 
 function files($: CheerioAPI, selector: string, base: string): SoftSeFile[] {

@@ -2,7 +2,7 @@ import type { Command } from "commander";
 
 import type { NjuServices } from "../app/services.js";
 import { addFormatOption, runCommand, type CommandRuntime, type FormatOptions } from "../core/command.js";
-import { accountText, accountsText } from "./text.js";
+import { accountsText } from "./text.js";
 
 export function registerAccountCommands(
   program: Command,
@@ -14,7 +14,7 @@ export function registerAccountCommands(
   addFormatOption(account.command("current").description("显示当前账号"))
     .action(async (options: FormatOptions) => runCommand(runtime, options, async () => {
       const data = await service.current();
-      return { data, text: accountText(data) };
+      return { data, text: data };
     }));
 
   addFormatOption(account.command("list").description("列出本机账号"))
@@ -26,13 +26,13 @@ export function registerAccountCommands(
   addFormatOption(account.command("add <name>").description("新增并切换到账号"))
     .action(async (name: string, options: FormatOptions) => runCommand(runtime, options, async () => {
       const data = await service.add(name);
-      return { data, text: accountText(data) };
+      return { data, text: data };
     }));
 
   addFormatOption(account.command("use <name>").description("切换当前账号"))
     .action(async (name: string, options: FormatOptions) => runCommand(runtime, options, async () => {
       const data = await service.use(name);
-      return { data, text: accountText(data) };
+      return { data, text: data };
     }));
 
   addFormatOption(account.command("remove <name>").description("移除非当前账号"))

@@ -44,7 +44,7 @@ export interface NjuServices {
     };
   academic: Pick<GraduateAcademicClient, "grades" | "exams" | "schedule" | "plan">;
   ehall: Pick<EHallPortalClient, "services" | "tasks" | "applications" | "serviceLink">;
-  softse: Pick<SoftSeClient, "courses" | "search" | "course" | "assignments" | "assignment" | "grades" | "enroll" | "submissionLink"> & {
+  softse: Pick<SoftSeClient, "courses" | "catalog" | "participants" | "search" | "course" | "assignments" | "assignment" | "grades" | "enroll" | "submissionLink"> & {
     download(activityId: string, fileName: string, path: string, submitted?: boolean): Promise<{ path: string; bytes: number }>;
   };
   tex: Pick<TexClient, "templates" | "projects" | "create" | "createFromTemplate" | "rename" | "log" | "files" | "read"> & {

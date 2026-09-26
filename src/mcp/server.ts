@@ -31,7 +31,7 @@ const OPTIONAL_TERM = z
   .optional()
   .describe("Academic term ID; omit to use the current term");
 
-export function createMcpServer(services: NjuServices): McpServer {
+function createMcpServer(services: NjuServices): McpServer {
   const server = new McpServer({
     name: "njucli",
     version: VERSION,
@@ -129,6 +129,16 @@ export function createMcpServer(services: NjuServices): McpServer {
   read("softse_courses", "List the signed-in user's Software School Moodle courses.",
     {},
     () => services.softse.courses(),
+  );
+
+  read("softse_catalog", "遍历当前账号可见的全部 SoftSE 课程分类与分页，返回去重后的课程目录。",
+    {},
+    () => services.softse.catalog(),
+  );
+
+  read("softse_participants", "分页读取当前账号有权查看的单门课程名单；userId 为 Moodle 用户 ID。",
+    { courseId: z.string().regex(/^[1-9]\d*$/), page: z.number().int().min(1).optional() },
+    ({ courseId, page }) => services.softse.participants(courseId, page),
   );
 
   read("softse_search", "Search courses in the Software School Moodle catalog.",

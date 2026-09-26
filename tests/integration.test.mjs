@@ -15,10 +15,12 @@ import { AUTH_CAPABILITIES } from "../dist/auth/types.js";
 import { registerCampusCommands } from "../dist/commands/campus.js";
 import { registerTexCommands } from "../dist/commands/tex.js";
 import { registerMailCommands } from "../dist/commands/mail.js";
+import { registerSoftSeCommands } from "../dist/commands/softse.js";
 import { CampusClient } from "../dist/domains/campus/client.js";
 import { listCampusSources } from "../dist/domains/campus/sources/registry.js";
 import { TexClient } from "../dist/domains/tex/client.js";
 import { MailClient } from "../dist/domains/mail/client.js";
+import { SoftSeClient } from "../dist/domains/softse/client.js";
 import { bindMail } from "../dist/domains/mail/bind.js";
 import { registerSoftwareCommands } from "../dist/commands/software.js";
 import { SoftwareClient } from "../dist/domains/software/client.js";
@@ -166,6 +168,52 @@ test("软件：官网目录、安装包去重、流式下载与本地覆盖", as
   assert.equal(downloads, 2);
   await saveFile(output, payload);
   assert.deepEqual(await readFile(output), payload);
+});
+
+test("SoftSE：课程目录遍历与空分类", async (t) => {
+  const requests = [];
+  const pages = {
+    "/course/index.php": `<div class="course_category_tree">
+      <h3 class="categoryname"><a href="/course/index.php?categoryid=8">分类</a></h3>
+      <h3 class="categoryname"><a href="/course/index.php?categoryid=9">空分类</a></h3></div>`,
+    "/course/index.php?categoryid=8": `<div class="course_category_tree">
+      <div class="coursebox"><h3 class="coursename"><a href="/course/view.php?id=901">课程甲</a></h3></div>
+      <div class="pagination"><a href="/course/index.php?page=1&categoryid=8">下一页</a></div></div>`,
+    "/course/index.php?categoryid=8&page=1": `<div class="course_category_tree">
+      <div class="coursebox"><h3 class="coursename"><a href="/course/view.php?id=901">课程甲</a></h3></div>
+      <div class="coursebox"><h3 class="coursename"><a href="/course/view.php?id=902">课程乙</a></h3></div>
+      <div class="pagination"><a href="/course/index.php?page=0&categoryid=8#courses">上一页</a></div></div>`,
+    "/course/index.php?categoryid=9": `<body id="page-course-index-category"><form id="switchcategory">
+      <select name="categoryid"><option value="9" selected>空分类</option></select></form></body>`,
+  };
+  const request = await localHttp(t, (req, res) => {
+    requests.push(req.url);
+    res.end(pages[req.url] ?? "<h1>未知页面</h1>");
+  });
+  const result = await command(registerSoftSeCommands, new SoftSeClient(request), ["softse", "catalog"]);
+  assert.equal(result.code, 0);
+  assert.deepEqual(result.data.map(course => course.courseId), ["901", "902"]);
+  assert.equal(requests.length, 4);
+});
+
+test("SoftSE：课程成员分页与末页补齐行", async (t) => {
+  const request = await localHttp(t, (req, res) => {
+    const page = new URL(req.url, "http://localhost").searchParams.get("page");
+    res.end(`<table id="participants"><tbody><tr>
+      <th class="c0"><a href="/user/view.php?id=${page === "0" ? "9001" : "9002"}&course=370">合成昵称</a></th>
+      <td class="c1">学生</td><td class="c2">小组</td></tr>
+      <tr class="emptyrow"><th class="c0"></th><td class="c1"></td><td class="c2"></td></tr></tbody></table>
+      ${page === "0" ? '<div class="pagination"><a href="/user/index.php?id=370&page=1">下一页</a></div>' : ""}`);
+  });
+  const client = new SoftSeClient(request);
+  const first = await command(registerSoftSeCommands, client, ["softse", "participants", "370"]);
+  const last = await command(registerSoftSeCommands, client, ["softse", "participants", "370", "--page", "2"]);
+  assert.equal(first.code, 0);
+  assert.equal(last.code, 0);
+  assert.equal(first.data.nextPage, 2);
+  assert.equal(last.data.nextPage, null);
+  assert.deepEqual(first.data.items.map(member => member.userId), ["9001"]);
+  assert.deepEqual(last.data.items.map(member => member.userId), ["9002"]);
 });
 
 test("TeX：直接创建、单次提交回读、HTTP 失败与编译日志", async (t) => {

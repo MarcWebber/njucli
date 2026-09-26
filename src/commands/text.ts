@@ -38,16 +38,14 @@ import type {
 import type {
   SoftSeAssignment,
   SoftSeCourse,
-  SoftSeCoursePage,
   SoftSeCourseSummary,
   SoftSeGrade,
   SoftSeLink,
+  SoftSeParticipantPage,
 } from "../domains/softse/types.js";
 import type { DoctorResult, TodayResult } from "../app/services.js";
 
 const NONE = "无";
-
-export const accountText = (account: string): string => account;
 
 export function accountsText(accounts: string[]): string {
   return accounts.length === 0 ? NONE : accounts.join("\n");
@@ -180,8 +178,13 @@ export function softSeCoursesText(courses: SoftSeCourseSummary[]): string {
   ).join("\n");
 }
 
-export function softSeCoursePageText(page: SoftSeCoursePage): string {
-  return softSeCoursesText(page.items);
+export function softSeParticipantsText(page: SoftSeParticipantPage): string {
+  const rows = page.items.map((item) => `${item.name}\tMoodle ID: ${item.userId}\t${item.roles}\t${item.groups}`);
+  return [
+    `课程 ${page.courseId} · 第 ${page.page} 页`,
+    rows.length ? rows.join("\n") : NONE,
+    ...(page.nextPage === null ? [] : [`下一页：njucli softse participants ${page.courseId} --page ${page.nextPage}`]),
+  ].join("\n");
 }
 
 export function softSeCourseText(course: SoftSeCourse): string {

@@ -1,6 +1,6 @@
 # 校园服务接口证据
 
-更新日期：2026-09-25（本地凭据、多邮箱管理与邮件读取）
+更新日期：2026-09-26（SoftSE 课程目录与名单）
 
 本文记录 NjuCLI V1 实际采用的入口、请求顺序、字段契约和证据等级。公开实现只用于发现公开站点协议；本仓库没有以第三方代码或 Git 历史为底座，也不授权绕过验证码、VPN 或访问控制。
 
@@ -193,7 +193,10 @@ GET /login/index.php?authCAS=CAS
 
 ```text
 GET /my/
+GET /course/index.php
+GET /course/index.php?categoryid={categoryId}
 GET /course/search.php?search=...&perpage=20&page=...
+GET /user/index.php?id={courseId}&page={zeroBasedPage}&perpage=20
 GET /course/view.php?id={courseId}
 GET /mod/assign/view.php?id={activityId}
 GET /grade/report/index.php?id={courseId}
@@ -610,3 +613,30 @@ V1 为八个 source 分别固定 HTTPS origin、section、列表 selector、详�
 新进程实测：两个邮箱分别保留，新邮箱为当前邮箱；保存的新密码与输入一致，`mail.json` 权限 0600；邮件夹 6 个，列表 3 封，正文 692 字符，读取前后未读状态相同。临时凭据文件与个人数据验证输出在完成后删除。此项验证了第二个真实邮箱的绑定和读取，浏览器自动生成客户端密码仍沿用此前未验收的状态。
 
 源码与 7 项本地集成通过；`git diff --check`、CLI 帮助、8 个校园源和 `npm pack --dry-run` 通过，打包清单为 92 个文件，含认证 Skill 与 29 行脚本。实际 tarball 安装到临时目录后，帮助、邮箱绑定状态和新邮箱 1 封列表读取通过，脚本相对导入路径保留。
+
+## SoftSE 课程目录与名单（2026-09-26）
+
+已有工作区修改先提交为 `7d42b5a`，本轮在该基线上扩展 `SoftSeClient`、CLI 与只读 MCP。新增命令：
+
+```bash
+njucli softse catalog --format json
+njucli softse participants 370 --page 1 --format json
+```
+
+`catalog` 从 `/course/index.php` 出发，跟随 `.course_category_tree` 内的分类、分页和更多课程链接。目录根页本轮返回 14 个顶层分类；分类内使用 `.coursebox .coursename a` 提取课程。URL 查询参数排序、去除片段与归一化零页后去重，课程按 `courseId` 去重。空分类实际可能没有课程树，其页面为 `body#page-course-index-category`，`#switchcategory select[name="categoryid"]` 选中目标分类。
+
+`participants` 使用 `/user/index.php?id={courseId}&page={page-1}&perpage=20`，只读取指定课程的指定页。`#participants tbody tr` 的 `th.c0` 内 `/user/view.php?id={userId}&course={courseId}` 链接提供页面显示名、Moodle 用户 ID 和课程内资料链接，`td.c1/c2` 分别为角色与小组。末页包含 `.emptyrow` 补齐行，解析时跳过；下一页取同课程的分页链接。结果为 `{ courseId, page, nextPage, items }`，末页 `nextPage: null`。
+
+名单表当前显示账号名称、角色、小组和最近课程访问。指定资料页 `/user/profile.php?id={userId}` 本轮仅核对了字段标签，可见“电子邮件地址”等字段，未观察到独立的“学号”标签；这些字段能否可靠对应学号尚未验证。当前 `participants` 完成了课程成员账号的分页读取，学生身份与学号的对应能力仍未完成。
+
+| 验证层 | 实际结果 |
+| --- | --- |
+| 源码与本地集成 | `pnpm lint`、`pnpm test` 通过，共 9 项；SoftSE 覆盖课程分类与分页去重、空分类、成员分页及末页补齐 |
+| 认证实网：目录 CLI | 返回 438 门课程，438 个唯一 `courseId` |
+| 认证实网：课程 370 名单 CLI | 第 1、2 页各 20 人，跨页重复为 0；第 16 页 14 人，`nextPage: null` |
+| 匿名 HTTP | 指定名单页与资料页最终均为 `/login/index.php`，最终 HTTP 200 表示登录页 |
+| 认证实网：权限对照 | 370 出现在当前账号的课程导航，名单可读；451 不在导航，名单请求最终为 `/enrol/index.php`，CLI 返回 `USER_ACTION_REQUIRED`、退出码 4 |
+| MCP stdio | 列出 38 个工具，包含 `softse_catalog` 和 `softse_participants`，两者均声明只读 |
+| 使用说明与打包 | SoftSE Skill 校验通过；CLI 帮助、8 个校园源和 `npm pack --dry-run` 通过，清单 93 个文件，包含新增 Skill 与编译 client |
+
+权限样本确认了当前账号与上述课程的访问结果，尚不能推出“任意两人只要有共同课程就能查看彼此资料”的通用规则。本轮仅执行查询，未提交选课请求；没有将真实姓名、学号、邮箱、成员列表或页面原文写入仓库。使用步骤见 [SoftSE Skill](../skills/njucli-softse/SKILL.md)。

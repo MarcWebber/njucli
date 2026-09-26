@@ -6,11 +6,11 @@ import { optionalPositiveInteger } from "./options.js";
 import {
   softSeAssignmentsText,
   softSeAssignmentText,
-  softSeCoursePageText,
   softSeCourseText,
   softSeCoursesText,
   softSeGradesText,
   softSeLinkText,
+  softSeParticipantsText,
 } from "./text.js";
 
 interface PageOptions extends FormatOptions {
@@ -30,10 +30,24 @@ export function registerSoftSeCommands(
       return { data, text: softSeCoursesText(data) };
     }));
 
+  addFormatOption(softse.command("catalog").description("遍历全部可见分类与分页，列出 SoftSE 课程目录"))
+    .action(async (options: FormatOptions) => runCommand(runtime, options, async () => {
+      const data = await service.catalog();
+      return { data, text: softSeCoursesText(data) };
+    }));
+
+  addFormatOption(softse.command("participants <course-id>").description("分页查询当前账号有权查看的课程名单")
+    .option("--page <page>", "页码，从 1 开始，每页 20 人"))
+    .action(async (courseId: string, options: PageOptions) => runCommand(runtime, options, async () => {
+      const id = String(optionalPositiveInteger(courseId, "course-id"));
+      const data = await service.participants(id, optionalPositiveInteger(options.page, "--page"));
+      return { data, text: softSeParticipantsText(data) };
+    }));
+
   addFormatOption(softse.command("search <query>").description("搜索 SoftSE 课程").option("--page <page>", "页码"))
     .action(async (query: string, options: PageOptions) => runCommand(runtime, options, async () => {
       const data = await service.search(query, optionalPositiveInteger(options.page, "--page"));
-      return { data, text: softSeCoursePageText(data) };
+      return { data, text: softSeCoursesText(data.items) };
     }));
 
   addFormatOption(softse.command("course <course-id>").description("查询课程章节与活动"))

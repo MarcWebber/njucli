@@ -76,6 +76,8 @@ njucli
 │   └── booking <booking-id>
 ├── softse
 │   ├── courses
+│   ├── catalog
+│   ├── participants <course-id> [--page <n>]
 │   ├── search <query> [--page <n>]
 │   ├── course <course-id>
 │   ├── assignments [course-id] [--pending]
@@ -257,7 +259,9 @@ V1 不自动填写或提交 EHall 申请。成绩认定等表单涉及动态附�
 
 ## 软件学院教学支持系统
 
-`softse` 使用软件学院 Moodle 当前 HTML 契约：`courses` 读取我的课程，`search` 搜索课程，`course` 读取章节与活动，`assignment` 读取要求正文、语义化提交状态、ISO 截止时间和附件链接，`grades` 读取课程成绩表。`assignments [course-id] --pending` 读取作业详情后按截止时间排序，省略课程 ID 时遍历 `courses` 返回的课程；草稿和重新开放的作业都保留。课程列表仅提供 ID、名称和链接，不从列表推断自助选课资格。输出不包含 Moodle 用户 ID、sesskey 或页面脚本配置。
+`softse` 使用软件学院 Moodle 当前 HTML 契约：`courses` 读取我的课程，`catalog` 遍历可见课程目录，`search` 搜索课程，`participants` 分页读取单门课程名单，`course` 读取章节与活动，`assignment` 读取要求正文、语义化提交状态、ISO 截止时间和附件链接，`grades` 读取课程成绩表。`assignments [course-id] --pending` 读取作业详情后按截止时间排序，省略课程 ID 时遍历 `courses` 返回的课程；草稿和重新开放的作业都保留。课程列表仅提供 ID、名称和链接，不从列表推断自助选课资格。名单中的 `userId` 是 Moodle 用户 ID，学号须有独立字段契约；认证参数留在会话中。
+
+`catalog` 从 `/course/index.php` 的课程树逐层发现分类和分页链接，串行读取，并按规范化 URL 与课程 ID 去重。正常空分类由页面标识与选中的分类确认。`participants <course-id> --page <n>` 每页 20 人，返回 `{ courseId, page, nextPage, items }`；成员包含 `userId/name/url/roles/groups`，`url` 使用页面提供的课程内资料链接。读取权限由远端当前会话决定，命令只读取指定课程的指定页面。CLI 与只读 MCP 共用现有 `SoftSeClient` 和认证装配。
 
 `softse enroll` 从自助选课页原样收集隐藏字段，只提交一次，并重新访问选课页，要求官方成员关系判断将其重定向至目标课程且课程结构有效。需要选课密钥时只读取 `NJUCLI_SOFTSE_ENROLMENT_KEY`，不允许把密钥写在参数中。该写链路只依据页面契约实现，不在个人正式课程上执行开发验证。
 

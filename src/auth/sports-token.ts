@@ -6,7 +6,7 @@ import {
   createSportsSignature,
 } from "../domains/sports/signing.js";
 
-export const SPORTS_SSO_URL =
+const SPORTS_SSO_URL =
   "https://authserver.nju.edu.cn/authserver/login?service=" +
   encodeURIComponent(`${SPORTS_API_BASE_URL}/sso/manageLogin`);
 
