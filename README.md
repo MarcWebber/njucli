@@ -1,10 +1,26 @@
 # NjuCLI
 
-面向南京大学学生与 AI 助手的校园服务命令行。
+[![CI](https://github.com/MarcWebber/njucli/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/MarcWebber/njucli/actions/workflows/ci.yml)
+[![Node.js](https://img.shields.io/badge/Node.js-20%2B-5FA04E?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![License: Personal Use](https://img.shields.io/badge/License-Personal_Use-blue)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/MarcWebber/njucli?style=flat)](https://github.com/MarcWebber/njucli/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/MarcWebber/njucli?style=flat)](https://github.com/MarcWebber/njucli/forks)
 
-在终端管理 TeX 论文、阅读校园邮件、查询课程与作业，使用统一的命令格式和 JSON 输出连接日常校园服务。
+**把论文、邮件、课程和校园事务，接到你的终端与 AI 助手。**
 
-[快速开始](#快速开始) · [功能](#功能) · [使用示例](#使用示例) · [AI 接入](#ai-接入) · [目录结构](#目录结构) · [参与开发](#参与开发)
+NjuCLI 面向南京大学学生，提供统一的校园服务命令、JSON 输出、38 个只读 MCP 工具和 5 个任务 Skill。账号与会话保存在本机，AI 通过你授权的命令完成具体任务。
+
+[快速开始](#快速开始) · [功能](#功能) · [使用示例](#使用示例) · [AI 接入](#ai-接入) · [参与贡献](CONTRIBUTING.md) · [许可证](#许可证)
+
+## 特性
+
+- **写作与阅读**：管理 TeX 项目，修改正文、上传素材、编译 PDF；读取校园邮件并下载附件。
+- **课程与校园**：查询课表、作业、课程名单、图书借阅、体育场地及正版软件安装包。
+- **为 AI 提供明确接口**：CLI 支持 JSON；MCP 提供只读查询；Skill 描述认证、写作、邮箱、软件和 SoftSE 的任务流程。
+- **一次安装，统一升级**：一行命令安装全局 CLI 和 Skill，`njucli upgrade` 同步更新。
+- **本机账号管理**：隔离不同账号与邮箱，复用官方认证会话；具体能力和验证范围见[接口证据](docs/interface-evidence.md)。
+
+项目由个人维护。按[个人使用许可证](LICENSE)提供源码，学校及其他机构使用须另行取得书面授权。
 
 ## 快速开始
 
@@ -228,4 +244,20 @@ npm pack --dry-run
 
 `pnpm test` 构建后运行 Node 内置集成测试，使用本机 HTTP 服务和临时会话文件。
 
-开发流程：**最小脚本验证 → 领域 client → CLI/MCP → 集成测试 → Skill → 打包交付**。具体约定见 [AGENTS.md](AGENTS.md)；提交问题时请附命令、版本、预期结果及脱敏后的实际输出。
+向 `main` 提交 PR 后，[GitHub Actions](https://github.com/MarcWebber/njucli/actions/workflows/ci.yml) 自动执行构建和本地测试。普通贡献者的 PR 需要 CI 通过、维护者批准及评审讨论解决后合入。详见[贡献指南](CONTRIBUTING.md)与[主分支规则](https://github.com/MarcWebber/njucli/rules)。
+
+开发流程：**最小脚本验证 → 领域 client → CLI/MCP → 集成测试 → Skill → 打包交付**。具体约定见 [AGENTS.md](AGENTS.md)。[提交问题](https://github.com/MarcWebber/njucli/issues/new)时，请附命令、版本、预期结果及脱敏后的实际输出。
+
+## 社区与项目状态
+
+顶部 Stars、Forks 徽章展示 GitHub 的公开社区数据。项目当前没有安装量或活跃用户统计，也不收集校园使用行为遥测。
+
+当前版本为 `0.1.0`，通过 GitHub `main` 分发。网页登录与完整安装流程已在 macOS 验证，CI 在 Ubuntu 上运行本地测试；各校园服务的实网验收范围分别记录在[接口证据](docs/interface-evidence.md)中。欢迎通过 [Issues](https://github.com/MarcWebber/njucli/issues)反馈问题，通过 [PR](https://github.com/MarcWebber/njucli/pulls)提交改进。
+
+## 许可证
+
+[NjuCLI 个人使用许可证 1.0](LICENSE)允许非商业性的个人学习、研究和本人校园事务使用，以及在相同条款下分享修改版。学校、院系、实验室、公司等机构的部署、集成或业务使用，以及商业用途，须事先取得相关著作权人的书面授权。
+
+这是一份带使用范围限制的源码可见许可证。学生或教职员工以个人身份处理自己的课程、论文、邮件等事务，属于允许的个人使用。第三方依赖继续适用各自的许可证。
+
+机构授权请[联系维护者](https://github.com/MarcWebber/njucli/issues/new)，说明使用场景和部署范围。
