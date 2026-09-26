@@ -11,7 +11,7 @@ node -e 'if (Number(process.versions.node.split(".")[0]) < 20) { console.error("
 
 njucli_work=$(mktemp -d "${TMPDIR:-/tmp}/njucli-install.XXXXXX")
 trap 'rm -rf "$njucli_work"' EXIT
-git clone --quiet --depth 1 --branch main https://github.com/MarcWebber/njucli.git "$njucli_work/source"
+git -c credential.helper= clone --quiet --depth 1 --branch main https://github.com/MarcWebber/njucli.git "$njucli_work/source"
 
 cd "$njucli_work/source"
 njucli_manager=$(node -p 'require("./package.json").packageManager')

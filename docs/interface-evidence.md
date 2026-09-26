@@ -653,4 +653,6 @@ njucli softse participants 370 --page 1 --format json
 | 安装产物 | `npm pack --dry-run` 包含 96 个文件，含安装脚本、Skill 注册脚本、升级命令与 5 个 Skill |
 | Skill 与文档 | 本轮更新的 4 个 Skill 均通过 frontmatter 校验；认证脚本以 Skill 的绝对路径调用，接口证据使用 GitHub 链接 |
 
-上述安装与升级验证使用临时 CLI 和 Skill 目录，没有改动个人认证文件或客户端配置。公开远端安装的验证单独记录。
+上述安装与升级验证使用临时 CLI 和 Skill 目录，没有改动个人认证文件或客户端配置。
+
+推送后从公开的 `raw.githubusercontent.com/MarcWebber/njucli/main/scripts/install.sh` 执行一行安装，真实克隆 GitHub `main`、按锁文件构建并安装成功，版本为 `0.1.0`；安装后公开源查询返回 8 个来源，5 个 Skill 已注册。安装脚本对公开仓库采用匿名 Git 下载，避免本机失效的 Git 凭据干扰下载；此设置仅作用于该次 clone。
