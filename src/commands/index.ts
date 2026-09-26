@@ -16,6 +16,7 @@ import { registerSoftwareCommands } from "./software.js";
 import { registerSportsCommands } from "./sports.js";
 import { registerSoftSeCommands } from "./softse.js";
 import { registerTexCommands } from "./tex.js";
+import { registerUpgradeCommand } from "./upgrade.js";
 
 export function createCli(services: NjuServices, runtime: CommandRuntime): Command {
   const program = new Command()
@@ -43,6 +44,7 @@ export function createCli(services: NjuServices, runtime: CommandRuntime): Comma
   for (const group of groups) group.action(() => group.outputHelp());
 
   registerAggregateCommands(program, services, runtime);
+  registerUpgradeCommand(program, runtime);
   program.command("mcp")
     .description("启动只读 MCP stdio 服务")
     .action(async () => {

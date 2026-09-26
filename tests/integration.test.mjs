@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readlink, realpath, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createServer } from "node:http";
@@ -25,6 +25,8 @@ import { bindMail } from "../dist/domains/mail/bind.js";
 import { registerSoftwareCommands } from "../dist/commands/software.js";
 import { SoftwareClient } from "../dist/domains/software/client.js";
 import { saveFile, writeJsonFile } from "../dist/core/fs.js";
+import { installSkills } from "../scripts/install-skills.mjs";
+import { registerUpgradeCommand } from "../dist/commands/upgrade.js";
 
 async function command(register, service, args) {
   let stdout = "", stderr = "", code;
@@ -52,6 +54,54 @@ async function localHttp(t, handler) {
     return response;
   };
 }
+
+test("安装：全局 Skill 链接、重复安装与同名内容保护", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "njucli-install-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const packageRoot = join(directory, "package");
+  const skillsRoot = join(directory, "codex", "skills");
+  for (const name of ["njucli-auth", "njucli-tex"]) {
+    await mkdir(join(packageRoot, "skills", name), { recursive: true });
+    await writeFile(join(packageRoot, "skills", name, "SKILL.md"), "first version");
+  }
+  assert.deepEqual(await installSkills(packageRoot, skillsRoot), ["njucli-auth", "njucli-tex"]);
+  await installSkills(packageRoot, skillsRoot);
+  assert.equal(await readlink(join(skillsRoot, "njucli-auth")), join(await realpath(packageRoot), "skills", "njucli-auth"));
+  await writeFile(join(packageRoot, "skills", "njucli-auth", "SKILL.md"), "upgraded version");
+  assert.equal(await readFile(join(skillsRoot, "njucli-auth", "SKILL.md"), "utf8"), "upgraded version");
+  const occupiedRoot = join(directory, "occupied");
+  await mkdir(join(occupiedRoot, "njucli-tex"), { recursive: true });
+  await writeFile(join(occupiedRoot, "njucli-tex", "SKILL.md"), "user content");
+  await assert.rejects(installSkills(packageRoot, occupiedRoot), /已被其他内容占用/);
+  assert.equal(await readFile(join(occupiedRoot, "njucli-tex", "SKILL.md"), "utf8"), "user content");
+  await assert.rejects(stat(join(occupiedRoot, "njucli-auth")), { code: "ENOENT" });
+});
+
+test("升级：远端 main、JSON 输出、失败退出码与临时目录清理", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "njucli-upgrade-test-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const log = join(directory, "calls.json");
+  await writeFile(join(directory, "bash"), `#!${process.execPath}\n
+import fs from 'node:fs';
+fs.writeFileSync(process.env.UPGRADE_TEST_LOG, JSON.stringify({args:process.argv.slice(2),cwd:process.cwd()}));
+console.log('install progress');
+process.exit(Number(process.env.UPGRADE_TEST_EXIT));
+`, { mode: 0o755 });
+  const run = (exit) => command((program, _, runtime) => registerUpgradeCommand(program, {
+    ...runtime,
+    environment: { ...process.env, NJUCLI_FORMAT: "json", PATH: directory, UPGRADE_TEST_LOG: log, UPGRADE_TEST_EXIT: String(exit) },
+  }), {}, ["upgrade"]);
+  const success = await run(0);
+  assert.equal(success.code, 0);
+  assert.equal(success.data.source, "https://github.com/MarcWebber/njucli/tree/main");
+  assert.match(success.stderr, /install progress/);
+  const call = JSON.parse(await readFile(log, "utf8"));
+  assert.deepEqual(call.args, [join(process.cwd(), "scripts", "install.sh")]);
+  await assert.rejects(stat(call.cwd), { code: "ENOENT" });
+  const failure = await run(9);
+  assert.equal(failure.code, 1);
+  assert.match(failure.error.message, /退出码 9/);
+});
 
 test("认证：本地凭据、自动恢复与普通网络错误", async (t) => {
   const configDir = await mkdtemp(join(tmpdir(), "njucli-auth-"));

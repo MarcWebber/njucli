@@ -10,23 +10,23 @@
 | 仅支持本地 stdio MCP 的 AI | 查询 38 个只读工具；TeX 包含项目、模板、文件、正文和编译日志；邮箱包含邮件夹、列表、搜索和正文；软件包含目录与安装包链接；SoftSE 包含可见课程目录与单门课程名单分页 |
 | 仅能访问远程 HTTP 工具的云端 AI | 本版不能直接连接；没有发布 HTTP 服务，也不托管个人账号会话 |
 
-根目录 `.codex-plugin/plugin.json` 是 Codex 插件清单，`.mcp.json` 是本地 MCP 配置，`skills/njucli-tex/SKILL.md` 是写作指导。此包未安装到任何客户端或插件市场；不同客户端不能直接互认所有清单。
+根目录 `.codex-plugin/plugin.json` 是 Codex 插件清单，`.mcp.json` 是本地 MCP 配置，`skills/` 包含 5 个任务 Skill。全局安装会自动注册 Codex Skill；MCP 按下方配置接入。
 
 ## 安装
 
-先在源码目录构建并打包，再安装本地产物；这不发布 npm：
+准备 Node.js 20+（含 npm）、Git 和 curl，执行：
 
 ```bash
-pnpm install --frozen-lockfile
-pnpm lint
-pnpm build
-npm pack
-npm install --global ./njucli-0.1.0.tgz
+curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/install.sh | bash
 njucli --help
 njucli auth login tex
 ```
 
-安装产物包含插件清单、MCP 配置、Skill 和本说明。不要用 `npx njucli` 替代本地安装：本项目尚未确认 npm 名称归属或发布来源。
+安装脚本从指定 GitHub 仓库获取 `main`，通过 `package.json` 锁定的 pnpm 与锁文件构建，再安装全局 `njucli` 命令；临时源码在结束时清理。5 个 Skill 通过目录链接安装到 `${CODEX_HOME:-~/.codex}/skills/`，链接指向完整包内的对应目录。已有同名目录或指向其他位置的链接会保留并报错，需先自行迁移。源码目录的普通 `pnpm install` 仅安装开发依赖。
+
+升级时运行 `njucli upgrade`。命令重新安装远端 `main`，保留已有的全局安装前缀；Skill 链接随安装包更新，个人账号目录保持原位。升级进度写入 stderr，`--format json` 的最终结果使用统一输出格式。
+
+需要指定其他宿主的 Skill 目录时，可设置 `NJUCLI_SKILLS_DIR`，并在安装和升级时使用相同设置。此变量优先于 `CODEX_HOME`。`NJUCLI_INSTALL_PREFIX` 可指定 CLI 安装前缀，其 `bin` 目录需位于 PATH；默认使用 npm 当前全局前缀。安装产物同时保留插件清单、MCP 配置和本说明。
 
 统一认证使用 `auth login tex --username "统一认证账号" --password "统一认证密码"`，或以 `--credentials` 导入含 `username/password` 的 JSON。CLI 自动填写官方表单；[认证 Skill](../skills/njucli-auth/SKILL.md) 提供截图拖动脚本，复用同一 CLI 浏览器和会话，扫码由本人完成。
 
@@ -36,7 +36,7 @@ njucli auth login tex
 
 将根目录 `.mcp.json` 的 `mcpServers.njucli` 合并到宿主配置，保留它已有的服务。宿主需能在 PATH 找到 `njucli`；否则把 `command` 改为本机 `command -v njucli` 返回的绝对路径。MCP 只使用 stdin/stdout；不要给 `mcp` 添加 `--format json`。客户端调用同一账号时应串行执行，避免争用 CLI 专用 Chrome。
 
-使用支持 Skill 和终端执行的宿主时，将 `skills/njucli-tex` 放入该宿主的 Skill 目录，或按其本地插件导入流程选择本插件根目录。写作 Skill 直接调用 CLI 执行用户指定的写作任务，MCP 提供只读查询。
+Codex 在下一轮对话可发现已安装 Skill。其他支持 Skill 和终端执行的宿主，可通过 `NJUCLI_SKILLS_DIR` 指定其全局 Skill 目录，或按本地插件导入流程选择完整安装包。写作 Skill 直接调用 CLI 执行用户指定的写作任务，MCP 提供只读查询。
 
 ## 豆包与 TRAE
 
@@ -58,4 +58,4 @@ AI 可以据用户提供的材料撰写章节、修改公式和排版、维护�
 
 插件配置不含个人凭据。账号密码保存在本机账号目录，网页登录使用 CLI 专用 Chrome；读取结果可能包含论文、邮件或课程资料，由调用宿主处理。
 
-源码仓库为 [MarcWebber/njucli](https://github.com/MarcWebber/njucli)，公开可见。当前安装方式是从源码构建或安装本地 tarball。类型检查、打包、MCP 协议与实际客户端安装分别记录验证结果。
+源码仓库为 [MarcWebber/njucli](https://github.com/MarcWebber/njucli)，公开可见。全局安装直接使用该仓库，也可在源码目录构建并安装本地 tarball。类型检查、打包、MCP 协议与实际客户端安装分别记录验证结果。

@@ -8,29 +8,24 @@
 
 ## 快速开始
 
-当前通过 GitHub 的 `main` 分支下载源码并安装。准备 Node.js 20+ 和 pnpm 10.27.0（可用 `npm install --global pnpm@10.27.0` 安装）。网页认证使用本机 Google Chrome，账号和密码保存在本地账号目录。当前验证环境为 macOS。
+准备 Node.js 20+（含 npm）、Git 和 curl，一行命令安装全局 CLI 与 Codex Skill：
 
 ```bash
-git clone --branch main https://github.com/MarcWebber/njucli.git
-cd njucli
-pnpm install --frozen-lockfile
-pnpm build
-npm install --global .
+curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/install.sh | bash
+```
+
+安装会下载 GitHub `main`、自动构建 CLI，并将认证、TeX、邮箱、软件下载、SoftSE 共 5 个 Skill 注册到 `~/.codex/skills/`；设置了 `CODEX_HOME` 时使用其 `skills/` 子目录。Skill 链接到完整安装包，脚本和业务实现随 CLI 一起更新。Codex 可在下一轮对话发现已安装 Skill。
+
+之后在任意目录升级：
+
+```bash
+njucli upgrade
+```
+
+网页认证需要本机 Google Chrome，当前验证环境为 macOS。账号和密码保存在本地账号目录。先体验公开信息查询，再登录需要使用的服务：
+
+```bash
 njucli --help
-```
-
-已安装后，在源码目录更新到远端最新版本：
-
-```bash
-git pull --ff-only origin main
-pnpm install --frozen-lockfile
-pnpm build
-npm install --global .
-```
-
-先体验公开信息查询，再登录需要使用的服务：
-
-```bash
 njucli campus canteens
 njucli auth login tex --username "统一认证账号" --password "统一认证密码"
 njucli tex projects
@@ -187,7 +182,7 @@ NJUCLI_FORMAT=json njucli softse assignments --pending
 }
 ```
 
-TeX 写作用 [njucli-tex Skill](skills/njucli-tex/SKILL.md) 配合终端完成。仓库同时提供 `.codex-plugin/` 插件清单，接入步骤见 [AI 接入指南](docs/ai-plugin.md)。
+TeX 写作用已全局安装的 [njucli-tex Skill](skills/njucli-tex/SKILL.md) 配合终端完成。仓库同时提供 `.codex-plugin/` 插件清单，其他客户端与 MCP 的接入步骤见 [AI 接入指南](docs/ai-plugin.md)。
 
 ## 目录结构
 
@@ -220,7 +215,11 @@ AGENTS.md                   # 开发规范与交付流程
 
 ## 参与开发
 
+源码开发使用 pnpm 10.27.0：
+
 ```bash
+git clone https://github.com/MarcWebber/njucli.git
+cd njucli
 pnpm install --frozen-lockfile
 pnpm lint
 pnpm test

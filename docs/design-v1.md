@@ -1,7 +1,7 @@
 # NjuCLI V1 设计与实现
 
 状态：实现与实网验收范围见下方里程碑
-更新日期：2026-09-25
+更新日期：2026-09-26
 
 ## 结论
 
@@ -15,10 +15,11 @@ V1 只服务学生及其 AI，优先上课、作业、选课、借书与运动�
 
 ## 已实现命令
 
-二进制名和 npm 包名均为 `njucli`。命令结构固定为 `njucli <domain> <command> [target] [options]`；顶层 `today`、`doctor` 和 `mcp` 是三个明确的独立入口。
+二进制名和 npm 包名均为 `njucli`。命令结构固定为 `njucli <domain> <command> [target] [options]`；顶层 `today`、`doctor`、`mcp` 和 `upgrade` 是独立入口。
 
 ```text
 njucli
+├── upgrade
 ├── account
 │   ├── current
 │   ├── list
@@ -121,6 +122,14 @@ njucli
 日期接受 `YYYY-MM-DD`、`today` 和 `tomorrow`，统一按 `Asia/Shanghai` 解释。查询词与稳定 ID 使用位置参数；`--source`、`--section`、`--term`、`--date`、分页和输出格式只做筛选或修饰。
 
 分页与枚举只在 CLI/MCP 入口验证，不在 client 再验一次；每页条数不设没有远端证据的本地上限。日期在用户输入和学期数据进入计算时验证一次，周范围及日期展开不逐次重验。本地下载与导出共用 `saveFile`，替换指定输出文件；新文件权限为 0600，已有文件保留原权限。
+
+## 全局安装与升级
+
+用户通过 `curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/install.sh | bash` 安装。脚本克隆远端 `main` 到临时目录，使用 `package.json` 指定的 pnpm 和 `--frozen-lockfile` 安装构建依赖，构建后将 tarball 安装为全局 CLI；结束时清理临时源码。
+
+全局安装的 `postinstall` 将包内 5 个 `njucli-*` Skill 链接到 Codex 的用户级 Skill 目录。默认目录为 `~/.codex/skills`，支持 `CODEX_HOME`；`NJUCLI_SKILLS_DIR` 可指定其他宿主目录。同名目录或指向其他位置的链接会报错并保留。源码开发安装不修改全局 Skill。
+
+`njucli upgrade` 调用同一安装脚本，从远端 `main` 更新。命令识别现有 npm 全局安装前缀，保持命令与 Skill 链接位置稳定。脚本支持 `NJUCLI_INSTALL_PREFIX` 指定全局 CLI 前缀；自定义前缀的 `bin` 需要位于 PATH。升级过程输出到 stderr，最终结果由统一输出边界处理。
 
 ## 执行模型
 

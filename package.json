@@ -19,6 +19,7 @@
     ".codex-plugin",
     ".mcp.json",
     "skills",
+    "scripts",
     "docs"
   ],
   "engines": {
@@ -27,6 +28,7 @@
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "build": "pnpm clean && tsc -p tsconfig.json",
+    "postinstall": "node scripts/install-skills.mjs",
     "lint": "tsc -p tsconfig.json --noEmit",
     "test": "pnpm build && node --test tests/integration.test.mjs",
     "dev": "tsx src/cli.ts"
