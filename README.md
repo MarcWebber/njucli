@@ -6,258 +6,28 @@
 [![GitHub stars](https://img.shields.io/github/stars/MarcWebber/njucli?style=flat)](https://github.com/MarcWebber/njucli/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/MarcWebber/njucli?style=flat)](https://github.com/MarcWebber/njucli/forks)
 
-**把论文、邮件、课程和校园事务，接到你的终端与 AI 助手。**
+南京大学校园服务的命令行工具，配套 Skills 供 AI 助手调用。
 
-NjuCLI 面向南京大学学生，提供统一的校园服务命令、JSON 输出、38 个只读 MCP 工具和 5 个任务 Skill。账号与会话保存在本机，AI 通过你授权的命令完成具体任务。
+## 安装
 
-[快速开始](#快速开始) · [功能](#功能) · [使用示例](#使用示例) · [AI 接入](#ai-接入) · [参与贡献](CONTRIBUTING.md) · [许可证](#许可证)
-
-## 特性
-
-- **写作与阅读**：管理 TeX 项目，修改正文、上传素材、编译 PDF；读取校园邮件并下载附件。
-- **课程与校园**：查询课表、作业、课程名单、图书借阅、体育场地及正版软件安装包。
-- **为 AI 提供明确接口**：CLI 支持 JSON；MCP 提供只读查询；Skill 描述认证、写作、邮箱、软件和 SoftSE 的任务流程。
-- **一次安装，统一升级**：一行命令安装全局 CLI 和 Skill，`njucli upgrade` 同步更新。
-- **本机账号管理**：隔离不同账号与邮箱，复用官方认证会话；具体能力和验证范围见[接口证据](docs/interface-evidence.md)。
-
-项目由个人维护。按[个人使用许可证](LICENSE)提供源码，学校及其他机构使用须另行取得书面授权。
-
-## 快速开始
-
-准备 Node.js 20+（含 npm）、Git 和 curl，一行命令安装全局 CLI 与 Codex Skill：
+需要 Node.js 20+、Git 和 curl。网页登录需要 Google Chrome，目前主要在 macOS 上验证。
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/install.sh | bash
 ```
 
-安装会下载 GitHub `main`、自动构建 CLI，并将认证、TeX、邮箱、软件下载、SoftSE 共 5 个 Skill 注册到 `~/.codex/skills/`；设置了 `CODEX_HOME` 时使用其 `skills/` 子目录。Skill 链接到完整安装包，脚本和业务实现随 CLI 一起更新。Codex 可在下一轮对话发现已安装 Skill。
+同时安装全局 `njucli` 和 Codex Skills。
 
-之后在任意目录升级：
+升级：
 
 ```bash
 njucli upgrade
 ```
 
-网页认证需要本机 Google Chrome，当前验证环境为 macOS。账号和密码保存在本地账号目录。先体验公开信息查询，再登录需要使用的服务：
+## 文档
 
-```bash
-njucli --help
-njucli campus canteens
-njucli auth login tex --username "统一认证账号" --password "统一认证密码"
-njucli tex projects
-```
-
-所有命令遵循：
-
-```text
-njucli <领域> <动作> [目标] [选项]
-```
-
-使用 `njucli <领域> --help` 查看该领域的动作和参数。
-
-## 功能
-
-| 领域 | 现有命令能力 |
-| --- | --- |
-| **TeX 写作** `tex` | 项目与模板查询、创建、模板创建、改名、正文读写、单文件上传、编译、日志、PDF 与源码下载 |
-| **校园邮箱** `mail` | 本机绑定、邮件夹、未读列表、全文搜索、正文读取、附件下载、绑定管理 |
-| **研究生教务** `academic` | 成绩、考试安排、课表、培养方案 |
-| **课程** `course` | 本科课表、今日/本周课程、下一节课、ICS 导出；研究生可选/已选课程查询与选退课 |
-| **软件学院教学** `softse` | 全站可见课程目录、课程搜索、课程名单分页、课程活动、作业要求与状态、资料下载、成绩项、自助选课、官方作业提交页链接 |
-| **图书馆** `library` | 图书检索、详情、馆藏位置与可借状态、个人借阅 |
-| **体育** `sports` | 场馆、场地时段、余量、预约记录、官方预约及取消页面链接 |
-| **网上办事大厅** `ehall` | 服务目录、待办、办件进度、官方应用链接 |
-| **校园信息** `campus` | 公告来源、栏目文章、文章正文、食堂名称与电话 |
-| **正版软件** `software` | 官方软件目录、说明链接、Adobe / WPS / MathType / Origin 安装包查询与下载 |
-| **账号与认证** `account` / `auth` | 本地账号切换、隔离会话、登录检查、会话恢复、主动刷新与退出 |
-
-`today` 汇总本科课程、借阅和体育预约；`doctor` 检查当前账号及服务连接。接口来源与执行结果分别记录在[接口说明](docs/interface-evidence.md)和[实网记录](docs/design-v1.md#验收里程碑)。
-
-## 使用示例
-
-### 写论文
-
-```bash
-njucli auth login tex
-njucli tex templates
-njucli tex from-template TEMPLATE_KEY
-njucli tex projects "论文"
-njucli tex files PROJECT --version VERSION
-njucli tex read PROJECT FILE_KEY --version VERSION
-njucli tex write PROJECT main.tex --version VERSION --input ./main.tex
-njucli tex upload PROJECT ./figure.png --version VERSION
-njucli tex compile PROJECT main.tex --version VERSION --output ./paper.pdf
-njucli tex log PROJECT --version VERSION
-njucli tex download PROJECT --version VERSION --output ./source.zip
-```
-
-`TEMPLATE_KEY` 来自模板查询；`PROJECT` 和 `VERSION` 来自项目查询；`FILE_KEY` 来自文件列表。正文写入和编译使用文件路径，例如 `main.tex`。
-
-`write` 更新已有 UTF-8 文件；`upload` 将单个非隐藏文件上传至项目根目录，同名文件直接替换。文件大小遵循网站的小于 50 MiB 限制。上传后按字节回读，正文写入后核对保存，编译结合本次响应与日志确认产物。
-
-AI 可以根据你的材料撰写章节、调整公式、维护参考文献，再通过这些命令保存、编译和下载。完整流程见 [TeX 写作 Skill](skills/njucli-tex/SKILL.md)。
-
-### 读校园邮件
-
-直接提供完整邮箱地址和客户端专用密码，校验成功后保存到本地：
-
-```bash
-njucli mail bind --address "邮箱地址" --password "邮箱客户端专用密码"
-njucli mail folders
-njucli mail list --unread --limit 10
-njucli mail search "奖学金"
-njucli mail read MESSAGE_ID
-njucli mail download MESSAGE_ID 1 --output ./附件.pdf
-```
-
-也可用 `mail bind --credentials ./mail-credentials.json` 导入含 `address/password` 的 JSON。已保存统一认证账号时，`mail bind --password "邮箱客户端专用密码"` 默认使用 `username@smail.nju.edu.cn`；username 已为完整邮箱地址则直接使用。显式 `--address` 独立保存，不改变统一认证账号。
-
-同一本地账号可绑定多个邮箱，每次绑定成功后切换为该邮箱。`mail accounts` 列出绑定邮箱，`mail use "邮箱地址"` 切换默认邮箱，`mail unbind [address]` 删除指定或当前邮箱的本地凭据。
-
-无参数 `mail bind` 校验并复用当前邮箱。尚无凭据时打开[校园邮箱](https://mail.nju.edu.cn/)官方向导：检查 IMAP、必要时开启 IMAP/SMTP、生成一个专用密码并验证保存；扫码由本人完成。
-
-`MESSAGE_ID` 来自列表或搜索结果，附件编号来自正文查询。分页使用 `nextBefore`：`njucli mail list --before UID`。`folders/list/search` 使用当前邮箱；`read/download` 按邮件 ID 使用其所属的已绑定邮箱，切换默认邮箱后仍可读取原 ID。读取和下载保持原有已读标记，`mail status` 查看本机绑定。
-
-完整流程见[邮箱 Skill](skills/njucli-mail/SKILL.md)，官方说明见[学生邮箱客户端设置](https://itsc.nju.edu.cn/1a/8f/c21586a334479/page.htm)。
-
-### 查课程和作业
-
-```bash
-njucli auth login ehall
-njucli academic grades
-njucli academic exams
-njucli academic schedule
-njucli academic plan
-
-njucli auth login softse
-njucli softse courses
-njucli softse catalog --format json
-njucli softse participants 370 --page 1 --format json
-njucli softse assignments --pending
-njucli softse assignment ACTIVITY_ID
-njucli softse download ACTIVITY_ID "作业说明.pdf" --output ./作业说明.pdf
-```
-
-`softse catalog` 逐一读取当前账号可见的课程分类与分页，按课程 ID 去重；`courses` 保持“我的课程”含义。`participants` 每页 20 个成员账号，返回页面显示名、Moodle 用户 ID、课程内资料链接、角色和小组，通过 `nextPage` 继续翻页，末页为 `null`。学生身份与学号的对应关系尚未实现；页面显示名由用户设置，资料页字段与学号的关系尚待验证。详见 [SoftSE Skill](skills/njucli-softse/SKILL.md)。
-
-`ACTIVITY_ID` 和附件名称取自作业查询结果。教务查询可使用 `--term` 指定学期。
-
-### 下载正版软件
-
-```bash
-njucli software list
-njucli software show adobe-cc
-njucli software show adobe --format json
-njucli software download adobe-cc FILE_ID --output ./CreativeCloud.dmg
-```
-
-`FILE_ID` 取自 `show` 的 `files[].id`，按目标操作系统选择；CC 的 `macarm64` 为 Apple Silicon，`osx10` 为 Intel Mac，`win64` 与 `winarm64` 为对应 Windows 架构。`adobe-cc` 读取 Adobe 官网的 Creative Cloud 安装包，安装后以“学工号@nju.edu.cn”进入南大统一认证，再由 CC 安装 Photoshop 等产品。`adobe` 读取南大提供的离线版本，版本与适用系统以官方页面为准。
-
-`wps-365`、`mathtype`、`origin` 同样支持 `show` 和 `download`。校内服务器下载需要校园网或官方 VPN。下载流式保存至指定路径，同名输出直接更新；软件安装与校园授权按官方说明完成。详见[软件下载 Skill](skills/njucli-software/SKILL.md)和[南大正版软件专区](https://itsc.nju.edu.cn/zbrj/list.htm)。
-
-### 管理登录
-
-```bash
-njucli auth login --username "统一认证账号" --password "统一认证密码"
-njucli auth status
-njucli auth refresh tex
-njucli auth logout tex
-```
-
-`auth login [capability] --credentials ./auth-credentials.json` 可导入含 `username/password` 的 JSON。后续登录复用已存凭据，CLI 自动填写统一认证官方账号登录表单；滑块可通过[认证 Skill 的截图拖动脚本](skills/njucli-auth/SKILL.md)完成，扫码由本人完成。每次业务前探测会话，失效时自动登录，包括之前主动退出的会话。
-
-配置默认位于 `~/.config/njucli/accounts/<account>/`，设置 `XDG_CONFIG_HOME` 可更换根目录。`auth.json` 保存统一认证的 `username/password`；`mail.json` 保存 `current` 和 `mailboxes`，每个邮箱包含 `address/password`。两份文件权限为 `0600`。`auth logout` 清除会话，已保存的账号密码供后续登录复用。
-
-通过 `account add/use/current/list/remove` 管理本地账号；`NJUCLI_ACCOUNT` 为当前进程指定账号。统一认证账号与邮箱地址分别管理。
-
-## AI 接入
-
-### 终端与 JSON
-
-具备终端能力的 AI 使用现有 CLI。为具体命令添加 `--format json`，或为进程设置 `NJUCLI_FORMAT=json`：
-
-```bash
-njucli tex projects --format json
-NJUCLI_FORMAT=json njucli softse assignments --pending
-```
-
-成功结果位于 `data`，失败信息位于 `error`；认证提示提供下一步的 `auth_command`。命令直接执行指定动作，写入成功包含必要的结果回读。
-
-### MCP 与 Skill
-
-`njucli mcp` 提供 38 个只读工具，CLI 与 MCP 共用业务实现。将以下配置加入支持本地 stdio MCP 的 AI 宿主：
-
-```json
-{
-  "mcpServers": {
-    "njucli": {
-      "command": "njucli",
-      "args": ["mcp"]
-    }
-  }
-}
-```
-
-TeX 写作用已全局安装的 [njucli-tex Skill](skills/njucli-tex/SKILL.md) 配合终端完成。仓库同时提供 `.codex-plugin/` 插件清单，其他客户端与 MCP 的接入步骤见 [AI 接入指南](docs/ai-plugin.md)。
-
-## 目录结构
-
-```text
-src/
-├── cli.ts                  # 程序入口
-├── commands/               # 命令、参数与文本展示
-├── app/                    # 业务接口与生产装配
-├── account/                # 本地账号与目录
-├── auth/                   # 登录交接、会话存储与恢复
-│   └── drivers/            # 各站点的认证流程
-├── core/                   # 文件、输入、日期、输出与脱敏
-├── domains/                # 领域 client 和响应解析
-│   ├── tex/                # TeX 项目与写作
-│   ├── mail/               # IMAP 邮件
-│   ├── software/           # 正版软件目录与下载
-│   ├── academic/           # 研究生教务
-│   ├── course/             # 课表与选课
-│   ├── softse/             # 软件学院教学
-│   ├── library/            # 图书馆
-│   ├── sports/             # 体育
-│   ├── ehall/              # 网上办事大厅
-│   └── campus/             # 校园公开信息
-└── mcp/                    # 只读 MCP 工具
-tests/integration.test.mjs   # 本地集成测试
-skills/                     # 统一认证、TeX 写作、校园邮箱与软件下载 Skill
-docs/                       # 设计、接口与验证记录
-AGENTS.md                   # 开发规范与交付流程
-```
-
-## 参与开发
-
-源码开发使用 pnpm 10.27.0：
-
-```bash
-git clone https://github.com/MarcWebber/njucli.git
-cd njucli
-pnpm install --frozen-lockfile
-pnpm lint
-pnpm test
-npm pack --dry-run
-```
-
-`pnpm test` 构建后运行 Node 内置集成测试，使用本机 HTTP 服务和临时会话文件。
-
-向 `main` 提交 PR 后，[GitHub Actions](https://github.com/MarcWebber/njucli/actions/workflows/ci.yml) 自动执行构建和本地测试。普通贡献者的 PR 需要 CI 通过、维护者批准及评审讨论解决后合入。详见[贡献指南](CONTRIBUTING.md)与[主分支规则](https://github.com/MarcWebber/njucli/rules)。
-
-开发流程：**最小脚本验证 → 领域 client → CLI/MCP → 集成测试 → Skill → 打包交付**。具体约定见 [AGENTS.md](AGENTS.md)。[提交问题](https://github.com/MarcWebber/njucli/issues/new)时，请附命令、版本、预期结果及脱敏后的实际输出。
-
-## 社区与项目状态
-
-顶部 Stars、Forks 徽章展示 GitHub 的公开社区数据。项目当前没有安装量或活跃用户统计，也不收集校园使用行为遥测。
-
-当前版本为 `0.1.0`，通过 GitHub `main` 分发。网页登录与完整安装流程已在 macOS 验证，CI 在 Ubuntu 上运行本地测试；各校园服务的实网验收范围分别记录在[接口证据](docs/interface-evidence.md)中。欢迎通过 [Issues](https://github.com/MarcWebber/njucli/issues)反馈问题，通过 [PR](https://github.com/MarcWebber/njucli/pulls)提交改进。
+[Skills](skills/) · [AI 客户端接入](docs/ai-plugin.md) · [贡献指南](CONTRIBUTING.md) · [问题反馈](https://github.com/MarcWebber/njucli/issues)
 
 ## 许可证
 
-[NjuCLI 个人使用许可证 1.0](LICENSE)允许非商业性的个人学习、研究和本人校园事务使用，以及在相同条款下分享修改版。学校、院系、实验室、公司等机构的部署、集成或业务使用，以及商业用途，须事先取得相关著作权人的书面授权。
-
-这是一份带使用范围限制的源码可见许可证。学生或教职员工以个人身份处理自己的课程、论文、邮件等事务，属于允许的个人使用。第三方依赖继续适用各自的许可证。
-
-机构授权请[联系维护者](https://github.com/MarcWebber/njucli/issues/new)，说明使用场景和部署范围。
+[个人使用许可证](LICENSE)：允许非商业个人学习和本人校园事务使用；学校、机构及商业用途须另获书面授权。

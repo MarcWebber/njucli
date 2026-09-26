@@ -2,7 +2,7 @@
   "name": "njucli",
   "version": "0.1.0",
   "license": "SEE LICENSE IN LICENSE",
-  "description": "面向南京大学学生与 AI 的校园服务命令行。",
+  "description": "南京大学校园服务 CLI 与 AI Skills",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/MarcWebber/njucli.git"

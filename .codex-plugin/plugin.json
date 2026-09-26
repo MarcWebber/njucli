@@ -1,14 +1,14 @@
 {
   "name": "njucli",
   "version": "0.1.0",
-  "description": "南京大学学生的本地 CLI 与 TeX 写作助手。",
+  "description": "南京大学校园服务 CLI 与 AI Skills",
   "author": { "name": "NjuCLI contributors" },
   "skills": "./skills/",
   "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "NjuCLI",
-    "shortDescription": "校园查询与 TeX 论文写作",
-    "longDescription": "复用本机 NjuCLI 和隔离登录态。通过只读 MCP 查询，通过具备终端能力的 AI 调用 CLI 完成授权的 TeX 写作、素材上传与编译。需要先安装 njucli 和 Google Chrome。",
+    "shortDescription": "南京大学校园服务 CLI 与 AI Skills",
+    "longDescription": "南京大学校园服务的命令行工具，配套 Skills 供 AI 助手调用。",
     "developerName": "NjuCLI contributors",
     "category": "Productivity",
     "capabilities": ["Read", "Write"],
