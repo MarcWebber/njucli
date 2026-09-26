@@ -656,3 +656,5 @@ njucli softse participants 370 --page 1 --format json
 上述安装与升级验证使用临时 CLI 和 Skill 目录，没有改动个人认证文件或客户端配置。
 
 推送后从公开的 `raw.githubusercontent.com/MarcWebber/njucli/main/scripts/install.sh` 执行一行安装，真实克隆 GitHub `main`、按锁文件构建并安装成功，版本为 `0.1.0`；安装后公开源查询返回 8 个来源，5 个 Skill 已注册。安装脚本对公开仓库采用匿名 Git 下载，避免本机失效的 Git 凭据干扰下载；此设置仅作用于该次 clone。
+
+随后以已安装 CLI 执行真实远端 `njucli upgrade --format json`，返回 `ok: true`，安装前缀保持不变。再次回读 5 个 Skill 的内容及安装脚本，与当前源码逐字节一致；公开下载脚本也已核对一致。此验证使用隔离的安装目录，未改动用户原有的全局 Skill。
