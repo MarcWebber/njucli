@@ -15,7 +15,7 @@ import { selectionSessionDriver } from "../auth/drivers/selection-browser.js";
 import { texSessionDriver } from "../auth/drivers/tex-browser.js";
 import { SessionStore } from "../auth/session-store.js";
 import { exchangeSportsAccessToken } from "../auth/sports-token.js";
-import { AUTH_CAPABILITIES, type AuthCapability, type AuthCredentials } from "../auth/types.js";
+import { AUTH_CAPABILITIES, type AuthCapability, type AuthCredentials, type AuthMaintenance } from "../auth/types.js";
 import { parseCampusDate } from "../core/dates.js";
 import { AppError, asAppError } from "../core/errors.js";
 import { readJsonFile, saveFile, writeJsonFile } from "../core/fs.js";
@@ -27,6 +27,7 @@ import { scheduleToIcs } from "../domains/course/ics.js";
 import { GraduateCourseSelectionClient } from "../domains/course/selection-client.js";
 import { CourseService } from "../domains/course/service.js";
 import { EHallPortalClient } from "../domains/ehall/client.js";
+import { EHallTripClient } from "../domains/ehall/trip.js";
 import { NjuOpacClient } from "../domains/library/client.js";
 import { MailClient } from "../domains/mail/client.js";
 import { bindMail } from "../domains/mail/bind.js";
@@ -34,6 +35,7 @@ import { SoftwareClient } from "../domains/software/client.js";
 import { SportsClient } from "../domains/sports/client.js";
 import { SoftSeClient } from "../domains/softse/client.js";
 import { TexClient } from "../domains/tex/client.js";
+import { YouthClient } from "../domains/youth/client.js";
 import { compileTexFile, uploadTexFile, writeTexFile } from "../domains/tex/editor.js";
 import type { DoctorResult, NjuServices, TodayResult } from "./services.js";
 
@@ -49,13 +51,13 @@ export function createProductionServices(): NjuServices {
 
   const withBrowser = async <T>(
     capability: AuthCapability,
-    operation: (session: BrowserSession) => Promise<T>,
+    operation: (session: BrowserSession, account: AccountRecord) => Promise<T>,
     probe?: (session: BrowserSession) => Promise<boolean>,
   ): Promise<T> => {
     const account = await accountStore.current();
     return withBrowserSession(account, false, async (session) => {
       await auth.ensureSession(account, capability, probe && (() => probe(session)));
-      return operation(session);
+      return operation(session, account);
     });
   };
 
@@ -86,6 +88,14 @@ export function createProductionServices(): NjuServices {
   const withTex = <T>(operation: (client: TexClient) => Promise<T>): Promise<T> =>
     withBrowser("tex", (session) => operation(new TexClient(session.request)));
 
+  const withYouth = <T>(operation: (client: YouthClient) => Promise<T>): Promise<T> => {
+    let client: YouthClient;
+    return withBrowser("youth", () => operation(client), async (session) => {
+      client = new YouthClient(session.request);
+      return client.restoreSession();
+    });
+  };
+
   const withLibrary = <T>(
     capability: "vpn" | "opac",
     operation: (client: NjuOpacClient) => Promise<T>,
@@ -102,6 +112,45 @@ export function createProductionServices(): NjuServices {
   };
 
   const services: NjuServices = {
+    youth: {
+      profile: () => withYouth((client) => client.profile()),
+      menus: () => withYouth((client) => client.menus()),
+      years: () => withYouth((client) => client.years()),
+      hours: (year) => withYouth((client) => client.hours(year)),
+      activities: (options) => withYouth((client) => client.activities(options)),
+      activity: (id) => withYouth((client) => client.activity(id)),
+      enroll: (id, input) => withYouth((client) => client.enroll(id, input)),
+      cancel: (id) => withYouth((client) => client.cancel(id)),
+      rate: (id, stars, comment) => withYouth((client) => client.rate(id, stars, comment)),
+      teams: (options) => withYouth((client) => client.teams(options)),
+      team: (id) => withYouth((client) => client.team(id)),
+      trainings: (options) => withYouth((client) => client.trainings(options)),
+      enrollTraining: (id) => withYouth((client) => client.enrollTraining(id)),
+      cancelTraining: (id) => withYouth((client) => client.cancelTraining(id)),
+      categories: (options) => withYouth((client) => client.categories(options)),
+      applications: (options) => withYouth((client) => client.applications(options)),
+      application: (id) => withYouth((client) => client.application(id)),
+      transcript: (options) => withYouth((client) => client.transcript(options)),
+      exportTranscript: (output) => withYouth((client) => client.exportTranscript(output)),
+      courses: (options) => withYouth((client) => client.courses(options)),
+      course: (id) => withYouth((client) => client.course(id)),
+      courseGrades: (options) => withYouth((client) => client.courseGrades(options)),
+      practices: (options) => withYouth((client) => client.practices(options)),
+      practice: (id) => withYouth((client) => client.practice(id)),
+      practiceTeams: (options) => withYouth((client) => client.practiceTeams(options)),
+      practiceTeam: (id) => withYouth((client) => client.practiceTeam(id)),
+      practiceResources: (options) => withYouth((client) => client.practiceResources(options)),
+      practiceResource: (id) => withYouth((client) => client.practiceResource(id)),
+      practiceJournals: (options) => withYouth((client) => client.practiceJournals(options)),
+      clubs: (options) => withYouth((client) => client.clubs(options)),
+      club: (id) => withYouth((client) => client.club(id)),
+      jobs: (options) => withYouth((client) => client.jobs(options)),
+      recruitments: (options) => withYouth((client) => client.recruitments(options)),
+      tickets: (options) => withYouth((client) => client.tickets(options)),
+      awards: (kind, options) => withYouth((client) => client.awards(kind, options)),
+      projects: (options) => withYouth((client) => client.projects(options)),
+      complaints: (options) => withYouth((client) => client.complaints(options)),
+    },
     software: new SoftwareClient(),
     mail: {
       bind: async (credentials) => {
@@ -137,19 +186,41 @@ export function createProductionServices(): NjuServices {
       remove: (name) => accountStore.remove(name),
     },
     auth: {
-      status: async (capability) => auth.status(await accountStore.current(), capability),
+      maintain: async () => {
+        const account = await accountStore.current();
+        return withBrowserSession(account, true, async () => {
+          const [current] = await auth.status(account, "sso");
+          const action = current!.status === "valid" ? "kept-alive" : "restored";
+          if (action === "restored") {
+            const credentials = await readJsonFile<AuthCredentials>(join(account.configDir, "auth.json"));
+            if (!credentials) throw new AppError("AUTH_REQUIRED", "请保存统一认证账号密码，以便自动恢复会话");
+            await auth.login(account, "sso");
+          }
+          const result: AuthMaintenance = { checkedAt: new Date().toISOString(), action, status: "valid" };
+          await writeJsonFile(join(account.configDir, "auth-maintenance.json"), result);
+          return result;
+        });
+      },
+      status: async (capability) => {
+        const account = await accountStore.current();
+        return withBrowserSession(account, true, () => auth.status(account, capability));
+      },
       login: async (capability, credentials) => {
         const account = await accountStore.current();
-        const path = join(account.configDir, "auth.json");
-        const previous = await readJsonFile<AuthCredentials>(path);
-        if (credentials) await writeJsonFile(path, credentials);
         return withBrowserSession(account, false, async (session) => {
-          if (credentials && previous?.username !== credentials.username) await session.clearCookies();
+          if (credentials) {
+            const path = join(account.configDir, "auth.json");
+            const previous = await readJsonFile<AuthCredentials>(path);
+            await writeJsonFile(path, credentials);
+            if (previous?.username !== credentials.username) await session.clearCookies();
+          }
           return auth.login(account, capability);
         });
       },
-      refresh: async (capability) => auth.refresh(await accountStore.current(), capability),
-      logout: async (capability) => auth.logout(await accountStore.current(), capability),
+      logout: async (capability) => {
+        const account = await accountStore.current();
+        return withBrowserSession(account, true, () => auth.logout(account, capability));
+      },
     },
     campus: {
       canteens: (query) => campus.canteens(query),
@@ -184,6 +255,8 @@ export function createProductionServices(): NjuServices {
       plan: () => withAcademic((client) => client.plan()),
     },
     ehall: {
+      trip: () => withBrowser("ehall", (session, account) => new EHallTripClient(session.request, account.configDir).trip()),
+      submitTrip: (input, dryRun) => withBrowser("ehall", (session, account) => new EHallTripClient(session.request, account.configDir).submitTrip(input, dryRun)),
       services: (query) => withEHall((client) => client.services(query)),
       tasks: (kind, page, pageSize) => withEHall((client) =>
         client.tasks(kind, page, pageSize)),
@@ -319,6 +392,8 @@ export function createProductionServices(): NjuServices {
 }
 
 function createAuthCoordinator(): AuthCoordinator {
+  const restoreYouthSession = (account: AccountRecord): Promise<boolean> =>
+    withBrowserSession(account, true, (session) => new YouthClient(session.request).restoreSession());
   const restoreEhallSession = (account: AccountRecord): Promise<boolean> =>
     withBrowserSession(account, true, async (session) => {
       const client = new EHallPortalClient(session.request);
@@ -358,17 +433,21 @@ function createAuthCoordinator(): AuthCoordinator {
       ehall: { login: restoreEhallSession, probe: restoreEhallSession },
       timetable: { login: probeTimetable, probe: probeTimetable },
       sports: { login: probeSports, probe: probeSports },
-      vpn: { login: interactiveVpnLogin, probe: probeVpn },
+      youth: { login: restoreYouthSession, probe: restoreYouthSession },
+      vpn: { login: loginVpn, probe: probeVpn },
       opac: { login: interactiveOpacLogin, probe: probeOpac },
     },
   });
 }
 
-async function interactiveVpnLogin(
+async function loginVpn(
   account: AccountRecord,
 ): Promise<boolean> {
   return withBrowserSession(account, false, async (session) => {
     const successHost = new URL(VPN_TEST_URL).hostname;
+    const response = await session.request(VPN_TEST_URL);
+    if (!response.ok) throw new Error(`WebVPN 登录恢复返回 HTTP ${response.status}`);
+    if (new URL(response.url).hostname === successHost) return true;
     await session.login(VPN_TEST_URL, (url) => url.hostname === successHost);
     return true;
   });

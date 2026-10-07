@@ -14,11 +14,11 @@ NjuCLI 服务南京大学学生及其 AI 助手，围绕写作、邮件、上课
 | `src/app/production.ts` | 唯一生产装配点 |
 | `src/account/` | 本地账号及隔离目录 |
 | `src/auth/` | 认证依赖、浏览器登录交接、会话保存与恢复 |
-| `src/domains/` | campus、academic、course、ehall、library、mail、software、softse、tex、sports 的 client 与解析 |
+| `src/domains/` | campus、academic、course、ehall、library、mail、software、softse、tex、sports、youth 的 client 与解析 |
 | `src/core/` | 文件、输入、日期、输出与脱敏函数 |
 | `src/mcp/` | 只读 MCP，调用相同业务方法 |
 | `tests/integration.test.mjs` | 少量本地集成测试 |
-| `skills/` | 通过现有 CLI 完成 统一认证、TeX 写作、邮箱操作与软件下载的 Skill |
+| `skills/` | 通过现有 CLI 完成统一认证、TeX 写作、邮箱、软件、课程、行程与青年平台任务的 Skill |
 | `.codex-plugin/`、`.mcp.json` | 插件清单与本地 MCP 配置 |
 | `docs/` | 设计、接口契约和执行证据 |
 
@@ -55,10 +55,11 @@ NjuCLI 服务南京大学学生及其 AI 助手，围绕写作、邮件、上课
 
 - capability 在静态依赖图与生产类型表中配齐。个人课表使用 `timetable`，研究生选课使用 `selection`；SoftSE 和 TeX 使用 SSO 派生的 `softse`、`tex`。
 - 每次业务前调用 `ensureSession`，探测失效时自动登录，认证与业务共享当前 context；每个业务请求执行一次。`logged-out` 只记录状态。
+- 持续认证维护使用 `auth maintain`：以现有 Cookie 访问 CAS，过期时使用已存凭据恢复，适合每两小时调度。`auth status` 的 expired 由维护或业务命令处理。
 - `auth login` 通过 `--username/--password` 或 `--credentials` 接收凭据，保存为 `auth.json` 的 `username/password`。`BrowserSession` 自动填写 authserver 官方账号登录表单；滑块支持 `skills/njucli-auth/scripts/login.mjs` 截图与坐标拖动，复用现有认证与会话保存；扫码由本人完成。
 - `mail bind` 通过 `--address/--password` 或 `--credentials` 接收邮箱凭据。省略地址时从统一认证 username 派生邮箱；显式地址独立保存。同一本地账号允许多个邮箱，`mail.json` 保存 `{ current, mailboxes: [{ address, password }] }`，通过 `mail accounts/use/unbind` 管理。
 - 两份凭据文件位于 `~/.config/njucli/accounts/<account>/`，由 `XDG_CONFIG_HOME` 覆盖根目录，权限 0600。日志、仓库和交付记录使用脱敏结果，个人业务数据保存在指定位置。
-- 浏览器使用 CLI 专用目录；会话型 Cookie 原子保存至账号目录的 `session-cookies.json`，权限 0600；持久 Cookie 由 Chrome 管理。
+- 浏览器使用 CLI 专用目录；全部 Cookie 原子保存至账号目录的 `session-cookies.json`，权限 0600。CLI/MCP 同账号调用在读取 Cookie 前取得 `session.lock`，保存后释放；不同账号独立。保存凭据后的统一认证在后台执行，官方滑块被拒绝后等待换图，最多尝试三张；学校账号错误直接返回原因。页面编辑仍使用可见 Chrome 并继承当前 Cookie。
 - 无参数 `mail bind` 复用已存凭据校验；仅无凭据时打开官方浏览器向导，必要时开启 IMAP/SMTP，单次生成专用密码并交给 `MailClient.bind` 校验保存。
 - 日常邮箱查询使用官方 IMAP/TLS 与本地凭据，EXAMINE/BODY.PEEK 保持已读状态。列表、搜索与邮件夹使用当前邮箱；正文与附件按邮件 ID 使用对应邮箱。解绑删除指定或当前邮箱的本地凭据。
 

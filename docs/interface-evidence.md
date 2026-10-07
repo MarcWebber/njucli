@@ -1,6 +1,6 @@
 # 校园服务接口证据
 
-更新日期：2026-09-26（SoftSE 课程目录、名单与全局安装升级）
+更新日期：2026-10-07
 
 本文记录 NjuCLI V1 实际采用的入口、请求顺序、字段契约和证据等级。公开实现只用于发现公开站点协议；本仓库没有以第三方代码或 Git 历史为底座，也不授权绕过验证码、VPN 或访问控制。
 
@@ -25,7 +25,7 @@
 
 ## 统一身份认证
 
-登录共用 `BrowserSession.login / completeLogin` 的可见页面与等待流程。authserver 正式账号登录表单自动使用 `auth.json` 的 username/password；站点 driver 决定成功地址和会话校验。SSO、selection、SoftSE、WebVPN 和 TeX 复用等待能力，验证码或扫码由本人在官方页面完成。
+登录共用 `BrowserSession.login / completeLogin` 的可见页面与等待流程。authserver 正式账号登录表单自动使用 `auth.json` 的 username/password；站点 driver 决定成功地址和会话校验。SSO、selection、SoftSE、WebVPN 和 TeX 复用等待能力；统一认证滑块使用官方图像识别与鼠标拖动，其他站点的验证码及扫码依各站点实际流程完成。
 
 ### 已观察关系
 
@@ -51,9 +51,9 @@ sso -> vpn -> opac
 selection
 ```
 
-`selection` 使用同一 account 浏览器目录中的独立会话。登录和业务请求共用隔离的 Playwright persistent context。CLI 自有会话型 Cookie 以 0600 权限原子保存到 `session-cookies.json`，下次启动恢复；持久 Cookie 由 Chromium 目录维护。
+`selection` 使用同一 account 浏览器目录中的独立会话。登录和业务共用当次 `BrowserSession`。HTTP 查询先载入 `session-cookies.json`，仅页面操作按需打开专用 Chrome 并继承当前 Cookie；全部会话型和持久 Cookie 均以 0600 权限原子保存，下次启动恢复。
 
-每次业务前在线探测目标能力，失效时自动登录并复用本地凭据。metadata 只记录 capability/status，`logged-out` 也允许后续业务登录。`auth status` 探测状态，`auth refresh` 检查并恢复会话。SSO 根探针访问 `authserver/login?service=...`，核对 EHall 落地路径。
+每次业务前在线探测目标能力，失效时自动登录并复用本地凭据。metadata 只记录 capability/status，`logged-out` 也允许后续业务登录。`auth status` 探测状态，`auth login` 执行官方登录流程。SSO 根探针访问 `authserver/login?service=...`，核对 EHall 落地路径。
 
 同一命令认证与业务在 `AsyncLocalStorage` 作用域内共用一个 context，结束后保存并关闭。全量 logout 包含 SSO，清理会话并记录 logged-out；本地账号密码保留供后续登录使用。
 
@@ -63,7 +63,46 @@ selection
 
 2026-09-10 只读复核中，编译 CLI 的 `auth status sso` 返回 `expired`，随后 `auth status tex` 返回 `valid`，新进程 `tex projects` 返回 8 个项目。说明根会话失效不应阻断仍有效的子站会话；该结果不证明根会话续期或子站过期重建。
 
-同日读取[公开登录页](https://authserver.nju.edu.cn/authserver/login)及其直接引用的 `login.js`、`schoolCombinedLogin.js`、`utils.js`、`common-header.js`（版本 `20260703.154014`），未发现可供 CLI 使用的 `refresh_token` 或启用长期登录的控件。[common-header.js](https://authserver.nju.edu.cn/authserver/njuTheme/static/common/common-header.js?v=20260703.154014) 中的 30 天期限用于 `MULTIFACTOR_BROWSER_FINGERPRINT`，不是登录会话有效期。上述检查不代表学校所有认证渠道均无长期授权；目前没有足够契约或实网证据支持注册长期刷新入口或承诺永久免登录。
+同日读取[公开登录页](https://authserver.nju.edu.cn/authserver/login)及其直接引用的 `login.js`、`schoolCombinedLogin.js`、`utils.js`、`common-header.js`（版本 `20260703.154014`），未发现可供 CLI 使用的 `refresh_token` 或启用长期登录的控件。[common-header.js](https://authserver.nju.edu.cn/authserver/njuTheme/static/common/common-header.js?v=20260703.154014) 中的 30 天期限用于 `MULTIFACTOR_BROWSER_FINGERPRINT`，不是登录会话有效期。上述检查范围限于网页登录前端；OAuth 续期协议的契约与南大部署结果见下节。
+
+2026-10-03 匿名实网复核：读取官方登录页及其直接引用的 8 个非通用库脚本，版本为 `20260703.154014`。在这些公开前端中未发现延长已有认证会话有效期的 API 契约。[qrcode.js](https://authserver.nju.edu.cn/authserver/njuTheme/static/custom/js/qrcode.js?v=20260703.154014) 的 `refresh()` 获取登录二维码，使用 `qrCode/getToken` 和 `qrCode/getCode`，再通过 `qrCode/getStatus.htl` 查询扫码状态。页面虽有“开启后 7 天内无需再次登录”的 `rememberMeTip` 文案和 `#myRememberMe` 样式，但没有对应的实际表单控件；密码表单没有 rememberMe 字段，登录脚本直接提交当前表单。上述文案、二维码更新及登录探测均不能证明会话续期。[官方认证帮助](https://oi.nju.edu.cn/ee/60/c21475a585312/pagem.htm) 描述同一浏览器内复用认证，未提供续期接口或有效期契约。
+
+API 续期接入以既有会话或刷新凭据发起的续期请求、已确认的响应字段及新凭据或有效期回读为完成条件。当前认证能力为在线状态检查、官方登录和业务前按需恢复。验证范围：类型检查、构建、14 项本地集成、编译产物帮助和打包清单通过；官方公开前端读取属于 `nju-live-public`。下方进一步确认了 OAuth 续期接口的部署，合法刷新凭据与目标业务访问仍待认证实网验证。
+
+### 会话与续期契约（2026-10-03）
+
+以下为本人已有会话的只读核对，未执行退出、取消授权或业务写入。认证 Cookie 为会话型，没有可用的服务端剩余期限。
+
+| 查询 | 请求 | 已确认结果 |
+| --- | --- | --- |
+| CAS 根会话 | GET `/authserver/login?service=<已注册服务>` | 有效会话可取得 ST，并由目标服务换取业务会话 |
+| 在线会话 | GET `/personalInfo/UserOnline/user/queryUserOnline` | `code="0"`，`datas.userOnline` 返回会话，`userOnlineRememberMe` 为空；没有 TTL、expiresAt 或 lastAccess |
+| 认证日志 | POST `/personalInfo/UserLogs/user/queryUserLogs` | `datas.data/total/typeList`；退出原因 2 表示服务端会话超时，多条记录约 8 小时，不能据此确定固定寿命 |
+| 智能体授权 | POST `/personalInfo/accountSecurity/queryGrantAgents` | `code="-1"`、`datas=null`、业务提示“没有【智能体代理】license”；未取得可用授权契约 |
+
+个人中心 JSON 请求使用 `Content-Type: application/json`、`X-Requested-With: XMLHttpRequest`、`refererToken: <REFERERCE_TOKEN Cookie>`，请求体含随机字段 `n`；前端另配置 `XSRF-TOKEN` / `X-XSRF-TOKEN`。认证日志分页参数为 `pageIndex/pageSize`，筛选字段为 `operType/startTime/endTime/result/loginLocation/typeCode`。智能体授权查询参数为 `pageNum/pageSize/appName`。
+
+同一根会话经定时及额外查询，曾连续可用 9.3 小时。没有独立静置会话作对照，也没有续期响应，因而仅证明当时会话仍有效。当前维护流程见[持续认证维护](#持续认证维护2026-10-07)。
+
+### CAS 代理实验结论（2026-10-03）
+
+| 环节 | 实网结果 |
+| --- | --- |
+| 标准入口 | `/authserver/proxy`、`serviceValidate`、`proxyValidate` 已部署；固定无效票据返回 `INVALID_TICKET` |
+| 真实 ST | 本人已有会话可取得并校验个人中心、EHall 的 ST |
+| 新应用 service | 未登记的独立回调应用不能作为登录 service；这与作为 `pgtUrl` 的回调用途不同 |
+| PGT 申请 | 已注册的个人中心、EHall service 搭配自控 Vercel、Pinggy、localhost.run HTTPS 回调，均返回 `INVALID_PROXY_CALLBACK`，未取得 PGTIOU/PGT |
+| 回调连通性 | 客户端公网预检成功，但未收到 CAS 票据回调；不能据此确认学校服务器的网络、TLS 或代理策略 |
+
+没有取得 PGT、PT 或通过代理恢复业务的证据。`INVALID_PROXY_CALLBACK` 的具体原因尚未确定；需要服务端日志区分策略、网络与 TLS。上游旧版 CAS 可能使用 `TGT-` 作为代理授权票据前缀。协议依据：[CAS 标准](https://apereo.github.io/cas/7.3.x/protocol/CAS-Protocol-Specification.html)、[服务代理策略](https://apereo.github.io/cas/7.3.x/services/Configuring-Service-Proxy-Policy.html)。这些实验未接入正式业务，临时回调和观测脚本已移除。
+
+### OAuth 续期接口（2026-10-03）
+
+匿名 `POST https://authserver.nju.edu.cn/authserver/oauthApi/token/refresh`，以固定无效 `refresh_token` 表单值核对，返回 HTTP 200、`error=invalid_refreshToken`、`error_code=20005`、提示“刷新令牌无效、过期或吊销”。这确认入口存在，没有刷新真实令牌。
+
+[官方续期契约](https://openapi.wisedu.com/openapi/auth/protocol/oauth/api/refreshToken.html)成功时返回 `access_token/refresh_token/token_type/expires_in`。初始[授权码](https://openapi.wisedu.com/openapi/auth/protocol/oauth/api/authorize.html)和[令牌交换](https://openapi.wisedu.com/openapi/auth/protocol/oauth/api/accessToken.html)依赖已注册的 `client_id/redirect_uri/client_secret`。当前 NjuCLI 未取得这份应用配置及初始 refresh_token，也未取得 OAuth 或官方 APP 令牌转换成现有 CAS Cookie 的契约。
+
+[CAS 的 renew 参数](https://apereo.github.io/cas/7.3.x/protocol/CAS-Protocol-Specification.html)要求重新提供主凭据，不是延长已有会话的参数。当前采用已有 Cookie 保活和失效后的凭据恢复，不宣称实现 OAuth API 续期。
 
 ## 本科个人课表
 
@@ -177,7 +216,7 @@ POST /taskcenterapp/sys/taskCenter/taskNew/getTaskRestful.do
 POST /taskcenterapp/sys/taskCenter/taskNew/queryProcessTrack.do
 ```
 
-任务的 `flag=1|2|3` 分别表示待办、已办、我发起的任务；办件的 `state=1|2|3` 分别表示进行中、已完成、已撤销。DTO 不返回 `formUrl`、`processInstanceFormView`、`appId` 或 `processInstanceId`，避免 Agent 把含认证上下文的内部链接当作稳定 API。成绩认定、离返校登记、研究生证补办、出国申请和通用报名等服务入口已在服务目录观察到，但其表单 mutation 未进入 V1。
+任务的 `flag=1|2|3` 分别表示待办、已办、我发起的任务；办件的 `state=1|2|3` 分别表示进行中、已完成、已撤销。DTO 不返回 `formUrl`、`processInstanceFormView`、`appId` 或 `processInstanceId`，避免 Agent 把含认证上下文的内部链接当作稳定 API。成绩认定、离返校登记、研究生证补办、出国申请和通用报名等服务入口已在服务目录观察到。研究生节假日离返校登记已按下文固定契约接入，其余表单仍只提供入口。
 
 ## 软件学院教学支持系统
 
@@ -483,7 +522,7 @@ V1 为八个 source 分别固定 HTTPS origin、section、列表 selector、详�
 
 后续每个远端契约至少需要当前官方页面或真实响应证据、一个明确的认证 capability 与单一 client。mutation 需要明确目标、唯一提交请求、人工挑战条件和 readback 标识。
 
-交换项目、EHall 表单提交、SoftSE 文件上传、图书续借/预约和体育预约提交在满足上述条件前维持 `pending`，不注册空壳命令。研究生选课读取已经达到 `nju-live-authenticated`；研究生选退课与 SoftSE 自助选课写入仍需使用专门的可撤销目标完成受控 smoke，不能拿个人正式课程验证。
+交换项目、研究生节假日登记之外的 EHall 表单提交、SoftSE 文件上传、图书续借/预约和体育预约提交在满足上述条件前维持 `pending`，不注册空壳命令。研究生选课读取已经达到 `nju-live-authenticated`；研究生选退课与 SoftSE 自助选课写入仍需使用专门的可撤销目标完成受控 smoke，不能拿个人正式课程验证。
 
 ## 2026-09-21 核对与修正
 
@@ -538,7 +577,7 @@ V1 为八个 source 分别固定 HTTPS origin、section、列表 selector、详�
 
 本地新增一个集成用例，覆盖目录过滤、链接去重、CC 架构 ID、流式下载、覆盖已有输出、HTML 响应拒绝及错误前保留原文件。类型检查与全部 5 个集成用例通过。
 
-同日较早的只读状态核对：`mail status` 返回 `bound:false`，当时尚未完成邮箱绑定；TeX `auth status/refresh` 均返回 valid，新进程读取 8 个项目；`auth status sso` 返回 expired。该结果证明现有 TeX 会话可复用，不能证明根会话已续期或永久免登录。NJU APP 仍处于公开入口调研层级。
+同日较早的只读状态核对：`mail status` 返回 `bound:false`，当时尚未完成邮箱绑定；TeX `auth status` 返回 valid，新进程读取 8 个项目；`auth status sso` 返回 expired。该结果证明现有 TeX 会话可复用，不能证明根会话已续期或永久免登录。NJU APP 仍处于公开入口调研层级。
 
 ## 邮箱绑定向导（2026-09-24）
 
@@ -658,3 +697,170 @@ njucli softse participants 370 --page 1 --format json
 推送后从公开的 `raw.githubusercontent.com/MarcWebber/njucli/main/scripts/install.sh` 执行一行安装，真实克隆 GitHub `main`、按锁文件构建并安装成功，版本为 `0.1.0`；安装后公开源查询返回 8 个来源，5 个 Skill 已注册。安装脚本对公开仓库采用匿名 Git 下载，避免本机失效的 Git 凭据干扰下载；此设置仅作用于该次 clone。
 
 随后以已安装 CLI 执行真实远端 `njucli upgrade --format json`，返回 `ok: true`，安装前缀保持不变。再次回读 5 个 Skill 的内容及安装脚本，与当前源码逐字节一致；公开下载脚本也已核对一致。此验证使用隔离的安装目录，未改动用户原有的全局 Skill。
+
+## 研究生节假日行程登记（2026-10-02）
+
+官方入口为 [研究生节假日离返校登记](https://ehall.nju.edu.cn/appShow?appId=6092355728536569)，业务根路径为 `https://ehallapp.nju.edu.cn/xxfw/sys/yjsjjrlfxappnju/`。`EHallTripClient` 复用当次 `ehall` 认证会话，CLI 提供：
+
+```bash
+njucli ehall trip --format json
+njucli ehall trip-submit --input /path/to/trip.json --dry-run --format json
+njucli ehall trip-submit --input /path/to/trip.json --format json
+```
+
+### 查询与表单
+
+入口 HTML 的 `pageMeta.params.userId` 标识当前本人；按官方应用配置取得当前角色，完成 `changeAppRole` 和 `setXgCommonAppRole` 的会话准备。业务请求采用 `application/x-www-form-urlencoded`，保留当次页面的 `referer`，不复制其他浏览器身份。
+
+下表路径相对于业务根路径，均使用 POST：
+
+| 路径 | 已确认的作用与字段 |
+| --- | --- |
+| `modules/apply/getStuIndexPage.do` | `data=JSON.stringify({})`；`PAGE=WDJ/YDJ/WXDJ` 对应待填报、已登记、无需登记，`SZOBJ` 提供假期，`SQOBJ.WID` 提供当前记录 |
+| `modules/register.do` | `*json=1` 读取表单模型和字典 URL |
+| `modules/register/cxxsjbxxdz.do` | 按当前 `XSBH` 读取本人基本信息，要求返回 `XH` 一致 |
+| `modules/register/xsdjlsjlbg.do` | `pageNumber/pageSize` 分页读取本人历史登记，按 `DJRQ` 取最近记录 |
+| `modules/apply/getCurStuApply.do` | `data=JSON.stringify({WID})` 取得当前或历史详情，要求 `DATA.XSBH` 为本人 |
+| `modules/register/cxxsdjjjrbddz.do` | 按本人、假期与学年读取各次离返校主记录的 `WID/DJBH`、日期和交通信息 |
+
+假期字段为 `JJRDM/JJRMC/XN/JJRKSRQ/JJRJSRQ/DJJSRQ`。CLI 查询返回 `status/holiday/defaults/missing/transportOptions/records`，联系方式和住宿信息可从本人基础资料与最近登记中复用；本次行程须另行提供。字典从表单模型的 `xsdjqxmxbd` 控件取得，交通方式为 `BY1`、目的地为 `BY3`，仅访问本站 `/xxfw/code/` 路径。目的地接受市或区县的中文名称或代码，须唯一匹配；官方树控件配置为 `unselectableLevel: 1`，当前命令接受城市及下级地区；实际界面可选择“江苏省/南京市”（`320100`）。此项仅在前端选中，未保存明细。交通方式使用官方选项。
+
+### 单次提交与回读
+
+| 输入/含义 | 远端字段 |
+| --- | --- |
+| `stayOnCampus`，假期是否全程留校 | `YL2` |
+| `phone/emergencyContact/emergencyPhone` | `YL3/JJLXR/JJLXRDH` |
+| `onCampus`，是否住校；`residence`，目前居住具体地址 | `YL5/YL6`，不住校时地址必填 |
+| 当前假期与学年 | `JJRDM/DJXN` |
+| 每次离返校日期、返校交通方式 | `YL1/YJFXRQ/YL4` |
+| 每站开始/结束日期、目的地、详细地址、交通方式、车次或航班号 | `KSRQ/JSRQ/BY3/XXDZ/BY1/BY2` |
+
+`stayOnCampus` 必填；留校时 `trips` 为空，外出时至少一段。每段包含至少一个 `stops`，CLI 按站点起止日期生成离返校日期，拒绝重叠日期。用户可省略已有联系方式、住宿信息以及可选的班次/返校交通；不从历史登记复制本次行程。假期 ID 必须仍是当前开放假期，当期已有登记时停止新建。`--dry-run` 只读取、补齐默认值和校验，不保存明细或总登记。
+
+每次离返校先通过 `commoncall/callQuery/zdscwid-MINE-QUERY.do` 生成 `DJBH`。各站明细调用 `commoncall/call/T_JJR_DJ_MX-DATAMODEL-ADD.do`，表单含 `requestParams=JSON.stringify(明细)`、`actionType=DATAMODEL`、`actionName=T_JJR_DJ_MX` 和 `dataModelAction=ADD`；`resultCode=00000` 表示本次明细保存响应成功。**明细 ADD 立即落库**，并非仅在总提交时写入。通过 `commoncall/callQuery/xsdjqxmxbd-MINE-QUERY.do` 按 `DJBH` 回读明细后，总登记提交到 `modules/holiday/SaveRegister.do`，表单字段必须为 `data=JSON.stringify({data: parents})`。
+
+总提交 `code=0` 后还须回读：首页为已登记状态，记录 `WID` 和本人 `XSBH` 一致，当前假期、各次 `DJBH`、公共信息与明细字段均匹配本次输入。多次离返校查询列表只提供部分字段，公共信息通过各记录 `WID` 对应的详情核对。成功返回 `submitted: true`、`recordId`、`registrationIds` 和本次计划。开始写入后的失败返回所处阶段与已生成 `registrationIds`，不自动重放；总登记未出现也不能排除已有未关联明细。
+
+AI 流程由[行程填报 Skill](../skills/njucli-ehall/SKILL.md)约定：先查询，将当前行程和缺失字段合为一次询问；用户已给出完整材料并要求办理时直接提交一次。临时输入权限为 0600，完成后清理。只读 MCP 新增 `ehall_trip`，工具总数 39；任务 Skill 总数 6。
+
+### 验证范围
+
+| 验证层 | 结果 |
+| --- | --- |
+| 官方页面与认证实网查询 | 确认当前国庆假期窗口、本人联系方式和住宿信息可复用、6 项交通选项、城市可选及上述表单字段与请求协议；`trip` 实网返回 `missing: []`；证据为 `nju-official-frontend + nju-live-authenticated` |
+| 源码与本地集成 | `pnpm lint`、`pnpm test` 通过，共 13 项；新增 2 项集成覆盖默认信息复用、留校/多次离校、逐条身份与编号回读、预览无写入及提交失败不重试 |
+| 编译 CLI、MCP 与安装产物 | `ehall trip` 实网返回开放假期、无缺失联系信息和 6 项交通选项；`trip-submit --dry-run` 用合成材料验证南京市、上海市的城市匹配与默认信息补齐，返回 `submitted: false`；MCP 实际列出 39 工具且 `ehall_trip` 声明只读；帮助与 `npm pack --dry-run` 通过，100 文件含新增 client 和 Skill |
+| 真实行程提交 | 尚未执行，实际远端明细 ADD 与总登记 SaveRegister 请求均为 0；用户本轮要求新增能力，未提供需登记的具体行程，不用虚构材料测试正式提交 |
+
+仓库仅记录契约、字段与验证状态，不保存真实联系方式、居住地址、行程或页面原文。
+
+### 直接填写与联系人复用（2026-10-03）
+
+普通填报可直接执行 `ehall trip-submit --stay`，或提供 `--from/--to/--destination/--address/--transport`。`--holiday` 可省略，采用当前开放假期；显式指定时仍核对假期编号。`--input` 保留给多次离返校、多地停留，不能与直接填写的业务参数混用。`--dry-run` 为可选预览，正常提交不要求先预览，也没有额外确认参数。
+
+联系方式与住宿资料保存在当前账号目录的 `ehall.json`，结构为 `{userId, contacts}`，权限 0600。缓存只在 `userId` 与本次已验证身份一致时复用；本人基本资料、当期登记的非空值优先，缓存补齐，仍有缺失才读取最近本人历史。正常查询同步默认值；显式覆盖值在完整校验后、实际业务写入前保存，预览不保存这些覆盖值。文件不保存行程。
+
+`pnpm lint` 与全部 13 项本地集成通过。现有行程用例新增直接参数与留校命令、缓存复用与跨身份隔离、文件权限、预览覆盖值不持久化及冲突参数校验。编译产物帮助与 `npm pack --dry-run` 通过，100 个文件包含行程 client 与 Skill。恢复学校登录后的首次认证实网查询返回当前假期待填报、`missing: []`、当前登记 0 条；真实联系人元数据已落盘，权限 0600。
+
+### 正式提交验收（2026-10-03）
+
+用户要求登记外出，并明确选择公开办公地址及简化交通选项后，通过编译 CLI `ehall trip-submit` 的直接参数正式执行一次。命令返回 `ok: true`、`submitted: true`、稳定的 `recordId` 和 1 个 `registrationId`。同次调用完成明细保存及回读、总登记提交、已登记状态与本人身份核对，以及按本次 `DJBH/WID` 对应的主记录和明细逐字段回读。联系人沿用账号资料，目的地地址和校外地址使用本次明确指定的公开地址，未复用原居住地址。
+
+该结果确认单次离返校、单站行程的真实远端写入与回读，证据为 `nju-live-authenticated`。全程留校、多次离返校和多站行程仍由本地集成覆盖，尚未执行对应实网写入。仓库不记录本次个人行程、联系人或登记编号。
+
+## 青年平台（2026-10-07）
+
+证据：`nju-live-authenticated` 与 `nju-official-frontend`。官方入口 [youth.nju.edu.cn](https://youth.nju.edu.cn/) 跳转至 `/tw/`，登录入口为 authserver CAS、service 为 `https://youth.nju.edu.cn/tw`。当前落地页标题为“学生第二课堂”。
+
+### 会话与字段
+
+同一 CLI context 先 `GET /tw/` 完成 SSO 派生会话，再 `POST /tw/ctx`（空表单）；`code=0` 的 `data` 为 Base64 JSON，含 `userId/name/departmentName/anonymous/menus`。登录身份须为 `anonymous=false`。缺少站点会话时直接请求 `ctx` 可能返回服务器异常，因此先走官网入口，不以该普通异常触发业务重试。
+
+菜单查询参数 `.me` 为当前 `menus` 中相应 PC 菜单 `id` 的 Base64，按 `urlN` 匹配；UUID 不硬编码。认证由站点 Cookie 完成，`.me` 是前端菜单上下文。普通 AJAX 返回 `code/msg/data/extend`，列表另有 `pageIndex/pageSize/totalPages/count`。普通列表每页最多 500 条；社团返回固定 `pageSize=12`，忽略小于该值的 `limit`，CLI 使用实际返回的分页元数据。
+
+| 业务 | 已确认路径（均以 `/tw/` 开头） | 方法与参数 |
+| --- | --- | --- |
+| 学年 | `common/selector` | GET；`clazz=Xn,valueField=id,labelField=mc`；`data[].label/value` |
+| 志愿时长 | `zyz/wdhd/fwsc` | POST 空表单；查询 `xnid`，空值为全部；`extend.fwzsc/cjhds` |
+| 本人活动 | `zyz/wdhd/ajaxList` | GET；`queryType=all,xmmc,xn,page,limit` |
+| 活动中心 | `zyz/hdzx/ajaxList` | GET；`queryType=all/zmz/jxz/yjs,xmmc,page,limit` |
+| 活动说明 | `zyz/hdzx/<id>/update` | GET；`view=true` |
+| 志愿者资料 | `zyz/grzl/create` | GET；解析官网标签、表单值和正文 |
+| 服务组织 | `zyz/tdzz/ajaxList`、`zyz/tdzz/<id>` | GET；列表名称筛选 `mc,mc.op=ILIKE` |
+| 培训 | `zyz/pxgl/bm/ajaxList` | GET；`mc,mc.op=ILIKE`；`syzt` 为报名开放，`bmzt` 为本人报名状态 |
+| 申报类别 | `xssq/xssq/ajaxList` | GET；类别标题 `bt`；`sqyq/sqks/sqjs/dqrsfksq/bksqyy/bdxList` 为要求、时间、可申报状态与表单字段 |
+| 本人申请 | `xssq/wdsq/ajaxList`、`xssq/wdsq/<id>/update` | GET；列表 `queryType=all`，详情 `view=true` |
+| 本人成绩单 | `xssq/zxsck/sqmx/ajaxList` | GET；`xh` 使用本次 ctx 的本人 `userId`；`mc,mc.op=ILIKE` |
+| 成绩单导出 | `xssq/zxsck/sqmx/export` | GET；本人 `xh` 与空 `ids`；返回带 Content-Disposition 的 PDF |
+| 青马课程 | `kcgl/xxzx/ajaxList`、`kcgl/xxzx/view`、`kcgl/cjcx/ajaxList` | GET；课程说明使用 `kcid` |
+| 本人社会实践 | `shsj/wdshsj/ajaxList`、`shsj/wdshsj/<id>/update`、`shsj/rj/ajaxList` | GET；详情 `view=true` |
+| 实践招募 | `shsj/sjzx/ajaxList`、`shsj/sjzx/<id>` | GET；`tdmc,xn` |
+| 实践资料库 | `shsj/sjzlk/ajaxList`、`shsj/sjzlk/<id>/update` | GET；`tdmc,tdmc.op=ILIKE,sz.xn.id,sz.xn.id.op=EQ`；详情 `view=true` |
+| 社团 | `st/qxstqk/loadData`、`st/qxstqk/view` | 列表 POST 表单 `tab=all/mine,lb,xj,dw,page,limit`；详情 GET `id` |
+| 岗位 | `sxgw/gwzx/ajaxList`、`sxgw/wdgw/ajaxList` | GET；`queryType=all,mc`，后者为本人记录 |
+| 骨干招募 | `xsgb/zmzx/ajaxList`、`xsgb/wdbm/ajaxList` | GET；`queryType=all`，后者为本人记录 |
+| 票务 | `dzp/pwzx/ajaxList`、`dzp/wdpq/ajaxList` | GET；`queryType=all,mc`，后者为本人票券 |
+| 实践评选 | `shsj/yxtd/ajaxList`、`shsj/yxbg/ajaxList`、`shsj/yxxs/ajaxList`、`shsj/yxzdls/ajaxList` | GET；依次为团队、报告、学生、指导教师 |
+| 志愿者评选、科创、投诉 | `zyzpy/grsq/ajaxList`、`kcss/sb/ajaxList`、`zyz/wqts/ajaxList` | GET；本人可见申报与投诉记录 |
+
+本人活动每行 `id` 是报名记录，活动在 `hd`，其 `hd.id` 为活动 ID。`shzt.label` 为报名审核状态。`fwzsc/fwsc/jtsc/pxsc` 分别为总、服务、交通与培训时长；仅 `hd.currentState.id=99` 时视为已认定。活动中心有真实的空 `xn/currentState`，按空值解析，不推测学年或时长。官方总时长与分项采用权重，不用直接相加代替 `fwzsc`。
+
+### 写操作契约
+
+下列请求已从官网生产前端确认，均为 `application/x-www-form-urlencoded` POST。源码执行一次提交，再按稳定 ID 回读；尚未对真实活动或培训执行写入 smoke。
+
+- 志愿活动报名：`zyz/hdzx/bm?hdid=<活动ID>&mm=<可选报名密码>`，表单 `bhdrs/zwys/qq`；回读本人活动中的 `hd.id` 和报名记录。
+- 取消活动：`zyz/wdhd/qxbm?id=<报名记录ID>`，空表单；遍历本人活动确认该记录消失。
+- 活动评价：`zyz/wdhd/hdpj`，表单 `id/pjxj/pj`；回读对应记录星级和文字。
+- 培训报名/取消：`zyz/pxgl/bm/saveBm`、`zyz/pxgl/bm/qxBm`，表单 `id`；回读培训行的 `bmzt`。官网拒绝或普通网络异常直接返回，不自动重复提交。
+
+### 验证范围
+
+编译后的 CLI 已逐项运行总时长、按学年时长、本人活动、全部活动、学年、申报类别、个人资料、成绩单、志愿组织、培训、实践招募与资料库、社团和已加入社团，以及课程、本人申请、实践、岗位、招募、票券、评选、科创和投诉查询。实际取得志愿服务 10 小时、1 次活动；全部活动 171 项、服务组织 124 项、培训 231 项、申请类别 9 项、实践招募 7 项、资料库 3,728 项、社团 138 项。其他已查询模块在当前研究生账号下返回空列表。活动、服务组织、实践团队、资料和社团详情均已通过编译 CLI 读取；新进程 `auth status youth` 返回 valid。
+
+成绩单导出经编译 CLI 返回真实 PDF，已核对文件可打开、1 页及正文学生字段。空成绩单明细属于当前账号数据，导出成功不表示有获认定的第二课堂申请。
+
+本地集成覆盖会话请求顺序、不同账号菜单隔离、空学年/状态、分页、CLI 筛选、单次报名、跨页回读、取消、培训状态、错误不重试和文件保存。MCP 协议列出 31 个 `youth_*` 只读工具，写操作和下载不注册 MCP。类型检查、18 项集成、帮助、来源目录及 `git diff --check` 通过。`npm pack --dry-run` 的 110 项清单包含青年平台 client、命令和 Skill，未包含个人配置；实际 tarball 在临时目录安装后帮助与来源目录正常，同一安装包的 MCP 查询返回本人真实志愿时长。个人凭据、Cookie、原始响应和成绩单文件均留在本机指定或临时目录，不进入仓库。
+
+## 认证流程修复（2026-10-07）
+
+本轮复核发现旧 TeX `probe` 和 `login` 共用会提交密码的浏览器流程；`completeLogin` 仅按 authserver 主机识别密码页，未区分 OAuth 授权页。普通 HTTP 业务也先启动 Chrome，Cookie 快照仅保存 `expires=-1` 的条目。上述行为已修正，普通业务请求继续只执行一次。
+
+- `nju-live-authenticated`：已有根 Cookie 通过纯 HTTP CAS 跳转进入 EHall；SoftSE 从失效 `/my/` 子会话，经 `GET /login/index.php?authCAS=CAS` 恢复到 `/my/`，页面存在退出链接，未提交密码。
+- `nju-live-authenticated`：TeX `GET /api/user/info` 初始返回 `status.code=1003`；`GET /oauth/login` 落在 authserver 的 `/authserver/oauth2.0/authorize`。当前 `.oauth-form` 仅有隐藏字段 `scope=user_profile`，表示 TeX 基本信息授权。`auth status tex` 不提交授权并返回 expired；`auth login tex` 使用同一 HTTP 会话单次 POST 该授权，新进程 `tex projects` 返回 9 个项目。
+- 官方滑块组件来自 `GET /authserver/common/toSliderCaptcha.htl` 和 `longbow.slidercaptcha.js`、`ids-sliderCaptcha.js`。组件使用大小两张图、280 CSS 像素的拖动区域，经页面鼠标事件提交 `canvasLength/moveLength/tracks`，官方 `verifySliderCaptcha.htl` 的 `errorCode=1` 才触发表单提交。CLI 读取当前原图的拼图轮廓，换算拖动距离，等待组件稳定后执行鼠标拖动；签名和表单提交继续由官方页面完成。
+- `nju-live-authenticated`：两次独立空账号目录，均只复制本人已存密码、不复制 Cookie。编译 CLI `auth login` 自动填写密码并拖动滑块，返回 `sso/valid`；各自的新进程 `auth status sso` 返回 valid，随后 `youth hours` 返回 10 小时、1 项活动。两次均无人工拖动；没有执行退出当前根会话。
+
+定位期间过早拖动及缩放图轮廓曾被官方返回 `errorCode=0`，最终改用原图并等待组件稳定后通过。两次成功证明当前官方组件的自动登录路径可用，不保证所有未来挑战均可识别，也不构成长期续期证据。CAS 代理仍未取得 PGT，智能体代理仍无已验证的可用授权，定时访问仍未证明延长服务端期限。
+
+类型检查、20 项本地集成、入口帮助及 `git diff --check` 通过。实际安装包包含 111 项文件，含滑块实现及更新后的认证 Skill，未包含个人凭据、Cookie 或临时测试文件。tarball 在临时前缀安装后，入口与 8 个校园信息源正常；第三个独立空会话目录使用该安装包自动登录，新进程 SSO 状态及志愿时长查询均通过。安装包对当前账号依次执行 SSO、TeX、SoftSE、youth 状态检查及志愿时长、TeX 项目、成绩查询，分别取得 valid、10 小时/1 项活动、9 个项目、18 条成绩；这 7 次调用的 Chrome 启动计数均为 0。
+
+### 会话恢复接入与并发处理
+
+后续按维护者要求集中修改生产认证流程，没有另建真实账号会话或重复提交真实密码。`withBrowserSession` 在读 Cookie 前取得账号级跨进程锁，在业务、会话保存和关闭之后释放；嵌套认证共用同一作用域。`auth status/login/logout` 的状态与凭据更新也纳入该作用域，避免并发操作以旧快照覆盖新会话。锁原子发布完整进程号，持有进程已退出时下一次调用可恢复；不同账号独立执行。
+
+统一认证恢复在已存凭据时使用后台 Chrome；TeX 编辑等页面操作切换为可见 Chrome并继承当前 Cookie。滑块结果读取官方 `POST /authserver/common/verifySliderCaptcha.htl` 的 `errorCode`，拒绝后等待官方重新载入图片，再处理下一张，最多三张。公开官方组件当前在拒绝后约一秒调用 `openSliderCaptcha()`、重置画布；这次重新读取了相同版本 `20260703.154014` 的登录及滑块脚本，属于 `nju-live-public`。学校账号错误读取 `#pwdFromId #showErrorTip` 并直接返回；已存凭据的自动恢复不进入三分钟人工等待。SoftSE 登录收敛为已确认的 HTTP CAS 路径，WebVPN 登录先使用已有 Cookie 发起 HTTP 跳转。
+
+本地集成以两个实际 Node 进程和本机 HTTP 服务确认：后一调用等待前一调用保存 Cookie，取得新会话；强制结束持锁进程后下一调用恢复；不同账号独立；业务失败后释放锁。学校账号错误与自动恢复超时使用本地页面替身核对输出。21 项本地集成通过，不将这些结果作为学校后台登录、三张滑块或长期续期的新增实网验收。
+
+最终类型检查、构建、21 项集成、入口及认证帮助、8 个校园信息源、差异检查通过。安装包包含 112 项文件，含账号锁；清单无账号配置、Cookie、锁或临时文件，源码未匹配本机真实密码。临时安装核对后更新本机全局 CLI，认证及生产装配编译文件与源码构建逐字节一致。使用该安装包读取已有会话：SSO、TeX、SoftSE、youth 均为 valid，志愿时长 10 小时、1 项活动；三个子站状态调用由实际账号锁串行处理，Chrome 启动计数为零，结束后锁已释放。本轮没有建立新学校登录会话或测试后台自动登录成功。
+
+### 持续认证维护（2026-10-07）
+
+持续维护使用正式 CLI 命令，由调度器周期调用；会话失效时执行凭据恢复。
+
+新增 `auth maintain`：在同一账号锁和 context 内经 CAS 根入口访问 EHall；当前有效时返回 `kept-alive`，失效时复用本地 `auth.json` 调用现有后台恢复并返回 `restored`，结束时保存 Cookie。无凭据且失效时直接报错，定时调用不打开扫码页面。`auth-maintenance.json` 以 0600 保存最近成功执行的 checkedAt、action 和 valid 状态。认证 Skill 与青年平台 Skill 均采用同一维护和业务恢复流程。
+
+本地集成新增生产装配、CLI、认证协调器及真实 Cookie jar 的组合验证：无凭据时不进入人工登录；过期后自动调用恢复并保存 Cookie；下一调用读取已存 Cookie，返回 kept-alive 且不重复登录。类型检查、构建和 22 项集成通过。实际安装包在临时目录检查 maintain 帮助后更新全局 CLI。
+
+认证实网：编译命令于北京时间 15:04、全局安装命令于 15:07 分别返回 kept-alive/valid，后续 `youth hours` 返回 10 小时、1 项活动。随后在当前 Codex 聊天启用“NjuCLI 认证自动维护”，状态 ACTIVE、每两小时调用固定 default 账号的全局 maintain 命令，恢复后再核对青年平台查询。首轮结果说明维护流程已经执行；自然失效后的后台恢复、跨期限持续性仍由后续定时执行核对，不将其写成 OAuth 刷新票据或已确认的服务端有效期延长。
+
+
+## 青年平台回读与代码清理（2026-10-07）
+
+使用当前全局 CLI 的已有会话，`youth hours` 返回已认定 10 小时、1 项活动；`youth activities --mine` 返回同一条审核通过记录及 10 小时，无需重新登录。报名、取消和评价仍仅有本地集成证据，本轮没有真实业务写入。
+
+删除 8 个未接入业务的实验文件（381 行），包括 CAS 代理探测、临时 HTTPS 回调和旧期限观测；同时删除对应的 103 行测试及导入。青年平台合并两处单次使用的私有方法，展示字段复用同一标签表；认证维护继续使用正式 `auth maintain`。历史研究压缩为已确认接口和结果，Skill 直接指导业务查询、自动恢复和定时维护。
+
+锁文件安装、类型检查、构建、21 项本地集成、入口与青年平台帮助、8 个校园信息源、文档本地链接及差异检查通过。实际安装包包含 105 项文件，临时安装后的入口、青年平台和维护帮助均正常。安装清单没有凭据、Cookie、锁或实验脚本；源码及 Git 历史未匹配本机保存的密码和认证会话值。

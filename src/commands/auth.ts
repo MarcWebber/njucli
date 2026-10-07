@@ -15,6 +15,12 @@ export function registerAuthCommands(
 ): Command {
   const auth = program.command("auth").description("管理统一认证会话");
 
+  addFormatOption(auth.command("maintain").description("维持统一认证会话；过期时使用已存凭据自动恢复"))
+    .action(async (options: FormatOptions) => runCommand(runtime, options, async () => {
+      const data = await service.maintain();
+      return { data, text: data.action === "restored" ? "已自动恢复统一认证会话" : "已维护统一认证会话" };
+    }));
+
   addFormatOption(auth.command("status [capability]").description("检查认证状态"))
     .action(async (capability: string | undefined, options: FormatOptions) => runCommand(runtime, options, async () => {
       const data = await service.status(parseCapability(capability));
@@ -34,12 +40,6 @@ export function registerAuthCommands(
       };
       const data = await service.login(parseCapability(capability), credentials);
       return { data, text: sessionsText([data]) };
-    }));
-
-  addFormatOption(auth.command("refresh [capability]").description("刷新认证会话"))
-    .action(async (capability: string | undefined, options: FormatOptions) => runCommand(runtime, options, async () => {
-      const data = await service.refresh(parseCapability(capability));
-      return { data, text: sessionsText(data) };
     }));
 
   addFormatOption(auth.command("logout [capability]").description("清除认证会话"))

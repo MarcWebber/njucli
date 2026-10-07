@@ -1,42 +1,50 @@
+import { load } from "cheerio";
 import type { AccountRecord } from "../../account/types.js";
 import { AppError } from "../../core/errors.js";
 import { texRequest } from "../../domains/tex/client.js";
-import { withBrowserSession } from "../browser-session.js";
+import { type BrowserSession, withBrowserSession } from "../browser-session.js";
 import type { AuthSessionDriver } from "../types.js";
 
 const ORIGIN = "https://tex.nju.edu.cn";
 
 export const texSessionDriver = {
-  login: (account: AccountRecord) => openConsoleAndCheckSession(account, 180_000),
-  probe: (account: AccountRecord) => openConsoleAndCheckSession(account, 15_000),
+  login(account: AccountRecord): Promise<boolean> {
+    return withBrowserSession(account, false, async (session) => {
+      if (await restoreSession(session, true)) return true;
+      await session.login(`${ORIGIN}/oauth/login`, (url) => url.origin === ORIGIN && url.pathname === "/console");
+      return hasSession(session);
+    });
+  },
+  probe(account: AccountRecord): Promise<boolean> {
+    return withBrowserSession(account, true, (session) => restoreSession(session));
+  },
 } satisfies AuthSessionDriver;
 
-function openConsoleAndCheckSession(account: AccountRecord, timeout: number): Promise<boolean> {
-  return withBrowserSession(account, false, async (session) => {
-    const page = await session.page();
-    try {
-      await page.goto(`${ORIGIN}/console`, { waitUntil: "domcontentloaded" });
-      if (new URL(page.url()).pathname.includes("login")) {
-        await page.goto(`${ORIGIN}/oauth/login`, { waitUntil: "domcontentloaded" });
-      }
-    } catch (error) {
-      if (!(error instanceof Error) || !error.message.includes("net::ERR_ABORTED")) throw error;
+async function restoreSession(session: BrowserSession, authorize = false): Promise<boolean> {
+  if (await hasSession(session)) return true;
+  const response = await session.request(`${ORIGIN}/oauth/login`);
+  if (!response.ok) throw new Error(`TeX 登录恢复返回 HTTP ${response.status}`);
+  const url = new URL(response.url);
+  if (authorize && url.hostname === "authserver.nju.edu.cn" && url.pathname === "/authserver/oauth2.0/authorize") {
+    const $ = load(await response.text());
+    if ($('.oauth-form input[type="hidden"][name="scope"][value="user_profile"]').length) {
+      const granted = await session.request(url.href, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ scope: "user_profile" }).toString(),
+      });
+      if (!granted.ok) throw new Error(`TeX 授权返回 HTTP ${granted.status}`);
     }
-    try {
-      await session.completeLogin(
-        (url) => url.origin === ORIGIN && url.pathname === "/console",
-        timeout,
-      );
-    } catch (error) {
-      if (!(error instanceof Error) ||
-        (error.name !== "TimeoutError" && !error.message.includes("net::ERR_ABORTED"))) throw error;
-    }
-    try {
-      await texRequest(session.request, "/api/user/info");
-      return true;
-    } catch (error) {
-      if (error instanceof AppError && error.code === "AUTH_REQUIRED") return false;
-      throw error;
-    }
-  });
+  }
+  return hasSession(session);
+}
+
+async function hasSession(session: BrowserSession): Promise<boolean> {
+  try {
+    await texRequest(session.request, "/api/user/info");
+    return true;
+  } catch (error) {
+    if (error instanceof AppError && error.code === "AUTH_REQUIRED") return false;
+    throw error;
+  }
 }

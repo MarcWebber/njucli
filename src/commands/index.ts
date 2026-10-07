@@ -17,6 +17,7 @@ import { registerSportsCommands } from "./sports.js";
 import { registerSoftSeCommands } from "./softse.js";
 import { registerTexCommands } from "./tex.js";
 import { registerUpgradeCommand } from "./upgrade.js";
+import { registerYouthCommands } from "./youth.js";
 
 export function createCli(services: NjuServices, runtime: CommandRuntime): Command {
   const program = new Command()
@@ -40,6 +41,7 @@ export function createCli(services: NjuServices, runtime: CommandRuntime): Comma
     registerSportsCommands(program, services.sports, runtime),
     registerSoftSeCommands(program, services.softse, runtime),
     registerTexCommands(program, services.tex, runtime),
+    registerYouthCommands(program, services.youth, runtime),
   ];
   for (const group of groups) group.action(() => group.outputHelp());
 

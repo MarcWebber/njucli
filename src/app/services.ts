@@ -1,4 +1,4 @@
-import type { AuthCapability, AuthCredentials, SessionMetadata } from "../auth/types.js";
+import type { AuthCapability, AuthCredentials, AuthMaintenance, SessionMetadata } from "../auth/types.js";
 import type { CampusClient } from "../domains/campus/client.js";
 import type { CampusSource } from "../domains/campus/types.js";
 import type { CourseService } from "../domains/course/service.js";
@@ -6,6 +6,7 @@ import type { GraduateCourseSelectionClient } from "../domains/course/selection-
 import type { CourseOccurrence } from "../domains/course/types.js";
 import type { GraduateAcademicClient } from "../domains/academic/client.js";
 import type { EHallPortalClient } from "../domains/ehall/client.js";
+import type { EHallTripClient } from "../domains/ehall/trip.js";
 import type { NjuOpacClient } from "../domains/library/client.js";
 import type { LibraryLoan } from "../domains/library/types.js";
 import type { SportsBookingSummary, SportsReservationLink, SportsSlotSchedule, SportsVenueSiteSummary } from "../domains/sports/types.js";
@@ -13,8 +14,10 @@ import type { SoftSeClient } from "../domains/softse/client.js";
 import type { TexClient } from "../domains/tex/client.js";
 import type { MailClient, MailBinding } from "../domains/mail/client.js";
 import type { SoftwareClient } from "../domains/software/client.js";
+import type { YouthClient } from "../domains/youth/client.js";
 
 export interface NjuServices {
+  youth: Pick<YouthClient, "profile" | "menus" | "years" | "hours" | "activities" | "activity" | "enroll" | "cancel" | "rate" | "teams" | "team" | "trainings" | "enrollTraining" | "cancelTraining" | "categories" | "applications" | "application" | "transcript" | "exportTranscript" | "courses" | "course" | "courseGrades" | "practices" | "practice" | "practiceTeams" | "practiceTeam" | "practiceResources" | "practiceResource" | "practiceJournals" | "clubs" | "club" | "jobs" | "recruitments" | "tickets" | "awards" | "projects" | "complaints">;
   software: Pick<SoftwareClient, "list" | "show" | "download">;
   mail: Pick<MailClient, "accounts" | "use" | "status" | "unbind" | "folders" | "list" | "search" | "read" | "download"> & {
     bind(credentials?: MailBinding): ReturnType<MailClient["bind"]>;
@@ -27,9 +30,9 @@ export interface NjuServices {
     remove(name: string): Promise<void>;
   };
   auth: {
+    maintain(): Promise<AuthMaintenance>;
     status(capability?: AuthCapability): Promise<SessionMetadata[]>;
     login(capability?: AuthCapability, credentials?: AuthCredentials): Promise<SessionMetadata>;
-    refresh(capability?: AuthCapability): Promise<SessionMetadata[]>;
     logout(capability?: AuthCapability): Promise<AuthCapability[]>;
   };
   campus: Pick<CampusClient, "canteens" | "articles" | "article"> & {
@@ -43,7 +46,8 @@ export interface NjuServices {
       export(path: string, termId?: string): Promise<{ path: string; eventCount: number }>;
     };
   academic: Pick<GraduateAcademicClient, "grades" | "exams" | "schedule" | "plan">;
-  ehall: Pick<EHallPortalClient, "services" | "tasks" | "applications" | "serviceLink">;
+  ehall: Pick<EHallPortalClient, "services" | "tasks" | "applications" | "serviceLink">
+    & Pick<EHallTripClient, "trip" | "submitTrip">;
   softse: Pick<SoftSeClient, "courses" | "catalog" | "participants" | "search" | "course" | "assignments" | "assignment" | "grades" | "enroll" | "submissionLink"> & {
     download(activityId: string, fileName: string, path: string, submitted?: boolean): Promise<{ path: string; bytes: number }>;
   };

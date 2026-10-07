@@ -24,13 +24,6 @@ export class AuthCoordinator {
     return result;
   }
 
-  async refresh(account: AccountRecord, capability?: AuthCapability): Promise<SessionMetadata[]> {
-    const targets = capability ? [capability] : (await this.options.sessions.list(account)).map((s) => s.capability);
-    const result: SessionMetadata[] = [];
-    for (const target of targets) result.push(await this.ensureSession(account, target));
-    return result;
-  }
-
   async logout(account: AccountRecord, capability?: AuthCapability): Promise<AuthCapability[]> {
     const targets = AUTH_CAPABILITIES.filter((target) => !capability || target === capability || dependsOn(target, capability)).reverse();
     for (const target of targets) {
@@ -42,9 +35,17 @@ export class AuthCoordinator {
 
   async ensureSession(account: AccountRecord, capability: AuthCapability, probe?: () => Promise<boolean>): Promise<SessionMetadata> {
     if (await this.probe(account, capability, probe)) return this.save(account, capability, true);
+    await this.save(account, capability, false);
     const metadata = await this.login(account, capability);
     // Some probes also initialize the per-command client or access token.
-    if (probe && !await probe()) throw new AppError("AUTH_REQUIRED", `${capability} 登录后会话仍不可用`);
+    try {
+      if (probe && !await this.probe(account, capability, probe)) {
+        throw new AppError("AUTH_REQUIRED", `${capability} 登录后会话仍不可用`);
+      }
+    } catch (error) {
+      await this.save(account, capability, false);
+      throw error;
+    }
     return metadata;
   }
 

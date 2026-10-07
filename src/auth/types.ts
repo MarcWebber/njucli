@@ -9,6 +9,7 @@ export const AUTH_CAPABILITIES = [
   "tex",
   "timetable",
   "sports",
+  "youth",
   "opac",
 ] as const;
 
@@ -28,4 +29,10 @@ export interface AuthSessionDriver {
 export interface AuthCredentials {
   username: string;
   password: string;
+}
+
+export interface AuthMaintenance {
+  checkedAt: string;
+  action: "kept-alive" | "restored";
+  status: "valid";
 }

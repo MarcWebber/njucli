@@ -5,6 +5,7 @@ import { z } from "zod";
 import type { NjuServices } from "../app/services.js";
 import { errorEnvelope } from "../core/output.js";
 import { redact } from "../core/redaction.js";
+import { ACTIVITY_STATES, AWARD_KINDS } from "../domains/youth/client.js";
 
 const VERSION = "0.1.0";
 
@@ -52,6 +53,60 @@ function createMcpServer(services: NjuServices): McpServer {
   read("software_show", "读取软件官方说明链接及安装包列表。", { id: z.string().min(1) },
     ({ id }) => services.software.show(id),
   );
+
+  const youthPage = { page: z.number().int().min(1).optional(), size: z.number().int().min(1).optional() };
+  read("youth_profile", "查询青年平台本人身份与志愿者资料。", {}, () => services.youth.profile());
+  read("youth_menus", "列出青年平台当前账号的功能入口。", {}, () => services.youth.menus());
+  read("youth_years", "列出志愿服务学年筛选 ID。", {}, () => services.youth.years());
+  read("youth_hours", "查询已认定志愿服务总时长和活动次数；省略 year 查询全部学年。", { year: z.string().optional() }, ({ year }) => services.youth.hours(year));
+  read("youth_activities", "分页查询志愿活动；mine 查询自己的报名记录与认定时长。", {
+    ...youthPage, query: z.string().optional(), year: z.string().optional(), mine: z.boolean().optional(), state: z.enum(ACTIVITY_STATES).optional(),
+  }, (options) => services.youth.activities(options));
+
+  for (const [name, description, operation] of [
+    ["teams", "志愿服务组织", services.youth.teams],
+    ["trainings", "志愿者培训和报名状态", services.youth.trainings],
+    ["transcript", "本人第二课堂成绩单明细", services.youth.transcript],
+    ["practice_teams", "社会实践团队招募", services.youth.practiceTeams],
+    ["practice_resources", "社会实践资料库", services.youth.practiceResources],
+  ] as const) {
+    read(`youth_${name}`, `分页查询${description}。`, { ...youthPage, query: z.string().optional(), year: z.string().optional() }, operation);
+  }
+  for (const [name, description, operation] of [
+    ["categories", "第二课堂申报类别、填报说明及开放时间", services.youth.categories],
+    ["applications", "我的第二课堂申请", services.youth.applications],
+    ["courses", "青马课程报名中心", services.youth.courses],
+    ["course_grades", "我的青马课程成绩", services.youth.courseGrades],
+    ["practices", "我的社会实践", services.youth.practices],
+    ["practice_journals", "我的社会实践行程记录", services.youth.practiceJournals],
+    ["projects", "科创作品申报记录", services.youth.projects],
+    ["complaints", "我的志愿服务投诉记录", services.youth.complaints],
+  ] as const) {
+    read(`youth_${name}`, `分页查询${description}。`, youthPage, operation);
+  }
+  for (const [name, description, operation] of [
+    ["activity", "志愿活动详情", services.youth.activity],
+    ["team", "志愿服务组织介绍", services.youth.team],
+    ["application", "第二课堂申请详情", services.youth.application],
+    ["course", "青马课程说明", services.youth.course],
+    ["practice", "本人社会实践详情", services.youth.practice],
+    ["practice_team", "社会实践团队介绍", services.youth.practiceTeam],
+    ["practice_resource", "社会实践资料详情", services.youth.practiceResource],
+    ["club", "社团介绍与入社要求", services.youth.club],
+  ] as const) {
+    read(`youth_${name}`, `读取${description}。`, { id: z.string().min(1) }, ({ id }) => operation(id));
+  }
+  read("youth_clubs", "分页查询全校社团；mine 查询已加入的社团。", {
+    ...youthPage, mine: z.boolean().optional(), category: z.string().optional(), stars: z.string().optional(), department: z.string().optional(),
+  }, (options) => services.youth.clubs(options));
+  for (const [name, description, operation] of [
+    ["jobs", "实习岗位", services.youth.jobs],
+    ["tickets", "票务活动", services.youth.tickets],
+  ] as const) {
+    read(`youth_${name}`, `分页查询${description}；mine 查询本人记录。`, { ...youthPage, query: z.string().optional(), mine: z.boolean().optional() }, operation);
+  }
+  read("youth_recruitments", "分页查询学生骨干招募；mine 查询本人报名。", { ...youthPage, mine: z.boolean().optional() }, services.youth.recruitments);
+  read("youth_awards", "查询社会实践或志愿者评选记录。", { ...youthPage, kind: z.enum(AWARD_KINDS).default("student") }, ({ kind, ...options }) => services.youth.awards(kind, options));
 
   read("course_today", "List the signed-in student's courses on one date.",
     { date: CAMPUS_DATE.optional(), termId: OPTIONAL_TERM },
@@ -106,6 +161,10 @@ function createMcpServer(services: NjuServices): McpServer {
   read("ehall_services", "Search official NJU EHall service entries.",
     { query: z.string().optional().describe("Service name keyword") },
     ({ query }) => services.ehall.services(query),
+  );
+
+  read("ehall_trip", "Read the current graduate holiday travel registration, contact defaults, and missing fields.",
+    {}, () => services.ehall.trip(),
   );
 
   read("ehall_tasks", "List EHall todo, done, or initiated tasks without opening forms.",

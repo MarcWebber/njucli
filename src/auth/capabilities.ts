@@ -13,6 +13,7 @@ export const AUTH_DEPENDENCIES: Readonly<Record<AuthCapability, readonly AuthCap
   tex: ["sso"],
   timetable: ["ehall"],
   sports: ["sso"],
+  youth: ["sso"],
   opac: ["vpn"],
 };
 

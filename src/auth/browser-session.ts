@@ -4,6 +4,8 @@ import { AsyncLocalStorage } from "node:async_hooks";
 
 import {
   chromium,
+  request,
+  type APIRequestContext,
   type APIResponse,
   type BrowserContext,
   type Page,
@@ -14,6 +16,8 @@ import { AppError } from "../core/errors.js";
 import type { AuthCredentials } from "./types.js";
 import { readJsonFile, writeJsonFile } from "../core/fs.js";
 import type { FetchLike, FetchResponse } from "../core/types.js";
+import { dragLoginSlider } from "./slider.js";
+import { lockAccount } from "./account-lock.js";
 
 const browserScope = new AsyncLocalStorage<{
   directory: string;
@@ -29,35 +33,35 @@ export async function withBrowserSession<T>(
   if (current?.directory === account.browserDataDir) {
     return operation(current.session);
   }
-  const session = await openBrowserSession(account, headless);
+  const unlock = await lockAccount(account.configDir);
   try {
-    return await browserScope.run(
-      { directory: account.browserDataDir, session },
-      () => operation(session),
-    );
+    const session = await openBrowserSession(account, headless);
+    try {
+      return await browserScope.run(
+        { directory: account.browserDataDir, session },
+        () => operation(session),
+      );
+    } finally {
+      await session.close();
+    }
   } finally {
-    await session.close();
+    await unlock();
   }
 }
 
 async function openBrowserSession(account: AccountRecord, headless: boolean): Promise<BrowserSession> {
-  await mkdir(account.browserDataDir, { recursive: true });
-  const context = await chromium.launchPersistentContext(account.browserDataDir, { headless, channel: "chrome" });
   const cookiePath = join(account.configDir, "session-cookies.json");
-  try {
-    const cookies = await readJsonFile<Parameters<BrowserContext["addCookies"]>[0]>(cookiePath);
-    if (cookies) await context.addCookies(cookies);
-    return new BrowserSession(context, cookiePath);
-  } catch (error) {
-    await context.close();
-    throw error;
-  }
+  const cookies = await readJsonFile<Awaited<ReturnType<BrowserContext["cookies"]>>>(cookiePath) ?? [];
+  const context = await request.newContext({ storageState: { cookies, origins: [] } });
+  return new BrowserSession(context, cookiePath, { directory: account.browserDataDir, headless });
 }
 
 export class BrowserSession {
+  private browserHeadless = false;
   constructor(
-    private readonly context: BrowserContext,
+    private context: BrowserContext | APIRequestContext,
     private readonly cookiePath: string,
+    private readonly browser?: { directory: string; headless: boolean },
   ) {}
 
   readonly request: FetchLike = async (input, init = {}) => {
@@ -76,16 +80,43 @@ export class BrowserSession {
     if (data !== undefined) options.data = data;
     if (init.redirect === "manual") options.maxRedirects = 0;
 
-    const response = await this.context.request.fetch(input.toString(), options);
+    const context = "pages" in this.context ? this.context.request : this.context;
+    const response = await context.fetch(input.toString(), options);
     return playwrightResponse(response);
   };
 
-  async page(): Promise<Page> {
+  async page(headless = this.browser?.headless ?? false): Promise<Page> {
+    if ("pages" in this.context && this.browser && this.browserHeadless !== headless) {
+      const cookies = await this.context.cookies();
+      await this.context.close();
+      this.context = await request.newContext({ storageState: { cookies, origins: [] } });
+    }
+    if (!("pages" in this.context)) {
+      const previous = this.context;
+      const { cookies } = await previous.storageState();
+      const { directory } = this.browser!;
+      await mkdir(directory, { recursive: true });
+      const context = await chromium.launchPersistentContext(directory, { headless, channel: "chrome" });
+      try {
+        // The current HTTP session is authoritative, including logout and account changes.
+        await context.clearCookies();
+        await context.addCookies(cookies);
+      } catch (error) {
+        await context.close();
+        throw error;
+      }
+      this.context = context;
+      this.browserHeadless = headless;
+      await previous.dispose();
+    }
     return this.context.pages()[0] ?? this.context.newPage();
   }
 
   async login(url: string, isAuthenticated: (url: URL) => boolean): Promise<void> {
-    const page = await this.page();
+    const credentials = await readJsonFile<AuthCredentials>(join(dirname(this.cookiePath), "auth.json"));
+    const page = "pages" in this.context
+      ? this.context.pages()[0] ?? await this.context.newPage()
+      : await this.page(Boolean(credentials));
     try {
       await page.goto(url, { waitUntil: "domcontentloaded" });
     } catch (error) {
@@ -95,36 +126,80 @@ export class BrowserSession {
       await this.completeLogin(isAuthenticated);
     } catch (error) {
       if (error instanceof Error && error.name === "TimeoutError") {
-        throw new AppError("USER_ACTION_REQUIRED", "学校登录尚未完成，请重新执行命令并在官方页面完成验证");
+        throw credentials
+          ? new AppError("AUTH_RESTORE_FAILED", "学校登录恢复超时，请检查网络或更新已保存的统一认证凭据")
+          : new AppError("USER_ACTION_REQUIRED", "学校登录尚未完成，请在官方页面完成验证");
       }
       throw error;
     }
   }
 
   async completeLogin(isAuthenticated: (url: URL) => boolean, timeout = 180_000): Promise<void> {
-    const page = await this.page();
+    const page = "pages" in this.context
+      ? this.context.pages()[0] ?? await this.context.newPage()
+      : await this.page();
+    const url = new URL(page.url());
+    if (isAuthenticated(url)) return;
     const credentials = await readJsonFile<AuthCredentials>(join(dirname(this.cookiePath), "auth.json"));
-    if (credentials && new URL(page.url()).hostname === "authserver.nju.edu.cn") {
+    if (credentials && url.hostname === "authserver.nju.edu.cn" && url.pathname === "/authserver/login") {
       await page.locator("#userNameLogin_a").click();
       const form = page.locator("#pwdFromId:visible");
       await form.locator('input[name="username"]').fill(credentials.username);
       await form.locator('#password').fill(credentials.password);
       await form.locator("#login_submit").click();
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const result = await loginResult(page, true);
+        if (result !== "slider") break;
+        const image = await page.locator("#slider-img1").getAttribute("src");
+        if (await dragLoginSlider(page)) {
+          await loginResult(page, false);
+          break;
+        }
+        if (attempt === 2) throw new AppError("AUTH_CHALLENGE_FAILED", "学校滑块验证未通过，已自动尝试三张验证图");
+        await page.waitForFunction((previous) => {
+          const image = document.querySelector<HTMLImageElement>("#slider-img1");
+          return image?.getAttribute("src") !== previous
+            && !document.querySelector("#sliderDiv .sliderContainer_fail");
+        }, image, { timeout: 10_000 });
+      }
+      await page.waitForURL(isAuthenticated, { timeout: 30_000, waitUntil: "commit" });
+      return;
     }
     await page.waitForURL(isAuthenticated, { timeout, waitUntil: "commit" });
   }
 
   async clearCookies(): Promise<void> {
-    await this.context.clearCookies();
+    if ("pages" in this.context) await this.context.clearCookies();
+    else {
+      await this.context.dispose();
+      this.context = await request.newContext();
+    }
   }
 
   async close(): Promise<void> {
     try {
-      await writeJsonFile(this.cookiePath, (await this.context.cookies()).filter((cookie) => cookie.expires === -1));
+      const cookies = "pages" in this.context ? await this.context.cookies() : (await this.context.storageState()).cookies;
+      await writeJsonFile(this.cookiePath, cookies);
     } finally {
-      await this.context.close();
+      if ("pages" in this.context) await this.context.close();
+      else await this.context.dispose();
     }
   }
+}
+
+async function loginResult(page: Page, slider: boolean): Promise<string> {
+  const handle = await page.waitForFunction((allowSlider) => {
+    if (location.hostname !== "authserver.nju.edu.cn" || location.pathname !== "/authserver/login") return "redirect";
+    const message = document.querySelector("#pwdFromId #showErrorTip")?.textContent?.trim();
+    if (message) return message;
+    const knob = document.querySelector<HTMLElement>("#sliderDiv .slider");
+    if (allowSlider && knob?.offsetParent) return "slider";
+    return false;
+  }, slider, { timeout: 30_000 });
+  const result = await handle.jsonValue() as string;
+  await handle.dispose();
+  if (result !== "slider" && result !== "redirect") throw new AppError("AUTH_REJECTED", `学校拒绝登录：${result}`);
+  return result;
 }
 
 function playwrightResponse(response: APIResponse): FetchResponse {
