@@ -7,7 +7,7 @@ description: 使用 NjuCLI 查询并填报南京大学 e-Hall 研究生节假日
 
 ## 前置条件
 
-安装 NjuCLI 与 Google Chrome，使用 `njucli account use <name>` 或 `NJUCLI_ACCOUNT` 选择本人账号。业务命令自动检查并复用 `ehall` 会话；需要登录时运行 `njucli auth login ehall`，认证步骤见[认证 Skill](../njucli-auth/SKILL.md)。同一账号串行执行命令。
+首次保存账号按[认证 Skill](../njucli-auth/SKILL.md)操作；已配置后直接执行行程命令，CLI 自动检查、复用或恢复 `ehall` 会话，并处理同一账号的并发调用。
 
 本能力对应研究生节假日离返校登记，应用 ID 为 `6092355728536569`。
 

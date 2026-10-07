@@ -3,11 +3,11 @@ name: njucli-softse
 description: 使用 NjuCLI 遍历南京大学软件学院 Moodle 课程目录，查询当前账号有权查看的单门课程名单。用户涉及 selearning.nju.edu.cn 的课程目录、课程 ID 或选课名单时使用。
 ---
 
-# SoftSE 课程与名单
+# 软件学院课程平台（SoftSE）
 
 ## 前置条件
 
-安装 NjuCLI 与 Google Chrome。通过 `njucli account use <name>` 或 `NJUCLI_ACCOUNT` 选择本地账号；首次使用 `njucli auth login softse` 完成统一认证。业务命令复用同一次调用中的专用浏览器会话。同一账号串行运行命令。
+使用 selearning.nju.edu.cn 的软件学院教学平台。首次保存账号按[认证 Skill](../njucli-auth/SKILL.md)操作；已配置后直接查询，CLI 通过 HTTP 自动复用或恢复会话，并处理同一账号的并发调用。
 
 ## 查询流程
 
