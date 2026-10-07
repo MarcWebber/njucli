@@ -14,9 +14,11 @@ import type { SoftSeClient } from "../domains/softse/client.js";
 import type { TexClient } from "../domains/tex/client.js";
 import type { MailClient, MailBinding } from "../domains/mail/client.js";
 import type { SoftwareClient } from "../domains/software/client.js";
+import type { TableClient } from "../domains/table/client.js";
 import type { YouthClient } from "../domains/youth/client.js";
 
 export interface NjuServices {
+  table: Pick<TableClient, "workspaces" | "bases" | "templates" | "show" | "rows" | "row" | "create" | "addSheet" | "addColumn" | "addView" | "updateView" | "append" | "update">;
   youth: Pick<YouthClient, "profile" | "menus" | "years" | "hours" | "activities" | "activity" | "enroll" | "cancel" | "rate" | "teams" | "team" | "trainings" | "enrollTraining" | "cancelTraining" | "categories" | "applications" | "application" | "transcript" | "exportTranscript" | "courses" | "course" | "courseGrades" | "practices" | "practice" | "practiceTeams" | "practiceTeam" | "practiceResources" | "practiceResource" | "practiceJournals" | "clubs" | "club" | "jobs" | "recruitments" | "tickets" | "awards" | "projects" | "complaints">;
   software: Pick<SoftwareClient, "list" | "show" | "download">;
   mail: Pick<MailClient, "accounts" | "use" | "status" | "unbind" | "folders" | "list" | "search" | "read" | "download"> & {

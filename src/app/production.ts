@@ -35,6 +35,7 @@ import { SoftwareClient } from "../domains/software/client.js";
 import { SportsClient } from "../domains/sports/client.js";
 import { SoftSeClient } from "../domains/softse/client.js";
 import { TexClient } from "../domains/tex/client.js";
+import { TableClient } from "../domains/table/client.js";
 import { YouthClient } from "../domains/youth/client.js";
 import { compileTexFile, uploadTexFile, writeTexFile } from "../domains/tex/editor.js";
 import type { DoctorResult, NjuServices, TodayResult } from "./services.js";
@@ -88,6 +89,14 @@ export function createProductionServices(): NjuServices {
   const withTex = <T>(operation: (client: TexClient) => Promise<T>): Promise<T> =>
     withBrowser("tex", (session) => operation(new TexClient(session.request)));
 
+  const withTable = <T>(operation: (client: TableClient) => Promise<T>): Promise<T> => {
+    let client: TableClient;
+    return withBrowser("table", () => operation(client), async (session) => {
+      client = new TableClient(session.request);
+      return client.restoreSession();
+    });
+  };
+
   const withYouth = <T>(operation: (client: YouthClient) => Promise<T>): Promise<T> => {
     let client: YouthClient;
     return withBrowser("youth", () => operation(client), async (session) => {
@@ -112,6 +121,21 @@ export function createProductionServices(): NjuServices {
   };
 
   const services: NjuServices = {
+    table: {
+      workspaces: () => withTable((client) => client.workspaces()),
+      bases: (query) => withTable((client) => client.bases(query)),
+      templates: (query) => withTable((client) => client.templates(query)),
+      show: (id) => withTable((client) => client.show(id)),
+      rows: (id, sheet, options) => withTable((client) => client.rows(id, sheet, options)),
+      row: (id, sheet, rowId) => withTable((client) => client.row(id, sheet, rowId)),
+      create: (name, options) => withTable((client) => client.create(name, options)),
+      addSheet: (id, input) => withTable((client) => client.addSheet(id, input)),
+      addColumn: (id, sheet, input) => withTable((client) => client.addColumn(id, sheet, input)),
+      addView: (id, sheet, input) => withTable((client) => client.addView(id, sheet, input)),
+      updateView: (id, sheet, input) => withTable((client) => client.updateView(id, sheet, input)),
+      append: (id, sheet, rows) => withTable((client) => client.append(id, sheet, rows)),
+      update: (id, sheet, updates) => withTable((client) => client.update(id, sheet, updates)),
+    },
     youth: {
       profile: () => withYouth((client) => client.profile()),
       menus: () => withYouth((client) => client.menus()),
@@ -392,6 +416,8 @@ export function createProductionServices(): NjuServices {
 }
 
 function createAuthCoordinator(): AuthCoordinator {
+  const restoreTableSession = (account: AccountRecord): Promise<boolean> =>
+    withBrowserSession(account, true, (session) => new TableClient(session.request).restoreSession());
   const restoreYouthSession = (account: AccountRecord): Promise<boolean> =>
     withBrowserSession(account, true, (session) => new YouthClient(session.request).restoreSession());
   const restoreEhallSession = (account: AccountRecord): Promise<boolean> =>
@@ -434,6 +460,7 @@ function createAuthCoordinator(): AuthCoordinator {
       timetable: { login: probeTimetable, probe: probeTimetable },
       sports: { login: probeSports, probe: probeSports },
       youth: { login: restoreYouthSession, probe: restoreYouthSession },
+      table: { login: restoreTableSession, probe: restoreTableSession },
       vpn: { login: loginVpn, probe: probeVpn },
       opac: { login: interactiveOpacLogin, probe: probeOpac },
     },

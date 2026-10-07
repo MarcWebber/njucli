@@ -26,19 +26,18 @@ njucli upgrade
 
 ## 现有 Skills
 
-安装时注册以下 7 个 Skill；点击名称查看操作步骤与命令参数。
+安装时注册以下 8 个 Skill；点击名称查看操作步骤与命令参数。
 
-| Skill | 用途 |
+| Skill | 服务 |
 | --- | --- |
-| [njucli-auth](skills/njucli-auth/SKILL.md) | 统一认证：保存账号、自动处理滑块、恢复和维护会话 |
-| [njucli-mail](skills/njucli-mail/SKILL.md) | 校园邮箱：多邮箱绑定与切换、搜索邮件、读取正文、下载附件 |
-| [njucli-softse](skills/njucli-softse/SKILL.md) | 软件学院课程平台（selearning.nju.edu.cn）：课程目录、我的课程、课程名单 |
-| [njucli-software](skills/njucli-software/SKILL.md) | 正版软件下载：查找 Adobe、WPS、MathType、Origin 等官方安装包 |
-| [njucli-tex](skills/njucli-tex/SKILL.md) | TeX 论文写作：项目管理、正文编辑、素材上传、编译与下载 |
-| [njucli-ehall](skills/njucli-ehall/SKILL.md) | 研究生行程登记：查询假期、填写留校或离返校安排、复用联系方式 |
-| [njucli-youth](skills/njucli-youth/SKILL.md) | 青年平台：志愿时长与活动、第二课堂、社会实践、社团和票券 |
-
-首次使用按对应 Skill 配置账号。统一认证与邮箱凭据分别保存在本机；已保存统一认证凭据后，业务命令自动处理会话恢复。
+| [njucli-auth](skills/njucli-auth/SKILL.md) | 统一认证 |
+| [njucli-mail](skills/njucli-mail/SKILL.md) | 校园邮箱 |
+| [njucli-softse](skills/njucli-softse/SKILL.md) | 软件学院课程平台 |
+| [njucli-software](skills/njucli-software/SKILL.md) | 正版软件 |
+| [njucli-tex](skills/njucli-tex/SKILL.md) | TeX 写作 |
+| [njucli-ehall](skills/njucli-ehall/SKILL.md) | 研究生行程登记 |
+| [njucli-table](skills/njucli-table/SKILL.md) | 协同表格 |
+| [njucli-youth](skills/njucli-youth/SKILL.md) | 青年平台 |
 
 完整命令通过 `njucli --help` 和 `njucli <domain> --help` 查看。
 

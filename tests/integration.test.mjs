@@ -22,6 +22,8 @@ import { registerTexCommands } from "../dist/commands/tex.js";
 import { registerMailCommands } from "../dist/commands/mail.js";
 import { registerSoftSeCommands } from "../dist/commands/softse.js";
 import { registerYouthCommands } from "../dist/commands/youth.js";
+import { TableClient } from "../dist/domains/table/client.js";
+import { registerTableCommands } from "../dist/commands/table.js";
 import { YouthClient } from "../dist/domains/youth/client.js";
 import { registerEHallCommands } from "../dist/commands/ehall.js";
 import { CampusClient } from "../dist/domains/campus/client.js";
@@ -1043,4 +1045,154 @@ test("账号装配：默认邮箱与统一认证同号，独立邮箱保留全�
   assert.equal((await services.mail.bind()).address, second.data.address);
   await services.account.remove("default");
   assert.equal((await services.mail.status()).bound, false);
+});
+
+
+test("协同表格：Cookie 认证、UUID 定位、单次填写回读与错误不重试", async (t) => {
+  const writes = [];
+  let tokenCalls = 0, broken = false, wrongReadback = false;
+  const stored = new Map();
+  const columns = [{ key: "0000", name: "学号", type: "text", data: null },
+    { key: "score", name: "成绩", type: "number", data: { enable_check_format: true, format_min_value: 0, format_max_value: 100 } },
+    { key: "sum", name: "总评", type: "formula", data: { formula: "{成绩}" } }];
+  const http = await localHttp(t, async (req, res) => {
+    const url = new URL(req.url, "https://table.nju.edu.cn");
+    const chunks = []; for await (const chunk of req) chunks.push(chunk);
+    const send = (data) => res.end(JSON.stringify(data));
+    if (url.pathname === "/sso/") return res.end("<script>var app={csrfToken:'local-csrf',username:'local-owner'};</script>");
+    if (url.pathname.endsWith("workspaces/")) return send({ workspace_list: [{ id: 7, type: "personal", name: "个人", table_list: [{ uuid: "base-1", workspace_id: 7, name: "课程成绩" }] }] });
+    if (url.pathname.endsWith("access-token/")) {
+      tokenCalls++; assert.equal(decodeURIComponent(url.pathname), "/api/v2.1/workspace/7/dtable/课程成绩/access-token/");
+      return send({ dtable_uuid: "base-1", access_token: "base-secret" });
+    }
+    assert.equal(req.headers.authorization, "Bearer base-secret");
+    if (url.pathname.endsWith("metadata/")) return send({ metadata: { tables: [{ _id: "sheet-1", name: "课程", columns, views: [] }] } });
+    if (req.method === "POST" || req.method === "PUT") {
+      const body = JSON.parse(Buffer.concat(chunks)); writes.push({ method: req.method, body });
+      if (broken) { res.statusCode = 503; return send({ error: "unavailable" }); }
+      if (req.method === "POST") {
+        const row_ids = body.rows.map((row, index) => { const _id = `r${index}`; stored.set(_id, { _id, ...row }); return { _id }; });
+        return send({ inserted_row_count: row_ids.length, row_ids });
+      }
+      for (const update of body.updates) stored.set(update.row_id, { ...stored.get(update.row_id), ...update.row });
+      return send({ success: true });
+    }
+    if (url.pathname.endsWith("rows/")) {
+      assert.equal(url.searchParams.get("convert_keys"), "true");
+      assert.equal(url.searchParams.get("start"), "1"); assert.equal(url.searchParams.get("view_name"), "成绩排名");
+      return send({ rows: [{ _id: "r1", 学号: "demo-2" }] });
+    }
+    const row = stored.get(url.pathname.split("/").at(-2));
+    if (row) return send({ ...row, ...(wrongReadback ? { 成绩: 99 } : {}) });
+    res.statusCode = 404; send({ error: "missing" });
+  });
+  const client = new TableClient(http);
+  assert.equal(await client.restoreSession(), true);
+  const bases = await client.bases("课程"); assert.equal(bases[0].uuid, "base-1");
+  const appended = await client.append("base-1", "课程", [{ 学号: "demo-1", 成绩: 0 }, { 学号: "demo-2", 成绩: null }]);
+  assert.equal(appended.rows[0].成绩, 0); assert.equal(appended.rows[1].成绩, null);
+  const updated = await client.update("base-1", "课程", [{ row_id: "r0", row: { 成绩: 80 } }]);
+  assert.equal(updated.rows[0].成绩, 80);
+  assert.equal((await client.rows("base-1", "课程", { page: 2, size: 1, view: "成绩排名" })).nextPage, 3);
+  assert.equal(tokenCalls, 1);
+  await assert.rejects(client.append("base-1", "课程", [{ 总评: 95 }]), /自动计算/);
+  await assert.rejects(client.append("base-1", "课程", [{ 成绩: 101 }]), /数值范围/);
+  await assert.rejects(client.append("base-1", "课程", [{ 不存在: "x" }]), /未找到字段/);
+  assert.equal(writes.length, 2);
+  broken = true;
+  await assert.rejects(client.append("base-1", "课程", [{ 成绩: 60 }]), /HTTP 503/);
+  assert.equal(writes.length, 3);
+  broken = false; wrongReadback = true;
+  await assert.rejects(client.update("base-1", "课程", [{ row_id: "r0", row: { 成绩: 70 } }]), (error) => error.details.rowId === "r0" && error.details.fields[0] === "成绩");
+  assert.equal(writes.length, 4);
+  assert.equal(await new TableClient(async () => ({ ok: true, url: "https://authserver.nju.edu.cn/authserver/login" })).restoreSession(), false);
+  await assert.rejects(new TableClient(async () => ({ ok: false, status: 500 })).restoreSession(), /HTTP 500/);
+});
+
+test("协同表格：模板复制、建表结构、视图按字段名映射与创建失败定位", async (t) => {
+  let base, sheets = [], failSheet = false;
+  const writes = [];
+  const http = await localHttp(t, async (req, res) => {
+    const url = new URL(req.url, "https://table.nju.edu.cn");
+    const chunks = []; for await (const chunk of req) chunks.push(chunk);
+    const bodyText = Buffer.concat(chunks).toString();
+    const send = (value) => res.end(JSON.stringify(value));
+    if (url.pathname === "/sso/") return res.end("csrfToken:'csrf',username:'owner'");
+    if (url.pathname.endsWith("workspaces/")) return send({ workspace_list: [{ id: 7, type: "personal", table_list: base ? [base] : [] }] });
+    if (url.pathname.endsWith("templates/")) return send({ template_list: [{ name: "grades", display_name: "登分", category: "教育", description: "成绩登记", link: "https://table.nju.edu.cn/dtable/external-links/template/" }] });
+    if (url.pathname.endsWith("access-token/")) return send({ access_token: "base-token", dtable_uuid: base.uuid });
+    const isGateway = url.pathname.startsWith("/api-gateway/");
+    const body = bodyText ? isGateway ? JSON.parse(bodyText) : Object.fromEntries(new URLSearchParams(bodyText)) : {};
+    if (req.method !== "GET") writes.push({ method: req.method, path: url.pathname, body });
+    if (!isGateway) {
+      assert.equal(req.headers["x-csrftoken"], "csrf");
+      if (url.pathname.endsWith("dtable-copy/")) {
+        assert.equal(body.dst_workspace_id, "7");
+        base = { uuid: "new-base", name: "原模板", workspace_id: 7 };
+        sheets = [{ _id: "original", name: "模板表", columns: [], views: [] }];
+        return send({ dtable: base });
+      }
+      if (url.pathname === "/api/v2.1/dtables/") {
+        assert.equal(body.owner, "owner");
+        base = { uuid: "new-base", name: body.name, workspace_id: 7 };
+        sheets = [{ _id: "default", name: "默认", columns: [], views: [] }];
+        return send({ table: base });
+      }
+      if (req.method === "PUT") { base.name = body.new_name; return send({ success: true }); }
+    }
+    assert.equal(req.headers.authorization, "Bearer base-token");
+    if (url.pathname.endsWith("metadata/")) return send({ metadata: { tables: sheets } });
+    if (url.pathname.endsWith("columns/")) {
+      const sheet = sheets.find((item) => item.name === body.table_name);
+      const column = { key: `key${sheet.columns.length}`, name: body.column_name, type: body.column_type, data: body.column_data };
+      sheet.columns.push(column); return send(column);
+    }
+    if (url.pathname.endsWith("tables/")) {
+      if (req.method === "DELETE") { sheets = sheets.filter((sheet) => sheet.name !== body.table_name); return send({ success: true }); }
+      if (failSheet) { res.statusCode = 400; return send({ error: "invalid formula" }); }
+      const sheet = { _id: "custom", name: body.table_name, columns: body.columns.map((col, i) => ({ key: `key${i}`, name: col.column_name, type: col.column_type })), views: [] };
+      sheets.push(sheet); return send(sheet);
+    }
+    const sheet = sheets.find((item) => item.name === url.searchParams.get("table_name"));
+    if (req.method === "POST") { const view = { _id: "view", name: body.name }; sheet.views.push(view); return send(view); }
+    const view = sheet.views[0];
+    if (req.method === "PUT") Object.assign(view, body);
+    return send(view);
+  });
+  const client = new TableClient(http); await client.restoreSession();
+  const copy = await client.create("我的作业表", { template: "grades" });
+  assert.equal(copy.base.name, "我的作业表"); assert.equal(copy.tables[0]._id, "original");
+  const definition = { tables: [{ name: "成绩", columns: [{ column_name: "分数", column_type: "number" }, { column_name: "总分", column_type: "formula", column_data: { formula: "{分数}" } }], views: [{ name: "排名", sorts: [{ column: "分数", direction: "down" }] }] }] };
+  const result = await client.create("自定义", { definition });
+  assert.equal(result.tables.length, 1); assert.equal(result.tables[0].name, "成绩");
+  const tableWrite = writes.find((item) => item.path.includes("/api-gateway/") && item.path.endsWith("tables/") && item.method === "POST");
+  assert.equal(tableWrite.body.columns.length, 1);
+  assert.equal(writes.filter((item) => item.path.endsWith("columns/")).length, 1);
+  assert.deepEqual(result.tables[0].views[0].sorts, [{ column_key: "key0", sort_type: "down" }]);
+  const previous = writes.length;
+  await assert.rejects(client.create("不存在模板", { template: "missing" }), /未找到模板/);
+  await assert.rejects(client.addView("new-base", "成绩", { name: "未知列", hidden: ["不存在"] }), /不存在的字段/);
+  assert.equal(writes.length, previous);
+  failSheet = true;
+  await assert.rejects(client.create("部分失败", { definition }), (error) => error.details.baseId === "new-base" && error.message.includes("已创建"));
+  assert.equal(writes.length, previous + 2);
+});
+
+test("协同表格 CLI：模板文件、分页与写入输入在提交前校验", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "njucli-table-")); t.after(() => rm(directory, { recursive: true, force: true }));
+  let calls = 0, createOptions;
+  const service = { create: async (_name, options) => { calls++; createOptions = options; return {}; }, append: async () => { calls++; }, rows: async () => { calls++; } };
+  assert.equal((await command(registerTableCommands, service, ["table", "create", "成绩", "--preset", "gradebook"])).code, 0);
+  assert.equal(createOptions.definition.tables[0].columns.find((item) => item.column_name === "总评").column_type, "formula");
+  assert.equal((await command(registerTableCommands, service, ["table", "create", "成绩", "--preset", "gradebook", "--template", "other"])).code, 2);
+  assert.equal((await command(registerTableCommands, service, ["table", "rows", "base", "sheet", "--size", "1001"])).code, 2);
+  const path = join(directory, "rows.json"); await writeFile(path, "[]");
+  assert.equal((await command(registerTableCommands, service, ["table", "append", "base", "sheet", "--input", path])).code, 2);
+  await writeFile(path, JSON.stringify({ tables: [{ name: "课程", columns: [{ column_name: "成绩", column_type: "number" }], views: [{ name: "排序", hidden: ["缺失"] }] }] }));
+  assert.equal((await command(registerTableCommands, service, ["table", "create", "成绩", "--input", path])).code, 2);
+  assert.equal(calls, 1);
+  const output = join(directory, "preset.json");
+  assert.equal((await command(registerTableCommands, service, ["table", "preset", "gradebook", "--output", output])).code, 0);
+  assert.equal(JSON.parse(await readFile(output, "utf8")).tables[0].name, "课程成绩");
+  assert.equal((await stat(output)).mode & 0o777, 0o600);
 });
