@@ -14,11 +14,11 @@ NjuCLI 服务南京大学学生及其 AI 助手，围绕写作、邮件、上课
 | `src/app/production.ts` | 唯一生产装配点 |
 | `src/account/` | 本地账号及隔离目录 |
 | `src/auth/` | 认证依赖、浏览器登录交接、会话保存与恢复 |
-| `src/domains/` | campus、academic、course、ehall、library、mail、software、softse、tex、sports、youth 的 client 与解析 |
+| `src/domains/` | campus、academic、course、ehall、library、mail、software、softse、tex、sports、youth、table 的 client 与解析 |
 | `src/core/` | 文件、输入、日期、输出与脱敏函数 |
 | `src/mcp/` | 只读 MCP，调用相同业务方法 |
 | `tests/integration.test.mjs` | 少量本地集成测试 |
-| `skills/` | 通过现有 CLI 完成统一认证、TeX 写作、邮箱、软件、课程、行程与青年平台任务的 Skill |
+| `skills/` | 通过现有 CLI 完成统一认证、TeX 写作、邮箱、软件、课程、行程、青年平台与协同表格任务的 Skill |
 | `.codex-plugin/`、`.mcp.json` | 插件清单与本地 MCP 配置 |
 | `docs/` | 设计、接口契约和执行证据 |
 

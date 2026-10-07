@@ -13,7 +13,7 @@ AI 负责撰写、修改和排版；`njucli tex` 负责官方平台上的读写�
 
 读取可以使用已注册的 `tex_projects`、`tex_templates`、`tex_files`、`tex_read`、`tex_log` MCP 工具。写入使用 CLI；仅支持 MCP、不能执行本机命令的宿主暂时只能读取。
 
-首次使用 `njucli auth login tex --username "统一认证账号" --password "统一认证密码"`，或以 `--credentials` 导入含 `username/password` 的 JSON。本地账号目录的 `auth.json` 以 0600 权限保存凭据，后续会话失效时自动登录。CLI 自动填写官方表单，验证码或扫码由本人完成；随后由 TeX 的 `user/info` 核对会话。同一账号的命令串行执行，共用专用浏览器目录。
+首次保存账号按[认证 Skill](../njucli-auth/SKILL.md)操作。已配置后直接执行 TeX 命令；CLI 自动恢复统一认证、完成 TeX 基本信息授权并核对会话。查询使用 HTTP，编辑、上传和编译使用专用可见 Chrome。
 
 ## 项目与正文
 

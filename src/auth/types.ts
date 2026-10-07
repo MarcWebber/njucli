@@ -10,6 +10,7 @@ export const AUTH_CAPABILITIES = [
   "timetable",
   "sports",
   "youth",
+  "table",
   "opac",
 ] as const;
 

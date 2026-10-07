@@ -864,3 +864,42 @@ AI 流程由[行程填报 Skill](../skills/njucli-ehall/SKILL.md)约定：先查
 删除 8 个未接入业务的实验文件（381 行），包括 CAS 代理探测、临时 HTTPS 回调和旧期限观测；同时删除对应的 103 行测试及导入。青年平台合并两处单次使用的私有方法，展示字段复用同一标签表；认证维护继续使用正式 `auth maintain`。历史研究压缩为已确认接口和结果，Skill 直接指导业务查询、自动恢复和定时维护。
 
 锁文件安装、类型检查、构建、21 项本地集成、入口与青年平台帮助、8 个校园信息源、文档本地链接及差异检查通过。实际安装包包含 105 项文件，临时安装后的入口、青年平台和维护帮助均正常。安装清单没有凭据、Cookie、锁或实验脚本；源码及 Git 历史未匹配本机保存的密码和认证会话值。
+
+## 协同表格（2026-10-07）
+
+证据来源：`nju-live-authenticated`、`nju-official-frontend`、`vendor-api`。学校部署为 SeaTable 6.2.13，入口为 [table.nju.edu.cn](https://table.nju.edu.cn/)，说明见[南大文档](https://doc.nju.edu.cn/books/18d80/page/6f3ef)。公开前端 `appDTable.7f588995.js`、`commons.8e938afa.js` 和 `viewDataGrid.548907a8.js` 用于核对当前接口；API Gateway 契约与 [SeaTable 官方 Python SDK](https://github.com/seatable/seatable-api-python/blob/master/seatable_api/api_gateway.py) 交叉核对。
+
+### 会话与接口
+
+- `GET /sso/?next=/` 复用统一认证 Cookie，落地首页含 `csrfToken/username`。`table` 依赖 `sso`，与业务使用同一次 BrowserSession；CSRF 只在本次 client 中使用。页面发生统一认证跳转时交回现有认证协调器恢复。
+- `GET /api/v2.1/workspaces/?detail=true` 返回 `workspace_list`，表格来自 `table_list/shared_table_list/group_shared_dtables`，使用 `uuid/name/workspace_id`。不把表格名作为稳定业务 ID。
+- `GET /api/v2.1/templates/` 返回 `template_list`，字段 `name/display_name/description/category/link/card_image_url`。本轮取得 25 个官方模板，包含作业收集评分、研究生学分统计、本科生课业自我评估、实验室机时、社团招新等。
+- `POST /api/v2.1/dtables/` 用表单 `name/owner` 创建个人表格，返回 `{table}`；`POST /api/v2.1/dtable-external-link/dtable-copy/` 用 `link/dst_workspace_id` 复制模板，返回 `{dtable}`。工作区表格改名为 `PUT /api/v2.1/workspace/{workspace}/dtable/`，表单 `name/new_name`。写入携带首页 CSRF 与站点 Referer。
+- Cookie 可直接获取 `GET /api/v2.1/workspace/{workspace}/dtable/{name}/access-token/`，返回 `access_token/dtable_uuid`。令牌仅缓存于当前 client 内存，不写入日志、配置或业务输出。
+
+以下路径均位于 `/api-gateway/api/v2/dtables/{uuid}/`，携带 Bearer 令牌：
+
+| 动作 | 请求与关键字段 | 回读 |
+| --- | --- | --- |
+| 结构读取 | `GET metadata/`，返回 `metadata.tables` | 工作表 `_id/name/columns/views` |
+| 工作表创建 | `POST tables/`，`table_name/lang/columns`；字段为 `column_name/column_type/column_data` | metadata 按 `_id` 核对 |
+| 工作表改名、删除 | `PUT/DELETE tables/`，`table_name` 和 `new_table_name` | 仅用于本次新建表的默认表整理；CLI 不开放删除命令 |
+| 字段新增 | `POST columns/`，`table_name/column_name/column_type/column_data` | metadata 按 `key` 核对 |
+| 视图创建、更新 | `POST views/?table_name=...`；`PUT views/{name}/?table_name=...` | `GET` 同名视图 |
+| 行读取 | `GET rows/?table_name=&convert_keys=true&start=&limit=&view_name=` | 字段名称作键，`_id` 标识行 |
+| 行新增 | `POST rows/`，`{table_name,rows}` | 返回 `inserted_row_count/row_ids:[{_id}]`，逐行读取 |
+| 行修改 | `PUT rows/`，`{table_name,updates:[{row_id,row}]}` | `GET rows/{id}/?table_name=&convert_keys=true` 核对提交字段 |
+
+视图排序和分组使用 `column_key/sort_type`，筛选使用 `column_key/filter_predicate/filter_term`。CLI 接受字段名称并从 metadata 转换 key，支持 `And/Or` 与隐藏列。读取分页默认 100 行、最多 1000 行；满页返回下一页提示，空页结束。
+
+### 登分模板与实际验收
+
+独立示例中通过编译后的 CLI 完成空白表格创建、自定义工作表、字段、视图、新增和按 ID 修改。官方作业评分模板另有复制、改名及结构读取的实际结果。验收仅使用虚构学生数据；原有业务表未修改。最终保留登分表示例和作业评分模板示例，各自只有一张业务工作表，临时核对工作表已移除。
+
+批量创建工作表时，SeaTable 未给公式生成完整依赖元数据；实现改为先建原始数据列，再按定义顺序通过字段接口添加公式。空表的条件公式可能被推断成字符串，直接引用该列与数值比较会报 `Inconsistent data types`。内置模板因此在等级判断时使用 `value({总评})`，另设隐藏的数值列“排序分”排序；排名视图筛除缺分记录。总评仍对缺分留空，不将缺分认定为零分。
+
+实网样例覆盖：平时 80、作业 90、期末 85 得总评 84.5、等级“良好”；三项 100 得 100、“优秀”；三项 0 得 0、“不及格”；缺作业及期末成绩时总评为空、等级“未录入完成”。作业成绩改为 95 后，总评回读为 85.5；成绩排名顺序为 100、85.5、0，待登分视图仅显示缺分行，需关注视图仅显示零分行。权重和等级阈值为可修改的示例规则，不代表学校统一评分标准。
+
+源码与本地集成覆盖统一认证接线、模板复制、短期令牌目标校验、结构和视图字段映射、公式分步创建、数据写后回读、无效字段和数值范围、普通失败不重试以及创建部分失败时返回已建 UUID。MCP 仅注册六个读取工具。个人配置、原始响应和临时探索脚本不进入仓库或安装包。
+
+尚未实网验收群组工作区写入、其他复杂字段类型及模板内应用复制效果。当前 CLI 未接入外部收集表单提交、附件上传或视图级分享的独立入口。

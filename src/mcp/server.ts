@@ -54,6 +54,17 @@ function createMcpServer(services: NjuServices): McpServer {
     ({ id }) => services.software.show(id),
   );
 
+  read("table_workspaces", "列出南大协同表格工作区。", {}, () => services.table.workspaces());
+  read("table_bases", "查找协同表格及 UUID。", { query: z.string().optional() }, ({ query }) => services.table.bases(query));
+  read("table_templates", "查找官方协同表格模板及预览链接。", { query: z.string().optional() }, ({ query }) => services.table.templates(query));
+  read("table_show", "读取协同表格字段、公式和视图。", { base: z.string().min(1) }, ({ base }) => services.table.show(base));
+  read("table_rows", "分页读取工作表，支持视图筛选排序。", {
+    base: z.string().min(1), sheet: z.string().min(1), view: z.string().optional(),
+    page: z.number().int().min(1).optional(), size: z.number().int().min(1).max(1000).optional(),
+  }, ({ base, sheet, ...options }) => services.table.rows(base, sheet, options));
+  read("table_row", "按稳定行 ID 读取记录。", { base: z.string().min(1), sheet: z.string().min(1), rowId: z.string().min(1) },
+    ({ base, sheet, rowId }) => services.table.row(base, sheet, rowId));
+
   const youthPage = { page: z.number().int().min(1).optional(), size: z.number().int().min(1).optional() };
   read("youth_profile", "查询青年平台本人身份与志愿者资料。", {}, () => services.youth.profile());
   read("youth_menus", "列出青年平台当前账号的功能入口。", {}, () => services.youth.menus());

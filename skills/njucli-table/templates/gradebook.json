@@ -1,0 +1,181 @@
+{
+  "tables": [
+    {
+      "name": "课程成绩",
+      "columns": [
+        {
+          "column_name": "学号",
+          "column_type": "text"
+        },
+        {
+          "column_name": "姓名",
+          "column_type": "text"
+        },
+        {
+          "column_name": "班级",
+          "column_type": "text"
+        },
+        {
+          "column_name": "平时成绩",
+          "column_type": "number",
+          "column_data": {
+            "format": "number",
+            "precision": 1,
+            "enable_precision": true,
+            "enable_check_format": true,
+            "format_min_value": 0,
+            "format_max_value": 100,
+            "decimal": "dot",
+            "thousands": "no"
+          }
+        },
+        {
+          "column_name": "作业成绩",
+          "column_type": "number",
+          "column_data": {
+            "format": "number",
+            "precision": 1,
+            "enable_precision": true,
+            "enable_check_format": true,
+            "format_min_value": 0,
+            "format_max_value": 100,
+            "decimal": "dot",
+            "thousands": "no"
+          }
+        },
+        {
+          "column_name": "期末成绩",
+          "column_type": "number",
+          "column_data": {
+            "format": "number",
+            "precision": 1,
+            "enable_precision": true,
+            "enable_check_format": true,
+            "format_min_value": 0,
+            "format_max_value": 100,
+            "decimal": "dot",
+            "thousands": "no"
+          }
+        },
+        {
+          "column_name": "总评",
+          "column_type": "formula",
+          "column_data": {
+            "formula": "if(not(or(isempty(\"平时成绩\"),isempty(\"作业成绩\"),isempty(\"期末成绩\"))),round({平时成绩}*0.3+{作业成绩}*0.2+{期末成绩}*0.5,1))",
+            "format": "number",
+            "precision": 1
+          }
+        },
+        {
+          "column_name": "等级",
+          "column_type": "formula",
+          "column_data": {
+            "formula": "if(or(isempty(\"平时成绩\"),isempty(\"作业成绩\"),isempty(\"期末成绩\")),\"未录入完成\",ifs(value({总评})>=90,\"优秀\",value({总评})>=80,\"良好\",value({总评})>=70,\"中等\",value({总评})>=60,\"及格\",true(),\"不及格\"))"
+          }
+        },
+        {
+          "column_name": "排序分",
+          "column_type": "formula",
+          "column_data": {
+            "formula": "value({总评})"
+          }
+        },
+        {
+          "column_name": "备注",
+          "column_type": "long-text"
+        },
+        {
+          "column_name": "更新时间",
+          "column_type": "mtime"
+        }
+      ],
+      "views": [
+        {
+          "name": "默认视图",
+          "hidden": [
+            "排序分"
+          ]
+        },
+        {
+          "name": "成绩排名",
+          "sorts": [
+            {
+              "column": "排序分",
+              "direction": "down"
+            }
+          ],
+          "hidden": [
+            "排序分"
+          ],
+          "filters": [
+            {
+              "column": "平时成绩",
+              "predicate": "is_not_empty"
+            },
+            {
+              "column": "作业成绩",
+              "predicate": "is_not_empty"
+            },
+            {
+              "column": "期末成绩",
+              "predicate": "is_not_empty"
+            }
+          ],
+          "conjunction": "And"
+        },
+        {
+          "name": "按班级",
+          "groupbys": [
+            {
+              "column": "班级",
+              "direction": "up"
+            }
+          ],
+          "sorts": [
+            {
+              "column": "学号",
+              "direction": "up"
+            }
+          ],
+          "hidden": [
+            "排序分"
+          ]
+        },
+        {
+          "name": "待登分",
+          "filters": [
+            {
+              "column": "平时成绩",
+              "predicate": "is_empty"
+            },
+            {
+              "column": "作业成绩",
+              "predicate": "is_empty"
+            },
+            {
+              "column": "期末成绩",
+              "predicate": "is_empty"
+            }
+          ],
+          "conjunction": "Or",
+          "hidden": [
+            "排序分"
+          ]
+        },
+        {
+          "name": "需关注",
+          "filters": [
+            {
+              "column": "等级",
+              "predicate": "is",
+              "value": "不及格"
+            }
+          ],
+          "hidden": [
+            "排序分"
+          ]
+        }
+      ]
+    }
+  ]
+}
