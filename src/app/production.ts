@@ -1,3 +1,5 @@
+import { createYouthServices } from '../../skills/njucli-youth/scripts/services.js';
+import { createTableServices } from '../../skills/njucli-table/scripts/services.js';
 import { createRuntime } from './runtime.js';
 import { createAuthServices } from '../auth/service.js';
 import { createAccountServices } from '../account/service.js';
@@ -21,6 +23,8 @@ export function createProductionServices() {
     auth: createAuthServices(runtime),
     account: createAccountServices(runtime),
     box: createBoxServices(runtime),
+    youth: createYouthServices(runtime),
+    table: createTableServices(runtime),
     software: new SoftwareClient(),
     mail: createMailServices(runtime),
     campus: new CampusClient(fetch),

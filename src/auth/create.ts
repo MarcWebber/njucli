@@ -13,6 +13,8 @@ import { AppError, asAppError } from "../core/errors.js";
 import { EHallPortalClient } from "../../skills/njucli-ehall/scripts/client.js";
 import { EHallTimetableClient } from "../../skills/njucli-course/scripts/client.js";
 import { NjuOpacClient } from "../../skills/njucli-library/scripts/client.js";
+import { YouthClient } from "../../skills/njucli-youth/scripts/client.js";
+import { TableClient } from "../../skills/njucli-table/scripts/client.js";
 
 const EHALL_URL = "https://ehall.nju.edu.cn/new/index.html";
 
@@ -21,6 +23,10 @@ const VPN_TEST_URL = "https://www-nju-edu-cn-s.atrust.nju.edu.cn/";
 const OPAC_WEBVPN_BASE_URL = "https://opac-nju-edu-cn.atrust.nju.edu.cn";
 
 export function createAuthCoordinator(): AuthCoordinator {
+  const restoreYouthSession = (account: AccountRecord): Promise<boolean> =>
+    withBrowserSession(account, true, (session) => new YouthClient(session.request).restoreSession());
+  const restoreTableSession = (account: AccountRecord): Promise<boolean> =>
+    withBrowserSession(account, true, (session) => new TableClient(session.request).restoreSession());
   const restoreEhallSession = (account: AccountRecord): Promise<boolean> => withBrowserSession(account, true, async (session) => {
     const client = new EHallPortalClient(session.request);
     if (await client.hasSession())
@@ -57,6 +63,8 @@ export function createAuthCoordinator(): AuthCoordinator {
       ehall: { login: restoreEhallSession, probe: restoreEhallSession },
       timetable: { login: probeTimetable, probe: probeTimetable },
       sports: { login: probeSports, probe: probeSports },
+      youth: { login: restoreYouthSession, probe: restoreYouthSession },
+      table: { login: restoreTableSession, probe: restoreTableSession },
       vpn: { login: interactiveVpnLogin, probe: probeVpn },
       opac: { login: interactiveOpacLogin, probe: probeOpac },
     },
@@ -66,6 +74,9 @@ export function createAuthCoordinator(): AuthCoordinator {
 async function interactiveVpnLogin(account: AccountRecord): Promise<boolean> {
   return withBrowserSession(account, false, async (session) => {
     const successHost = new URL(VPN_TEST_URL).hostname;
+    const response = await session.request(VPN_TEST_URL);
+    if (!response.ok) throw new Error(`WebVPN 登录恢复返回 HTTP ${response.status}`);
+    if (new URL(response.url).hostname === successHost) return true;
     await session.login(VPN_TEST_URL, (url) => url.hostname === successHost);
     return true;
   });

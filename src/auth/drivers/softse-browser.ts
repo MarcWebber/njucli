@@ -13,24 +13,19 @@ const LOGIN_URL = `https://${HOST}/login/index.php?authCAS=CAS`;
 
 export const softSeSessionDriver = {
   login(account: AccountRecord): Promise<boolean> {
-    return withBrowserSession(account, false, async (session) => {
-      await session.login(LOGIN_URL, isLoggedInPage);
-      return hasSoftSeSession(session);
-    });
+    return withBrowserSession(account, false, restoreSession);
   },
 
   probe(account: AccountRecord): Promise<boolean> {
-    return withBrowserSession(account, true, async (session) => {
-      const current = await hasSoftSeSession(session);
-      if (current) return current;
-      await (await session.page()).goto(LOGIN_URL, { waitUntil: "domcontentloaded" });
-      return hasSoftSeSession(session);
-    });
+    return withBrowserSession(account, true, restoreSession);
   },
 } satisfies AuthSessionDriver;
 
-function isLoggedInPage(url: URL): boolean {
-  return url.hostname === HOST && url.pathname !== "/login/index.php";
+async function restoreSession(session: BrowserSession): Promise<boolean> {
+  if (await hasSoftSeSession(session)) return true;
+  const response = await session.request(LOGIN_URL);
+  if (!response.ok) throw new Error(`SoftSE 登录恢复返回 HTTP ${response.status}`);
+  return hasSoftSeSession(session);
 }
 
 async function hasSoftSeSession(session: BrowserSession): Promise<boolean> {

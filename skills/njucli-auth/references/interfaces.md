@@ -2,7 +2,7 @@
 
 ## 统一身份认证
 
-登录、凭据和会话恢复集中在 `src/auth/`。业务通过 `AuthCoordinator.ensureSession` 使用当前账号的 CLI 专用 Chrome；会话 Cookie 保存在账号目录，认证和业务共用同一 context。
+登录、凭据和会话恢复集中在 `src/auth/`。业务通过 `AuthCoordinator.ensureSession` 检查当前账号，认证与业务共用当次会话。
 
 | 能力 | 登录入口或依赖 | 会话检查 |
 | --- | --- | --- |
@@ -10,8 +10,10 @@
 | `ehall` | `sso` → `https://ehall.nju.edu.cn/login` | 门户用户信息 |
 | `timetable` | `ehall` | 当前学期查询 |
 | `softse` | `sso` → `/login/index.php?authCAS=CAS` | `/my/` 的退出链接 |
-| `tex` | `sso` → `/oauth/login` | 控制台和 `/api/user/info` |
+| `tex` | `sso` → `/oauth/login` | `/api/user/info` |
 | `sports` | `sso` | CAS 票据换取本次请求的业务令牌 |
+| `youth` | `sso` → 青年平台 | 平台用户信息 |
+| `table` | `sso` → 协同表格 | 首页的 `csrfToken` 和 `username` |
 | `vpn` | `sso` → WebVPN | 测试页可访问 |
 | `opac` | `vpn` → 图书馆读者登录 | 借阅查询 |
 | `selection` | 研究生选课站登录页 | `loadPublicInfo_course.do` |
@@ -19,20 +21,18 @@
 
 `auth.json` 保存 `username/password`，用于 authserver 和云盘官方表单。邮箱的专用密码、绑定校验和网页向导由 `src/auth/mail-bind.ts` 接入。操作步骤见[使用说明](usage.md)。
 
-## 会话与票据
+## 会话管理
 
-`CASTGC` 和 ST 按 CAS 会话与服务票据处理，不作为 JWT 或 OAuth `refresh_token`。`service` 是票据绑定的业务地址；`renew=true` 要求重新提供主认证凭据，不代表延长现有会话。协议见 [Apereo CAS](https://apereo.github.io/cas/7.3.x/protocol/CAS-Protocol-Specification.html)。
-
-个人中心 `GET /personalInfo/UserOnline/user/queryUserOnline` 返回 `datas.userOnline / userOnlineRememberMe`，没有剩余有效期字段。JSON 请求使用 `REFERERCE_TOKEN → refererToken` 和 `XSRF-TOKEN → X-XSRF-TOKEN`。会话持续可用的时长与服务端续期分别验证。
-
-## OAuth 续期
-
-[厂商接口](https://openapi.wisedu.com/openapi/auth/protocol/oauth/api/refreshToken.html)为 `POST /authserver/oauthApi/token/refresh`，表单传 `refresh_token`，成功返回 `access_token / refresh_token / token_type / expires_in`。南大地址用无效占位令牌查询返回 `invalid_refreshToken`。
-
-实际接入需要获准的 `client_id / client_secret / redirect_uri` 和初始授权令牌；学校接入渠道见[统一认证服务](https://oi.nju.edu.cn/21440/list.htm)。OAuth 令牌刷新与 CAS Cookie 有效期分别验证。
+- HTTP 查询直接使用保存的 Cookie，需要页面时再启动 Chrome。结束时保存全部 Cookie，包含持久 Cookie。
+- 同一账号通过进程锁串行读写；取得锁后读取最新会话，退出后释放，持有进程崩溃后可恢复。
+- SSO、SoftSE、TeX 状态检查使用 HTTP，不读取密码或提交授权。TeX 主动登录可提交官方 `user_profile` 授权；编辑和编译使用可见页面。
+- `auth maintain` 检查 SSO，失效时使用已存凭据登录，成功后记录执行时间和动作。登录失败及登录后的复核失败保持 `expired`。
+- 官方滑块最多尝试三张，依据官方验证响应判断结果。业务写入保持一次提交。
 
 ## 验证范围
 
-- SSO、SoftSE、TeX、云盘登录与跨进程会话读取已验证；各站点自然过期后的自动恢复仍待逐项验证。
-- 个人中心和 EHall 均可取得 ST；`/authserver/serviceValidate` 携带 `pgtUrl` 时曾返回 `INVALID_PROXY_CALLBACK`，尚未取得 PGT 或 PT。
-- OAuth 令牌刷新成功和 CAS 会话续期尚未验证。
+本地集成覆盖 Cookie 跨调用保存、账号互斥与崩溃恢复、维护命令、HTTP 状态检查、TeX OAuth 授权和登录失败状态。当前各站点实网结果见所属 Skill 的接口资料。
+
+2026-10-07 实网核对：SSO、TeX、SoftSE、青年平台的已有会话均为 `valid`；`auth maintain` 返回 `kept-alive/valid`。自然失效后的后台恢复与跨期限持续性待实网核对。
+
+`kept-alive` 表示本次 CAS 访问成功，`restored` 表示重新建立会话。

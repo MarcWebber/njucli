@@ -15,6 +15,8 @@
 | 校园信息 | [新闻、公告与食堂](../skills/njucli-campus/references/interfaces.md) |
 | 正版软件 | [目录与安装包](../skills/njucli-software/references/interfaces.md) |
 | 校园邮箱 | [绑定、邮件与附件](../skills/njucli-mail/references/interfaces.md) |
+| 青年平台 | [活动、志愿时长与第二课堂](../skills/njucli-youth/references/interfaces.md) |
+| 协同表格 | [表格、记录、公式与视图](../skills/njucli-table/references/interfaces.md) |
 | 南大云盘 | [资料库、文件、分享与协作](../skills/njucli-box/references/interfaces.md) |
 
 ## 研究生节假日行程登记

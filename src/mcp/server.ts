@@ -1,3 +1,5 @@
+import { registerYouthTools } from '../../skills/njucli-youth/scripts/mcp.js';
+import { registerTableTools } from '../../skills/njucli-table/scripts/mcp.js';
 import type { NjuServices } from '../app/production.js';
 import { startReadMcp } from './read.js';
 import { registerBoxTools } from '../../skills/njucli-box/scripts/mcp.js';
@@ -16,6 +18,8 @@ import { registerTodayTools } from '../../skills/njucli-today/scripts/mcp.js';
 export function startMcpServer(services: NjuServices) {
   return startReadMcp('njucli', read => {
     registerBoxTools(read, services.box);
+    registerYouthTools(read, services.youth);
+    registerTableTools(read, services.table);
     registerSoftwareTools(read, services.software);
     registerMailTools(read, services.mail);
     registerCampusTools(read, services.campus);

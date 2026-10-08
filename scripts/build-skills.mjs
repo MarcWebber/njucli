@@ -1,5 +1,5 @@
 import { build } from "esbuild";
-import { copyFile, readdir, readFile, writeFile } from "node:fs/promises";
+import { copyFile, cp, readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -11,6 +11,9 @@ const entries = (await readdir(join(root, "skills"), { withFileTypes: true }))
 for (const entry of entries) {
   const directory = join(root, "skills", entry.name);
   const scripts = join(directory, "scripts");
+  if ((await readdir(directory)).includes("templates")) {
+    await cp(join(directory, "templates"), join(root, "dist", "skills", entry.name, "templates"), { recursive: true });
+  }
   const result = await build({
     entryPoints: [join(scripts, "run.ts"), ...(entry.name === "njucli-auth" ? [join(scripts, "runtime.ts")] : [])],
     outdir: scripts,

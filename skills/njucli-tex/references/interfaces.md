@@ -2,7 +2,7 @@
 
 ## TeX
 
-[南大 TeX 控制台](https://tex.nju.edu.cn/console)使用 TeXPage。CLI 使用可见 Chrome，统一认证说明见[认证 Skill](https://github.com/MarcWebber/njucli/blob/main/skills/njucli-auth/SKILL.md)。
+[南大 TeX 控制台](https://tex.nju.edu.cn/console)使用 TeXPage。查询使用 HTTP 会话，编辑、上传和编译使用可见 Chrome；统一认证说明见[认证 Skill](https://github.com/MarcWebber/njucli/blob/main/skills/njucli-auth/SKILL.md)。
 
 JSON 响应为 `{status: {code}, result}`：`1` 成功、`1003` 登录失效、`1010` 二次验证。以下路径相对 `https://tex.nju.edu.cn`，来自官方前端及实网核对。
 

@@ -13,6 +13,9 @@ const LOGOUT_URL = `https://${AUTH_HOST}/authserver/logout`;
 export const ssoSessionDriver = {
   login(account: AccountRecord): Promise<boolean> {
     return withBrowserSession(account, false, async (session) => {
+      const response = await session.request(LOGIN_URL);
+      if (!response.ok) throw new Error(`SSO 登录返回 HTTP ${response.status}`);
+      if (isLandingPage(new URL(response.url))) return true;
       await session.login(LOGIN_URL, isLandingPage);
       return true;
     });
@@ -20,9 +23,9 @@ export const ssoSessionDriver = {
 
   probe(account: AccountRecord): Promise<boolean> {
     return withBrowserSession(account, true, async (session) => {
-      const page = await session.page();
-      await page.goto(LOGIN_URL, { waitUntil: "domcontentloaded" });
-      const url = new URL(page.url());
+      const response = await session.request(LOGIN_URL);
+      if (!response.ok) throw new Error(`SSO 状态探测返回 HTTP ${response.status}`);
+      const url = new URL(response.url);
       if (url.hostname === AUTH_HOST) return false;
       if (!isLandingPage(url)) throw new Error("SSO 状态探测返回了未知页面");
       return true;
@@ -31,9 +34,8 @@ export const ssoSessionDriver = {
 
   logout(account: AccountRecord): Promise<void> {
     return withBrowserSession(account, true, async (session) => {
-      const page = await session.page();
       try {
-        await page.goto(LOGOUT_URL, { waitUntil: "domcontentloaded" });
+        await session.request(LOGOUT_URL);
       } finally {
         await session.clearCookies();
       }

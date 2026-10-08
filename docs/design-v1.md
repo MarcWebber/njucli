@@ -34,7 +34,9 @@ Skill 的 `run.ts` 在构建时生成 `run.mjs`，共享模块打入入口，第
 
 | 入口 | 能力 | 说明 |
 | --- | --- | --- |
-| `auth`、`account` | 登录、会话状态、退出和多账号管理 | [认证 Skill](../skills/njucli-auth/SKILL.md) |
+| `auth`、`account` | 登录、会话维护、状态、退出和多账号管理 | [认证 Skill](../skills/njucli-auth/SKILL.md) |
+| `youth` | 青年平台活动、志愿时长、第二课堂与报名 | [青年平台 Skill](../skills/njucli-youth/SKILL.md) |
+| `table` | 协同表格、模板、记录、公式与视图 | [协同表格 Skill](../skills/njucli-table/SKILL.md) |
 | `box` / `njubox` | 资料库、扫描搜索、上传下载、分享与上传链接、复制移动、收藏锁定、历史恢复和协作权限 | [云盘 Skill](../skills/njucli-box/SKILL.md) |
 | `campus` | 食堂、新闻、通知和文章正文 | [校园信息 Skill](../skills/njucli-campus/SKILL.md) |
 | `software` | 官方软件目录、安装包查询与下载 | [软件 Skill](../skills/njucli-software/SKILL.md) |
@@ -61,6 +63,8 @@ sso
 ├── softse
 ├── tex
 ├── sports
+├── youth
+├── table
 └── vpn → opac
 
 selection、box：独立站点会话
@@ -73,9 +77,9 @@ selection、box：独立站点会话
 | `auth.json` | 统一认证账号与密码 |
 | `mail.json` | 已绑定邮箱及当前邮箱 |
 | `ehall.json` | 按本人身份保存的联系方式与住宿资料 |
-| `session-cookies.json` | 浏览器会话 Cookie |
+| `session-cookies.json` | 会话型与持久 Cookie |
 
-配置以 0600 权限原子保存。各账号使用独立的 CLI 浏览器目录。登录凭据可通过 `--credentials` 导入，网站要求的交互在官方页面完成；详细步骤见 [认证说明](../skills/njucli-auth/references/usage.md)。
+配置以 0600 权限原子保存。同一账号在读取 Cookie 前取得进程锁，保存后释放。查询使用 HTTP 会话，页面操作按需打开专用 Chrome 并继承当前 Cookie。`auth maintain` 检查 SSO，过期时用已存凭据恢复。登录凭据可通过 `--credentials` 导入，网站要求的交互在官方页面完成；详细步骤见 [认证说明](../skills/njucli-auth/references/usage.md)。
 
 ## 输出与文件
 
@@ -85,7 +89,7 @@ selection、box：独立站点会话
 
 ## 全局安装与升级
 
-安装脚本从仓库 `main` 构建并安装 CLI，同时注册 14 个 Skill。`njucli upgrade` 使用同一流程，保留当前全局安装前缀。
+安装脚本从仓库 `main` 构建并安装 CLI，同时注册 16 个 Skill。`njucli upgrade` 使用同一流程，保留当前全局安装前缀。
 
 | 配置 | 用途 |
 | --- | --- |
@@ -115,7 +119,7 @@ npm pack --dry-run
 
 | 能力 | 已验证 | 待验证或待实现 |
 | --- | --- | --- |
-| 认证 | SSO 登录后跨进程读取；SoftSE 跨进程及间隔超过 15 分钟复用；TeX 子会话独立可用 | 各站点会话真正过期后的恢复 |
+| 认证 | SSO、TeX、SoftSE、青年平台已有会话通过 HTTP 跨进程读取；`auth maintain` 返回 `kept-alive/valid` | 自然失效后的后台恢复与跨期限持续性 |
 | 校园信息与软件 | 新闻列表与正文、食堂、软件目录及安装包下载 | 其余来源逐项核对 |
 | 教务与选课 | 研究生成绩、可选课程、已选课程读取 | 本科日期课表与 ICS；研究生考试、课表与培养方案；真实选退课 |
 | 行程登记 | 查询与一次单站离返校登记提交、回读 | 全程留校、多次离返校与多站行程写入 |
@@ -123,6 +127,8 @@ npm pack --dry-run
 | TeX | 项目创建、模板复制、改名、正文编辑、新文件上传、源码下载、编译、PDF 和日志；编译失败时阻止旧 PDF 下载 | 同名上传替换 |
 | 邮箱 | 两个邮箱独立绑定、切换、邮件夹、分页、搜索和正文读取，已读状态保持 | 真实附件下载 |
 | 云盘 | 资料库、扫描、已有分享、文件下载和内部链接；其他查询接口可读取 | 上传、创建分享、复制移动及其他管理写入 |
+| 青年平台 | 志愿时长、活动及各模块列表与详情；成绩单 PDF 下载 | 报名、取消、评价及培训写入 |
+| 协同表格 | 模板查询与复制、建表、工作表与字段、视图、行新增和修改 | 群组工作区写入、其他复杂字段及模板内应用复制 |
 | 图书馆 | 本地接口集成 | 南大校园网或 WebVPN 下的馆藏与借阅；续借、预约待实现 |
 | 体育 | 本地接口集成 | 登录后场馆、时段与预约读取；预约、取消提交待实现 |
 

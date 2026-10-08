@@ -19,7 +19,7 @@ test("独立 Skill：单目录、声明依赖、共用账号与 MCP 契约", asy
   delete env.NJUCLI_ACCOUNT;
   const run = async (skill, args) => (await execute(process.execPath, [join(directory, skill, "scripts/run.mjs"), ...args], { cwd: directory, env })).stdout;
   const names = (await readdir(join(root, "skills"))).filter((name) => name.startsWith("njucli-"));
-  assert.equal(names.length, 14);
+  assert.equal(names.length, 16);
 
   for (const name of names) {
     const target = join(directory, name);
@@ -36,6 +36,9 @@ test("独立 Skill：单目录、声明依赖、共用账号与 MCP 契约", asy
 
   const full = JSON.parse((await execute(process.execPath, [join(root, "dist/cli.js"), "campus", "sources", "--format", "json"], { env })).stdout);
   assert.deepEqual(JSON.parse(await run("njucli-campus", ["campus", "sources", "--format", "json"])), full);
+  const preset = join(directory, "gradebook.json");
+  assert.equal(JSON.parse(await run("njucli-table", ["table", "preset", "gradebook", "--output", preset, "--format", "json"])).ok, true);
+  assert.equal(JSON.parse(await readFile(preset, "utf8")).tables[0].name, "课程成绩");
   assert.equal(JSON.parse(await run("njucli-box", ["account", "add", "portable", "--format", "json"])).ok, true);
   await run("njucli-box", ["account", "use", "portable", "--format", "json"]);
   assert.equal(JSON.parse(await run("njucli-mail", ["account", "current", "--format", "json"])).data, "portable");
@@ -58,7 +61,7 @@ test("独立 Skill：单目录、声明依赖、共用账号与 MCP 契约", asy
     }
   }
   const unified = await tools(join(root, "dist/cli.js"));
-  assert.equal(unified.length, 54);
+  assert.equal(unified.length, 91);
   const separate = [];
   for (const name of names.filter((name) => !["njucli-auth", "njucli-doctor"].includes(name))) {
     const registered = await tools(join(directory, name, "scripts/run.mjs"));

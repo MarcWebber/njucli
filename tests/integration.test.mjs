@@ -4,12 +4,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createServer } from "node:http";
 import { once } from "node:events";
+import { spawn } from "node:child_process";
+import { setTimeout as delay } from "node:timers/promises";
 import { test } from "node:test";
 import { Command } from "commander";
 import { AccountStore } from "../dist/src/account/store.js";
 import { createProductionServices } from "../dist/src/app/production.js";
 import { AuthCoordinator } from "../dist/src/auth/coordinator.js";
-import { BrowserSession } from "../dist/src/auth/browser-session.js";
 import { SessionStore } from "../dist/src/auth/session-store.js";
 import { AUTH_CAPABILITIES } from "../dist/src/auth/types.js";
 import { registerCampusCommands } from "../dist/skills/njucli-campus/scripts/commands.js";
@@ -24,11 +25,19 @@ import { TexClient } from "../dist/skills/njucli-tex/scripts/client.js";
 import { MailClient } from "../dist/skills/njucli-mail/scripts/client.js";
 import { SoftSeClient } from "../dist/skills/njucli-softse/scripts/client.js";
 import { EHallTripClient } from "../dist/skills/njucli-ehall/scripts/trip.js";
-import { bindMail } from "../dist/src/auth/mail-bind.js";
 import { registerSoftwareCommands } from "../dist/skills/njucli-software/scripts/commands.js";
 import { SoftwareClient } from "../dist/skills/njucli-software/scripts/client.js";
 import { saveFile, writeJsonFile } from "../dist/src/core/fs.js";
 import { AppError } from "../dist/src/core/errors.js";
+import { BrowserSession, withBrowserSession } from "../dist/src/auth/browser-session.js";
+import { texSessionDriver } from "../dist/src/auth/drivers/tex-browser.js";
+import { ssoSessionDriver } from "../dist/src/auth/drivers/sso-browser.js";
+import { registerAuthCommands } from "../dist/src/auth/commands.js";
+import { registerYouthCommands } from "../dist/skills/njucli-youth/scripts/commands.js";
+import { TableClient } from "../dist/skills/njucli-table/scripts/client.js";
+import { registerTableCommands } from "../dist/skills/njucli-table/scripts/commands.js";
+import { YouthClient } from "../dist/skills/njucli-youth/scripts/client.js";
+import { bindMail } from "../dist/src/auth/mail-bind.js";
 import { installSkills } from "../scripts/install-skills.mjs";
 import { registerUpgradeCommand } from "../dist/src/commands/upgrade.js";
 import { registerBoxCommands } from "../dist/skills/njucli-box/scripts/commands.js";
@@ -307,14 +316,17 @@ test("云盘：命令、递归传输、分享回读与失败单次提交", async
 test("云盘：浏览器二进制 multipart 与响应异常边界", async () => {
   const form = new FormData(); form.set("parent_dir", "/");
   form.set("file", new Blob([new Uint8Array([0, 255, 1])]), "二进制.bin");
-  const session = new BrowserSession({ request: { fetch: async (_url, options) => {
+  const http = { fetch: async (_url, options) => {
     assert.equal(options.data, undefined);
     assert.equal(options.multipart.parent_dir, "/");
     assert.equal(options.multipart.file.name, "二进制.bin");
     assert.deepEqual(options.multipart.file.buffer, Buffer.from([0, 255, 1]));
     return { ok: () => true, status: () => 200, url: () => "https://box.nju.edu.cn/upload", headers: () => ({}), text: async () => "[]", body: async () => Buffer.from("[]") };
-  } } }, "unused");
-  await session.request("https://box.nju.edu.cn/upload", { method: "POST", body: form });
+  } };
+  for (const context of [http, { pages: () => [], request: http }]) {
+    const session = new BrowserSession(context, "unused");
+    await session.request("https://box.nju.edu.cn/upload", { method: "POST", body: form });
+  }
   for (const [status, body, code] of [[401, "{}", "AUTH_EXPIRED"], [200, "<html>error</html>", "REMOTE_SCHEMA_CHANGED"], [200, "{}", "REMOTE_SCHEMA_CHANGED"]]) {
     const client = new BoxClient(async () => ({ ok: status === 200, status, text: async () => body, headers: new Headers() }));
     await assert.rejects(client.repos(), { code });
@@ -412,6 +424,138 @@ test("体育：认证与查询共用签名头，列表和详情保持相同预�
   assert.deepEqual(calls, ["/authserver/login", "/venue-server/api/login", "/venue-server/roleLogin", "/venue-server/api/orders/mine", "/venue-server/api/orders/order-1"]);
 });
 
+test("青年平台：站点会话、学年时长、本人活动与不同账号隔离", async (t) => {
+  const calls = [];
+  const activity = { id: 7, mc: "校园服务", xn: { id: "2025-2026" }, xm: { ssxy: { mc: "学院" } }, hddd: "校园", hdks: null, hdjs: null, bmks: null, bmjs: null, currentState: { id: "99" } };
+  const registration = { id: 12, hd: activity, shzt: { label: "审核通过" }, fwzsc: 10, fwsc: 8, jtsc: 2, pxsc: 2 };
+  let identity = "student-one";
+  const http = await localHttp(t, async (req, res) => {
+    const url = new URL(req.url, "https://youth.nju.edu.cn");
+    const buffers = [];
+    for await (const chunk of req) buffers.push(chunk);
+    calls.push({ path: url.pathname, query: url.searchParams, method: req.method, body: Buffer.concat(buffers).toString() });
+    res.setHeader("content-type", "application/json");
+    const send = (data, extra = {}) => res.end(JSON.stringify({ code: 0, data, extend: {}, pageIndex: Number(url.searchParams.get("page") || 1), pageSize: Number(url.searchParams.get("limit") || 20), ...extra }));
+    if (url.pathname === "/tw/") return res.end("<title>学生第二课堂</title>");
+    if (url.pathname === "/tw/ctx") return send(Buffer.from(JSON.stringify({ userId: identity, name: "学生", departmentName: "学院", anonymous: false, menus: [{ id: `menu-${identity}`, type: "PC", name: "我的活动", urlN: "/zyz/wdhd" }] })).toString("base64"));
+    assert.equal(url.searchParams.get(".me"), Buffer.from(`menu-${identity}`).toString("base64"));
+    if (url.pathname === "/tw/zyz/wdhd/fwsc") {
+      assert.equal(req.method, "POST");
+      assert.equal(url.searchParams.get("xnid"), "2025-2026");
+      return send(null, { extend: { fwzsc: "10.0", cjhds: "1" } });
+    }
+    if (url.pathname === "/tw/zyz/wdhd/ajaxList") {
+      assert.equal(url.searchParams.get("queryType"), "all");
+      return send([registration, { ...registration, id: 13, hd: { ...activity, id: 8, xn: null, currentState: null } }], { count: 2 });
+    }
+    if (url.pathname === "/tw/common/selector") return send([{ value: "2025-2026", label: "2025-2026学年" }]);
+    res.statusCode = 404; res.end();
+  });
+  const first = new YouthClient(http);
+  assert.equal(await first.restoreSession(), true);
+  assert.deepEqual(calls.slice(0, 2).map((call) => [call.method, call.path]), [["GET", "/tw/"], ["POST", "/tw/ctx"]]);
+  assert.deepEqual(await first.hours("2025-2026"), { year: "2025-2026", hours: 10, activities: 1 });
+  const page = await first.activities({ mine: true, year: "2025-2026", page: 2, size: 5 });
+  assert.equal(page.page, 2); assert.equal(page.total, 2);
+  assert.equal(page.items[0].registrationId, "12");
+  assert.equal(page.items[0].hours, 10); assert.equal(page.items[0].serviceHours, 8);
+  assert.equal(page.items[1].hours, null); assert.equal(page.items[1].year, null);
+  assert.deepEqual(await first.years(), [{ id: "2025-2026", name: "2025-2026学年" }]);
+  identity = "student-two";
+  const second = new YouthClient(http);
+  await second.restoreSession();
+  await second.hours("2025-2026");
+  assert.equal(calls.filter((call) => call.path === "/tw/ctx").length, 2);
+});
+
+test("青年平台：报名单次提交、跨页回读、培训状态与远端错误", async (t) => {
+  let enrolled = false, trainingEnrolled = false, reject = false;
+  const writes = [];
+  const http = await localHttp(t, async (req, res) => {
+    const url = new URL(req.url, "https://youth.nju.edu.cn");
+    const buffers = [];
+    for await (const chunk of req) buffers.push(chunk);
+    const body = new URLSearchParams(Buffer.concat(buffers).toString());
+    const send = (data, extra = {}) => res.end(JSON.stringify({ code: 0, data, extend: {}, pageIndex: Number(url.searchParams.get("page") || 1), pageSize: Number(url.searchParams.get("limit") || 20), ...extra }));
+    if (url.pathname === "/tw/ctx") return send(Buffer.from(JSON.stringify({ anonymous: false, userId: "one", menus: [] })).toString("base64"));
+    if (req.method === "POST") {
+      writes.push(url.pathname);
+      if (reject) return res.end(JSON.stringify({ code: 1, msg: "报名已截止" }));
+      if (url.pathname === "/tw/zyz/hdzx/bm") {
+        assert.equal(url.searchParams.get("hdid"), "42");
+        assert.equal(url.searchParams.get("mm"), "event-password");
+        assert.equal(body.get("bhdrs"), "校园服务");
+        assert.equal(body.get("zwys"), "有经验");
+        assert.equal(body.get("qq"), "12345");
+        enrolled = true;
+      } else if (url.pathname.endsWith("/qxbm")) enrolled = false;
+      else if (url.pathname.endsWith("/saveBm")) trainingEnrolled = true;
+      else if (url.pathname.endsWith("/qxBm")) trainingEnrolled = false;
+      return send(null);
+    }
+    if (url.pathname === "/tw/zyz/wdhd/ajaxList") {
+      const target = { id: 25, hd: { id: 42, mc: "活动", xn: { id: "2025-2026" }, xm: { ssxy: { mc: "学院" } }, hddd: "校园", currentState: { id: "1" } }, shzt: { label: "待审核" } };
+      return send(enrolled && url.searchParams.get("page") === "2" ? [target] : [], { count: enrolled ? 21 : 0 });
+    }
+    if (url.pathname === "/tw/zyz/pxgl/bm/ajaxList") return send([{ id: 9, mc: "培训", bmzt: trainingEnrolled }], { count: 1 });
+    res.statusCode = 404; res.end();
+  });
+  const client = new YouthClient(http);
+  const result = await client.enroll("42", { understanding: "校园服务", strengths: "有经验", qq: "12345", password: "event-password" });
+  assert.equal(result.registrationId, "25");
+  assert.deepEqual(await client.cancel("25"), { registrationId: "25", cancelled: true });
+  assert.equal((await client.enrollTraining("9")).bmzt, true);
+  assert.equal((await client.cancelTraining("9")).bmzt, false);
+  assert.equal(writes.length, 4);
+  reject = true;
+  await assert.rejects(client.enrollTraining("9"), /报名已截止/);
+  assert.equal(writes.length, 5);
+  const forbidden = new YouthClient(async () => ({ status: 403, ok: false, url: "https://youth.nju.edu.cn/tw/", text: async () => "" }));
+  await assert.rejects(forbidden.restoreSession(), /HTTP 403/);
+  const redirected = new YouthClient(async () => ({ status: 200, ok: true, url: "https://authserver.nju.edu.cn/authserver/login", text: async () => "login" }));
+  assert.equal(await redirected.restoreSession(), false);
+});
+
+test("青年平台：CLI 分页筛选、文档详情与成绩单文件保存", async (t) => {
+  const calls = [];
+  const service = {
+    activities: async (options) => { calls.push(["activities", options]); return { page: 1, total: 0, items: [] }; },
+    practiceTeams: async (options) => { calls.push(["practiceTeams", options]); return { page: 2, total: 0, items: [] }; },
+    clubs: async (options) => { calls.push(["clubs", options]); return { page: 1, total: 0, items: [] }; },
+    tickets: async (options) => { calls.push(["tickets", options]); return { page: 1, total: 0, items: [] }; },
+    recruitments: async (options) => { calls.push(["recruitments", options]); return { page: 1, total: 0, items: [] }; },
+  };
+  assert.equal((await command(registerYouthCommands, service, ["youth", "activities", "服务", "--mine", "--year", "2025-2026"])).code, 0);
+  assert.equal(calls[0][1].query, "服务"); assert.equal(calls[0][1].mine, true);
+  await command(registerYouthCommands, service, ["youth", "practice-teams", "乡村", "--page", "2", "--size", "5"]);
+  assert.equal(calls[1][1].page, 2); assert.equal(calls[1][1].query, "乡村");
+  await command(registerYouthCommands, service, ["youth", "clubs", "--mine", "--category", "3"]);
+  assert.equal(calls[2][1].mine, true); assert.equal(calls[2][1].category, "3");
+  await command(registerYouthCommands, service, ["youth", "tickets", "音乐", "--mine"]);
+  assert.equal(calls[3][1].query, "音乐");
+  await command(registerYouthCommands, service, ["youth", "recruitments", "--mine"]);
+  assert.equal(calls[4][1].mine, true);
+  const invalid = await command(registerYouthCommands, service, ["youth", "activities", "--page", "0"]);
+  assert.equal(invalid.error.code, "INVALID_INPUT"); assert.equal(calls.length, 5);
+
+  const directory = await mkdtemp(join(tmpdir(), "njucli-youth-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const http = await localHttp(t, (req, res) => {
+    if (req.url.startsWith("/tw/ctx")) return res.end(JSON.stringify({ code: 0, data: Buffer.from(JSON.stringify({ userId: "self", anonymous: false, menus: [] })).toString("base64") }));
+    if (req.url.startsWith("/tw/zyz/hdzx/7/update")) return res.end('<body><div class="layui-inline"><label class="layui-form-label">活动地点</label><input value="校园"></div><p>活动说明</p><a href="attachment.pdf">附件</a><script>secret-script</script></body>');
+    assert.match(req.url, /xh=self/);
+    res.setHeader("content-disposition", 'attachment; filename="transcript.pdf"'); res.end("%PDF-synthetic");
+  });
+  const client = new YouthClient(http);
+  const detail = await client.activity("7");
+  assert.deepEqual(detail.fields, [{ label: "活动地点", value: "校园" }]);
+  assert.equal(detail.links[0].url, "https://youth.nju.edu.cn/tw/zyz/hdzx/7/attachment.pdf");
+  assert.doesNotMatch(detail.text, /secret-script/);
+  const output = join(directory, "transcript.pdf");
+  assert.equal((await client.exportTranscript(output)).bytes, 14);
+  assert.equal((await stat(output)).mode & 0o777, 0o600);
+});
+
 test("安装：全局 Skill 链接、重复安装与同名内容保护", async (t) => {
   const directory = await mkdtemp(join(tmpdir(), "njucli-install-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
@@ -475,8 +619,11 @@ test("认证：本地凭据、自动恢复与普通网络错误", async (t) => {
   const page = {
     goto: async () => {},
     url: () => "https://authserver.nju.edu.cn/authserver/login",
-    locator: (selector) => selector === "#pwdFromId:visible" ? form : { click: async () => {} },
+    locator: (selector) => selector === "#pwdFromId:visible" ? form : {
+      click: async () => {}, waitFor: () => new Promise(() => {}), isVisible: async () => false,
+    },
     waitForURL: async (ready) => { assert.equal(ready(new URL("https://ehall.nju.edu.cn/new/index.html")), true); },
+    waitForFunction: async () => ({ jsonValue: async () => "redirect", dispose: async () => {} }),
   };
   const session = new BrowserSession({ pages: () => [page] }, join(configDir, "session-cookies.json"));
   const valid = new Set();
@@ -504,7 +651,195 @@ test("认证：本地凭据、自动恢复与普通网络错误", async (t) => {
   await assert.rejects(auth.ensureSession(account, "timetable", async () => { throw new Error("network down"); }), /network down/);
   assert.deepEqual(calls, []);
   page.waitForURL = async () => { throw Object.assign(new Error("login timeout"), { name: "TimeoutError" }); };
-  await assert.rejects(session.login("https://authserver.nju.edu.cn/authserver/login", () => true), { code: "USER_ACTION_REQUIRED" });
+  await assert.rejects(session.login("https://authserver.nju.edu.cn/authserver/login", (url) => url.hostname === "ehall.nju.edu.cn"), { code: "AUTH_RESTORE_FAILED" });
+  page.waitForFunction = async () => ({ jsonValue: async () => "账号或密码错误", dispose: async () => {} });
+  await assert.rejects(session.login("https://authserver.nju.edu.cn/authserver/login", (url) => url.hostname === "ehall.nju.edu.cn"), { code: "AUTH_REJECTED", message: "学校拒绝登录：账号或密码错误" });
+});
+
+test("认证：跨进程调用使用最新 Cookie，崩溃后恢复，账号相互独立", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "njucli-auth-lock-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const account = { name: "lock", configDir: directory, browserDataDir: join(directory, "browser") };
+  const server = createServer((req, res) => {
+    if (req.url === "/rotate") res.setHeader("set-cookie", "session=synthetic-new; Path=/; HttpOnly");
+    res.end(req.headers.cookie ?? "");
+  }).listen(0, "127.0.0.1");
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  await once(server, "listening");
+  const origin = `http://127.0.0.1:${server.address().port}`;
+  const module = new URL("../dist/src/auth/browser-session.js", import.meta.url).href;
+  const child = (body, expectedSignal = null) => {
+    const process = spawn(globalThis.process.execPath, ["--input-type=module", "-e", `
+      import { withBrowserSession } from ${JSON.stringify(module)};
+      const account = ${JSON.stringify(account)};
+      const origin = ${JSON.stringify(origin)};
+      ${body}
+    `]);
+    let output = "", errors = "";
+    t.after(() => { if (process.exitCode === null && process.signalCode === null) process.kill("SIGKILL"); });
+    process.stdout.on("data", (chunk) => { output += chunk; });
+    process.stderr.on("data", (chunk) => { errors += chunk; });
+    const completed = once(process, "close").then(([code, signal]) => {
+      assert.equal(signal, expectedSignal, errors);
+      assert.equal(code, expectedSignal ? null : 0, errors); return output;
+    });
+    return { process, completed };
+  };
+  let reader;
+  await withBrowserSession(account, false, async (session) => {
+    await session.request(`${origin}/rotate`);
+    reader = child('console.log("starting"); await withBrowserSession(account, true, async (session) => { console.log(await (await session.request(origin + "/check")).text()); });');
+    await once(reader.process.stdout, "data");
+    await delay(250);
+    assert.equal(reader.process.exitCode, null);
+    const second = { ...account, configDir: join(directory, "second"), browserDataDir: join(directory, "second-browser") };
+    await withBrowserSession(second, true, async (session) => {
+      assert.equal(await (await session.request(`${origin}/check`)).text(), "");
+    });
+  });
+  assert.match(await reader.completed, /session=synthetic-new/);
+  const crashed = child('await withBrowserSession(account, true, async () => { console.log("locked"); setInterval(() => {}, 1000); await new Promise(() => {}); });', "SIGKILL");
+  await once(crashed.process.stdout, "data");
+  crashed.process.kill("SIGKILL");
+  await crashed.completed;
+  await withBrowserSession(account, true, async (session) => {
+    assert.match(await (await session.request(`${origin}/check`)).text(), /session=synthetic-new/);
+  });
+  await assert.rejects(stat(join(directory, "session.lock")), { code: "ENOENT" });
+  await assert.rejects(withBrowserSession(account, true, async () => { throw new Error("business failed once"); }), /business failed once/);
+  await assert.rejects(stat(join(directory, "session.lock")), { code: "ENOENT" });
+});
+
+test("认证：定时维护自动恢复失效会话并保存，后续调用复用且不重复登录", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "njucli-maintain-"));
+  const variables = ["XDG_CONFIG_HOME", "XDG_DATA_HOME", "NJUCLI_ACCOUNT"];
+  const previous = Object.fromEntries(variables.map((name) => [name, process.env[name]]));
+  t.after(async () => {
+    for (const name of variables) {
+      if (previous[name] === undefined) delete process.env[name];
+      else process.env[name] = previous[name];
+    }
+    await rm(directory, { recursive: true, force: true });
+  });
+  process.env.XDG_CONFIG_HOME = directory;
+  process.env.XDG_DATA_HOME = directory;
+  delete process.env.NJUCLI_ACCOUNT;
+  const server = createServer((req, res) => {
+    if (req.url === "/login") res.setHeader("set-cookie", "session=synthetic-maintained; Path=/; HttpOnly");
+    res.end(req.headers.cookie?.includes("synthetic-maintained") ? "valid" : "expired");
+  }).listen(0, "127.0.0.1");
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  await once(server, "listening");
+  const origin = `http://127.0.0.1:${server.address().port}`;
+  let logins = 0;
+  t.mock.method(ssoSessionDriver, "probe", (account) => withBrowserSession(account, true, async (session) =>
+    await (await session.request(`${origin}/check`)).text() === "valid"));
+  t.mock.method(ssoSessionDriver, "login", (account) => withBrowserSession(account, true, async (session) => {
+    assert.equal(JSON.parse(await readFile(join(account.configDir, "auth.json"), "utf8")).password, "synthetic-secret");
+    logins++;
+    await session.request(`${origin}/login`);
+    return true;
+  }));
+  const services = createProductionServices();
+  const missing = await command(registerAuthCommands, services.auth, ["auth", "maintain"]);
+  assert.equal(missing.error.code, "AUTH_REQUIRED");
+  assert.equal(logins, 0);
+  const account = await new AccountStore().current();
+  await writeJsonFile(join(account.configDir, "auth.json"), { username: "synthetic-user", password: "synthetic-secret" });
+  const recovered = await command(registerAuthCommands, services.auth, ["auth", "maintain"]);
+  assert.equal(recovered.data.action, "restored");
+  assert.equal(recovered.data.status, "valid");
+  const kept = await services.auth.maintain();
+  assert.equal(kept.action, "kept-alive");
+  assert.equal(logins, 1);
+  assert.deepEqual(JSON.parse(await readFile(join(account.configDir, "auth-maintenance.json"), "utf8")), kept);
+  assert.equal((await stat(join(account.configDir, "auth-maintenance.json"))).mode & 0o777, 0o600);
+});
+
+test("认证：纯 HTTP 查询跨调用保存会话与持久 Cookie，清除后不恢复旧身份", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "njucli-http-session-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const account = { name: "http", configDir: directory, browserDataDir: join(directory, "browser") };
+  const server = createServer((req, res) => {
+    if (req.url === "/login") res.setHeader("set-cookie", [
+      "session=synthetic-current; Path=/; HttpOnly",
+      "remember=synthetic-durable; Path=/; Max-Age=3600; HttpOnly",
+      "scoped=synthetic-scoped; Path=/private; HttpOnly",
+    ]);
+    res.end(JSON.stringify({ cookie: req.headers.cookie ?? "" }));
+  }).listen(0, "127.0.0.1");
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  await once(server, "listening");
+  const origin = `http://127.0.0.1:${server.address().port}`;
+  await withBrowserSession(account, false, async (session) => {
+    await session.request(`${origin}/login`);
+    assert.equal(await session.cookie(origin, "session"), "synthetic-current");
+    assert.equal(await session.cookie("https://other.example", "session"), undefined);
+    assert.equal(await session.cookie(`${origin}/private/file`, "scoped"), "synthetic-scoped");
+    assert.equal(await session.cookie(`${origin}/private-other`, "scoped"), undefined);
+    await withBrowserSession(account, true, async (nested) => {
+      assert.equal(nested, session);
+      assert.match((await nested.request(`${origin}/check`)).url, /check$/);
+    });
+  });
+  const path = join(directory, "session-cookies.json");
+  const cookies = JSON.parse(await readFile(path, "utf8"));
+  assert.equal(cookies.find((cookie) => cookie.name === "session").expires, -1);
+  assert.ok(cookies.find((cookie) => cookie.name === "remember").expires > Date.now() / 1000);
+  assert.equal((await stat(path)).mode & 0o777, 0o600);
+  await withBrowserSession(account, false, async (session) => {
+    const result = JSON.parse(await (await session.request(`${origin}/check`)).text());
+    assert.match(result.cookie, /session=synthetic-current/);
+    assert.match(result.cookie, /remember=synthetic-durable/);
+    await session.clearCookies();
+    assert.equal(JSON.parse(await (await session.request(`${origin}/check`)).text()).cookie, "");
+  });
+  assert.deepEqual(JSON.parse(await readFile(path, "utf8")), []);
+  await assert.rejects(stat(account.browserDataDir), { code: "ENOENT" });
+});
+
+test("认证：失效状态检查不读密码或启动浏览器，TeX 登录完成 OAuth 授权", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "njucli-auth-probe-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const account = { name: "probe", configDir: directory, browserDataDir: join(directory, "browser") };
+  await writeFile(join(directory, "auth.json"), "not a credential document");
+  const authorize = "https://authserver.nju.edu.cn/authserver/oauth2.0/authorize?client_id=synthetic&redirect_uri=https%3A%2F%2Ftex.nju.edu.cn%2Foauth%2Fcallback";
+  let grants = 0;
+  const http = await localHttp(t, async (req, res) => {
+    const url = new URL(req.url, "https://tex.nju.edu.cn");
+    if (url.pathname === "/api/user/info") return res.end(JSON.stringify({ status: { code: grants ? 1 : 1003 }, result: grants ? { id: "synthetic-user" } : null }));
+    if (url.pathname === "/oauth/login") {
+      res.setHeader("x-test-url", authorize);
+      return res.end('<form class="oauth-form" method="post"><input type="hidden" name="scope" value="user_profile"></form>');
+    }
+    if (url.pathname === "/authserver/oauth2.0/authorize") {
+      assert.equal(req.method, "POST");
+      const chunks = []; for await (const chunk of req) chunks.push(chunk);
+      assert.equal(Buffer.concat(chunks).toString(), "scope=user_profile");
+      grants++; return res.end("authorized");
+    }
+    if (url.pathname === "/authserver/login") {
+      res.setHeader("x-test-url", "https://authserver.nju.edu.cn/authserver/login");
+      return res.end("login form");
+    }
+    res.statusCode = 404; res.end();
+  });
+  await withBrowserSession(account, false, async (session) => {
+    session.page = async () => { throw new Error("probe must not open a browser"); };
+    session.request = async (input, init) => {
+      const response = await http(input, init);
+      return { ok: response.ok, status: response.status, headers: response.headers,
+        url: response.headers.get("x-test-url") ?? response.url,
+        text: () => response.text(), arrayBuffer: () => response.arrayBuffer() };
+    };
+    assert.equal(await ssoSessionDriver.probe(account), false);
+    assert.equal(await texSessionDriver.probe(account), false);
+    assert.equal(grants, 0);
+    assert.equal(await texSessionDriver.login(account), true);
+    assert.equal(grants, 1);
+    assert.equal(await texSessionDriver.probe(account), true);
+    assert.equal(grants, 1);
+  });
 });
 
 test("认证：登录失败与后置探测失败保持失效状态", async (t) => {
@@ -521,6 +856,11 @@ test("认证：登录失败与后置探测失败保持失效状态", async (t) =
   await assert.rejects(auth.ensureSession(account, "sso"), /login unavailable/);
   assert.equal((await sessions.list(account)).find((s) => s.capability === "sso").status, "expired");
   assert.deepEqual(await auth.ensureSession(account, "softse"), { capability: "softse", status: "valid" });
+  for (const capability of ["sso", "softse"]) {
+    await sessions.put(account, { capability, status: "valid" });
+    await assert.rejects(auth.login(account, capability), /login unavailable/);
+    assert.equal((await sessions.list(account)).find((s) => s.capability === capability).status, "expired");
+  }
   drivers.sso.login = async () => true;
   for (const failure of [false, new AppError("AUTH_REQUIRED", "post-login session expired"), new Error("post-login probe unavailable")]) {
     await sessions.put(account, { capability: "sso", status: "valid" });
@@ -915,6 +1255,7 @@ test("邮箱：文件绑定与复用、网页单次生成、失败保留原凭�
   };
   const page = {
     goto: async () => { calls.push("打开邮箱"); },
+    url: () => "https://mail.nju.edu.cn/cgi-bin/frame_html",
     waitForURL: async (ready) => { assert.equal(ready(new URL("https://mail.nju.edu.cn/cgi-bin/frame_html")), true); },
     frameLocator: (selector) => { assert.equal(selector, "#mainFrame"); return settings; },
     getByRole: (_, { name }) => ({ click: async () => { calls.push(name); } }),
@@ -1072,4 +1413,154 @@ test("账号装配：默认邮箱与统一认证同号，独立邮箱保留全�
   assert.equal((await services.mail.bind()).address, second.data.address);
   await services.account.remove("default");
   assert.equal((await services.mail.status()).bound, false);
+});
+
+
+test("协同表格：Cookie 认证、UUID 定位、单次填写回读与错误不重试", async (t) => {
+  const writes = [];
+  let tokenCalls = 0, broken = false, wrongReadback = false;
+  const stored = new Map();
+  const columns = [{ key: "0000", name: "学号", type: "text", data: null },
+    { key: "score", name: "成绩", type: "number", data: { enable_check_format: true, format_min_value: 0, format_max_value: 100 } },
+    { key: "sum", name: "总评", type: "formula", data: { formula: "{成绩}" } }];
+  const http = await localHttp(t, async (req, res) => {
+    const url = new URL(req.url, "https://table.nju.edu.cn");
+    const chunks = []; for await (const chunk of req) chunks.push(chunk);
+    const send = (data) => res.end(JSON.stringify(data));
+    if (url.pathname === "/sso/") return res.end("<script>var app={csrfToken:'local-csrf',username:'local-owner'};</script>");
+    if (url.pathname.endsWith("workspaces/")) return send({ workspace_list: [{ id: 7, type: "personal", name: "个人", table_list: [{ uuid: "base-1", workspace_id: 7, name: "课程成绩" }] }] });
+    if (url.pathname.endsWith("access-token/")) {
+      tokenCalls++; assert.equal(decodeURIComponent(url.pathname), "/api/v2.1/workspace/7/dtable/课程成绩/access-token/");
+      return send({ dtable_uuid: "base-1", access_token: "base-secret" });
+    }
+    assert.equal(req.headers.authorization, "Bearer base-secret");
+    if (url.pathname.endsWith("metadata/")) return send({ metadata: { tables: [{ _id: "sheet-1", name: "课程", columns, views: [] }] } });
+    if (req.method === "POST" || req.method === "PUT") {
+      const body = JSON.parse(Buffer.concat(chunks)); writes.push({ method: req.method, body });
+      if (broken) { res.statusCode = 503; return send({ error: "unavailable" }); }
+      if (req.method === "POST") {
+        const row_ids = body.rows.map((row, index) => { const _id = `r${index}`; stored.set(_id, { _id, ...row }); return { _id }; });
+        return send({ inserted_row_count: row_ids.length, row_ids });
+      }
+      for (const update of body.updates) stored.set(update.row_id, { ...stored.get(update.row_id), ...update.row });
+      return send({ success: true });
+    }
+    if (url.pathname.endsWith("rows/")) {
+      assert.equal(url.searchParams.get("convert_keys"), "true");
+      assert.equal(url.searchParams.get("start"), "1"); assert.equal(url.searchParams.get("view_name"), "成绩排名");
+      return send({ rows: [{ _id: "r1", 学号: "demo-2" }] });
+    }
+    const row = stored.get(url.pathname.split("/").at(-2));
+    if (row) return send({ ...row, ...(wrongReadback ? { 成绩: 99 } : {}) });
+    res.statusCode = 404; send({ error: "missing" });
+  });
+  const client = new TableClient(http);
+  assert.equal(await client.restoreSession(), true);
+  const bases = await client.bases("课程"); assert.equal(bases[0].uuid, "base-1");
+  const appended = await client.append("base-1", "课程", [{ 学号: "demo-1", 成绩: 0 }, { 学号: "demo-2", 成绩: null }]);
+  assert.equal(appended.rows[0].成绩, 0); assert.equal(appended.rows[1].成绩, null);
+  const updated = await client.update("base-1", "课程", [{ row_id: "r0", row: { 成绩: 80 } }]);
+  assert.equal(updated.rows[0].成绩, 80);
+  assert.equal((await client.rows("base-1", "课程", { page: 2, size: 1, view: "成绩排名" })).nextPage, 3);
+  assert.equal(tokenCalls, 1);
+  await assert.rejects(client.append("base-1", "课程", [{ 总评: 95 }]), /自动计算/);
+  await assert.rejects(client.append("base-1", "课程", [{ 成绩: 101 }]), /数值范围/);
+  await assert.rejects(client.append("base-1", "课程", [{ 不存在: "x" }]), /未找到字段/);
+  assert.equal(writes.length, 2);
+  broken = true;
+  await assert.rejects(client.append("base-1", "课程", [{ 成绩: 60 }]), /HTTP 503/);
+  assert.equal(writes.length, 3);
+  broken = false; wrongReadback = true;
+  await assert.rejects(client.update("base-1", "课程", [{ row_id: "r0", row: { 成绩: 70 } }]), (error) => error.details.rowId === "r0" && error.details.fields[0] === "成绩");
+  assert.equal(writes.length, 4);
+  assert.equal(await new TableClient(async () => ({ ok: true, url: "https://authserver.nju.edu.cn/authserver/login" })).restoreSession(), false);
+  await assert.rejects(new TableClient(async () => ({ ok: false, status: 500 })).restoreSession(), /HTTP 500/);
+});
+
+test("协同表格：模板复制、建表结构、视图按字段名映射与创建失败定位", async (t) => {
+  let base, sheets = [], failSheet = false;
+  const writes = [];
+  const http = await localHttp(t, async (req, res) => {
+    const url = new URL(req.url, "https://table.nju.edu.cn");
+    const chunks = []; for await (const chunk of req) chunks.push(chunk);
+    const bodyText = Buffer.concat(chunks).toString();
+    const send = (value) => res.end(JSON.stringify(value));
+    if (url.pathname === "/sso/") return res.end("csrfToken:'csrf',username:'owner'");
+    if (url.pathname.endsWith("workspaces/")) return send({ workspace_list: [{ id: 7, type: "personal", table_list: base ? [base] : [] }] });
+    if (url.pathname.endsWith("templates/")) return send({ template_list: [{ name: "grades", display_name: "登分", category: "教育", description: "成绩登记", link: "https://table.nju.edu.cn/dtable/external-links/template/" }] });
+    if (url.pathname.endsWith("access-token/")) return send({ access_token: "base-token", dtable_uuid: base.uuid });
+    const isGateway = url.pathname.startsWith("/api-gateway/");
+    const body = bodyText ? isGateway ? JSON.parse(bodyText) : Object.fromEntries(new URLSearchParams(bodyText)) : {};
+    if (req.method !== "GET") writes.push({ method: req.method, path: url.pathname, body });
+    if (!isGateway) {
+      assert.equal(req.headers["x-csrftoken"], "csrf");
+      if (url.pathname.endsWith("dtable-copy/")) {
+        assert.equal(body.dst_workspace_id, "7");
+        base = { uuid: "new-base", name: "原模板", workspace_id: 7 };
+        sheets = [{ _id: "original", name: "模板表", columns: [], views: [] }];
+        return send({ dtable: base });
+      }
+      if (url.pathname === "/api/v2.1/dtables/") {
+        assert.equal(body.owner, "owner");
+        base = { uuid: "new-base", name: body.name, workspace_id: 7 };
+        sheets = [{ _id: "default", name: "默认", columns: [], views: [] }];
+        return send({ table: base });
+      }
+      if (req.method === "PUT") { base.name = body.new_name; return send({ success: true }); }
+    }
+    assert.equal(req.headers.authorization, "Bearer base-token");
+    if (url.pathname.endsWith("metadata/")) return send({ metadata: { tables: sheets } });
+    if (url.pathname.endsWith("columns/")) {
+      const sheet = sheets.find((item) => item.name === body.table_name);
+      const column = { key: `key${sheet.columns.length}`, name: body.column_name, type: body.column_type, data: body.column_data };
+      sheet.columns.push(column); return send(column);
+    }
+    if (url.pathname.endsWith("tables/")) {
+      if (req.method === "DELETE") { sheets = sheets.filter((sheet) => sheet.name !== body.table_name); return send({ success: true }); }
+      if (failSheet) { res.statusCode = 400; return send({ error: "invalid formula" }); }
+      const sheet = { _id: "custom", name: body.table_name, columns: body.columns.map((col, i) => ({ key: `key${i}`, name: col.column_name, type: col.column_type })), views: [] };
+      sheets.push(sheet); return send(sheet);
+    }
+    const sheet = sheets.find((item) => item.name === url.searchParams.get("table_name"));
+    if (req.method === "POST") { const view = { _id: "view", name: body.name }; sheet.views.push(view); return send(view); }
+    const view = sheet.views[0];
+    if (req.method === "PUT") Object.assign(view, body);
+    return send(view);
+  });
+  const client = new TableClient(http); await client.restoreSession();
+  const copy = await client.create("我的作业表", { template: "grades" });
+  assert.equal(copy.base.name, "我的作业表"); assert.equal(copy.tables[0]._id, "original");
+  const definition = { tables: [{ name: "成绩", columns: [{ column_name: "分数", column_type: "number" }, { column_name: "总分", column_type: "formula", column_data: { formula: "{分数}" } }], views: [{ name: "排名", sorts: [{ column: "分数", direction: "down" }] }] }] };
+  const result = await client.create("自定义", { definition });
+  assert.equal(result.tables.length, 1); assert.equal(result.tables[0].name, "成绩");
+  const tableWrite = writes.find((item) => item.path.includes("/api-gateway/") && item.path.endsWith("tables/") && item.method === "POST");
+  assert.equal(tableWrite.body.columns.length, 1);
+  assert.equal(writes.filter((item) => item.path.endsWith("columns/")).length, 1);
+  assert.deepEqual(result.tables[0].views[0].sorts, [{ column_key: "key0", sort_type: "down" }]);
+  const previous = writes.length;
+  await assert.rejects(client.create("不存在模板", { template: "missing" }), /未找到模板/);
+  await assert.rejects(client.addView("new-base", "成绩", { name: "未知列", hidden: ["不存在"] }), /不存在的字段/);
+  assert.equal(writes.length, previous);
+  failSheet = true;
+  await assert.rejects(client.create("部分失败", { definition }), (error) => error.details.baseId === "new-base" && error.message.includes("已创建"));
+  assert.equal(writes.length, previous + 2);
+});
+
+test("协同表格 CLI：模板文件、分页与写入输入在提交前校验", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "njucli-table-")); t.after(() => rm(directory, { recursive: true, force: true }));
+  let calls = 0, createOptions;
+  const service = { create: async (_name, options) => { calls++; createOptions = options; return {}; }, append: async () => { calls++; }, rows: async () => { calls++; } };
+  assert.equal((await command(registerTableCommands, service, ["table", "create", "成绩", "--preset", "gradebook"])).code, 0);
+  assert.equal(createOptions.definition.tables[0].columns.find((item) => item.column_name === "总评").column_type, "formula");
+  assert.equal((await command(registerTableCommands, service, ["table", "create", "成绩", "--preset", "gradebook", "--template", "other"])).code, 2);
+  assert.equal((await command(registerTableCommands, service, ["table", "rows", "base", "sheet", "--size", "1001"])).code, 2);
+  const path = join(directory, "rows.json"); await writeFile(path, "[]");
+  assert.equal((await command(registerTableCommands, service, ["table", "append", "base", "sheet", "--input", path])).code, 2);
+  await writeFile(path, JSON.stringify({ tables: [{ name: "课程", columns: [{ column_name: "成绩", column_type: "number" }], views: [{ name: "排序", hidden: ["缺失"] }] }] }));
+  assert.equal((await command(registerTableCommands, service, ["table", "create", "成绩", "--input", path])).code, 2);
+  assert.equal(calls, 1);
+  const output = join(directory, "preset.json");
+  assert.equal((await command(registerTableCommands, service, ["table", "preset", "gradebook", "--output", output])).code, 0);
+  assert.equal(JSON.parse(await readFile(output, "utf8")).tables[0].name, "课程成绩");
+  assert.equal((await stat(output)).mode & 0o777, 0o600);
 });

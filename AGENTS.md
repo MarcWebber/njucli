@@ -54,10 +54,11 @@ NjuCLI 服务南京大学学生及其 AI 助手，围绕写作、邮件、上课
 
 - capability 在静态依赖图与生产类型表中配齐。个人课表使用 `timetable`，研究生选课使用 `selection`；SoftSE 和 TeX 使用 SSO 派生的 `softse`、`tex`。
 - 每次业务前调用 `ensureSession`，探测失效时自动登录，认证与业务共享当前 context；每个业务请求执行一次。`logged-out` 只记录状态。
+- `auth maintain` 检查 SSO 并使用已存凭据恢复失效会话；统一认证登录自动处理官方滑块，扫码由本人完成。
 - `auth login` 通过 `--username/--password` 或 `--credentials` 接收凭据，保存为 `auth.json` 的 `username/password`。`BrowserSession` 自动填写 authserver 官方账号登录表单；滑块支持 `skills/njucli-auth/scripts/login.mjs` 截图与坐标拖动，复用现有认证与会话保存；扫码由本人完成。
 - `mail bind` 通过 `--address/--password` 或 `--credentials` 接收邮箱凭据。省略地址时从统一认证 username 派生邮箱；显式地址独立保存。同一本地账号允许多个邮箱，`mail.json` 保存 `{ current, mailboxes: [{ address, password }] }`，通过 `mail accounts/use/unbind` 管理。
 - 两份凭据文件位于 `~/.config/njucli/accounts/<account>/`，由 `XDG_CONFIG_HOME` 覆盖根目录，权限 0600。日志、仓库和交付记录使用脱敏结果，个人业务数据保存在指定位置。
-- 浏览器使用 CLI 专用目录；会话型 Cookie 原子保存至账号目录的 `session-cookies.json`，权限 0600；持久 Cookie 由 Chrome 管理。
+- 浏览器使用 CLI 专用目录；全部 Cookie 原子保存至账号目录的 `session-cookies.json`，权限 0600。同一账号的 CLI/MCP 调用在读取 Cookie 前取得进程锁，保存后释放。查询使用 HTTP 会话，页面操作按需打开 Chrome。
 - 无参数 `mail bind` 复用已存凭据校验；仅无凭据时打开官方浏览器向导，必要时开启 IMAP/SMTP，单次生成专用密码并交给 `MailClient.bind` 校验保存。
 - 日常邮箱查询使用官方 IMAP/TLS 与本地凭据，EXAMINE/BODY.PEEK 保持已读状态。列表、搜索与邮件夹使用当前邮箱；正文与附件按邮件 ID 使用对应邮箱。解绑删除指定或当前邮箱的本地凭据。
 
@@ -65,7 +66,7 @@ NjuCLI 服务南京大学学生及其 AI 助手，围绕写作、邮件、上课
 
 - 业务写入按命令指定的目标和材料提交一次，再通过稳定标识回读结果。接口与人工挑战条件依据真实契约。
 - 个人账号验证默认采用查询。远端写核对使用维护者明确授权的可撤销目标；授权按项目、动作和文件范围执行。
-- TeX 固定复用 CLI 专用可见 Chrome，通过控制台及 `user/info` 验证会话。文本写入交给原生编辑器处理协作协议，正文填写一次后读取核对；编辑前确认网站采用自动同步模式。
+- TeX 查询通过 HTTP 恢复会话并以 `user/info` 核对；正文编辑、上传和编译复用 CLI 专用可见 Chrome。文本写入交给原生编辑器处理协作协议，正文填写一次后读取核对；编辑前确认网站采用自动同步模式。
 - 编译点击一次，按 Socket.IO requestId 关联本次结果并检查原始日志；仅在本次编译成功后保存 PDF。
 - 上传通过同一 context 的原生控件完成根目录单文件操作。同名时点击官方覆盖按钮，核对项目、版本、文件名与覆盖状态，再下载字节核对。
 - TeX 专用验收项目已有创建、模板创建、改名、正文编辑和编译授权。上传根据专用目标与具体文件范围另行授权。

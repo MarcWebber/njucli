@@ -1,6 +1,6 @@
 # AI 客户端接入
 
-NjuCLI 提供统一 CLI、54 个只读 stdio MCP 工具和 14 个独立 Skill。安装步骤见 [README](../README.md#安装)。
+NjuCLI 提供统一 CLI、91 个只读 stdio MCP 工具和 16 个独立 Skill。安装步骤见 [README](../README.md#安装)。
 
 ## 选择入口
 
@@ -27,7 +27,7 @@ NjuCLI 提供统一 CLI、54 个只读 stdio MCP 工具和 14 个独立 Skill。
 }
 ```
 
-宿主需能在 PATH 找到 `njucli`，也可将 `command` 改为本机绝对路径。`mcp` 使用标准输入输出传输协议。同一账号的调用串行执行，避免争用专用 Chrome。
+宿主需能在 PATH 找到 `njucli`，也可将 `command` 改为本机绝对路径。`mcp` 使用标准输入输出传输协议。同一账号的调用由共享认证串行处理，读取最新 Cookie 后执行。
 
 TRAE 可按其[本地 MCP 配置](https://docs.trae.cn/ide_add-mcp-servers)接入，客户端端到端验证待完成；豆包 App 的本地插件导入入口尚未确认。
 
@@ -41,6 +41,8 @@ TRAE 可按其[本地 MCP 配置](https://docs.trae.cn/ide_add-mcp-servers)接�
 
 | 任务 | 工作流程 |
 | --- | --- |
+| [青年平台](../skills/njucli-youth/SKILL.md) | 查询活动、志愿时长与第二课堂，按用户要求报名或取消 |
+| [协同表格](../skills/njucli-table/SKILL.md) | 查找与复制模板，创建表格、公式和视图，按行 ID 填写记录 |
 | [云盘](../skills/njucli-box/SKILL.md) | 查询资料库和路径，上传下载或管理文件；分享后将返回的 `url` 交给用户，保留 `id` 供撤销 |
 | [行程填报](../skills/njucli-ehall/SKILL.md) | 读取当前假期和已有联系资料，一次补齐缺项；按用户行程提交并回读。多段行程可用 JSON 输入 |
 | [论文写作](../skills/njucli-tex/SKILL.md) | 按用户材料修改正文、上传素材，编译后读取日志和 PDF |

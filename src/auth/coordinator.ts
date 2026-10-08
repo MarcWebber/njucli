@@ -11,6 +11,7 @@ export class AuthCoordinator {
   }) {}
 
   async login(account: AccountRecord, capability: AuthCapability = "sso"): Promise<SessionMetadata> {
+    await this.save(account, capability, false);
     for (const dependency of AUTH_DEPENDENCIES[capability]) await this.ensureSession(account, dependency);
     const metadata = await this.save(account, capability, await this.options.drivers[capability].login(account));
     if (metadata.status !== "valid") throw new AppError("AUTH_REQUIRED", `${capability} 登录未完成`);
@@ -35,7 +36,6 @@ export class AuthCoordinator {
 
   async ensureSession(account: AccountRecord, capability: AuthCapability, probe?: () => Promise<boolean>): Promise<SessionMetadata> {
     if (await this.probe(account, capability, probe)) return this.save(account, capability, true);
-    await this.save(account, capability, false);
     const metadata = await this.login(account, capability);
     // Some probes also initialize the per-command client or access token.
     try {

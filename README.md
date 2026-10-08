@@ -36,42 +36,30 @@ node "$SKILL_DIR/scripts/run.mjs" box --help
 
 每个入口都提供 `account` 和 `auth`，共用本地账号与会话。代码归属、项目对比和构建方式见[Skill 组织说明](docs/skill-layout.md)。
 
-## 登录
+## 现有 Skills
 
-首次登录可保存统一认证凭据，后续业务会在使用前检查会话，过期时调用官方登录流程：
+安装时注册以下 16 个 Skill。点击名称查看登录前提、操作步骤与命令参数。
 
-```bash
-njucli auth login --credentials ./auth-credentials.json
-njucli auth status sso --format json
-```
+| Skill | 服务 |
+| --- | --- |
+| [njucli-auth](skills/njucli-auth/SKILL.md) | 统一认证与会话维护 |
+| [njucli-campus](skills/njucli-campus/SKILL.md) | 校园信息 |
+| [njucli-academic](skills/njucli-academic/SKILL.md) | 研究生教务 |
+| [njucli-course](skills/njucli-course/SKILL.md) | 课表与选课 |
+| [njucli-ehall](skills/njucli-ehall/SKILL.md) | 办事大厅与行程登记 |
+| [njucli-library](skills/njucli-library/SKILL.md) | 图书馆 |
+| [njucli-sports](skills/njucli-sports/SKILL.md) | 体育场馆 |
+| [njucli-softse](skills/njucli-softse/SKILL.md) | 软件学院课程平台 |
+| [njucli-tex](skills/njucli-tex/SKILL.md) | TeX 写作 |
+| [njucli-mail](skills/njucli-mail/SKILL.md) | 校园邮箱 |
+| [njucli-software](skills/njucli-software/SKILL.md) | 正版软件 |
+| [njucli-box](skills/njucli-box/SKILL.md) | 南大云盘 |
+| [njucli-youth](skills/njucli-youth/SKILL.md) | 青年平台 |
+| [njucli-table](skills/njucli-table/SKILL.md) | 协同表格 |
+| [njucli-today](skills/njucli-today/SKILL.md) | 今日汇总 |
+| [njucli-doctor](skills/njucli-doctor/SKILL.md) | 服务检查 |
 
-凭据文件包含 `username` 和 `password`；遇到滑块或扫码时在官方页面完成验证。登录步骤见[认证 Skill](skills/njucli-auth/SKILL.md)。
-
-## 行程填报
-
-支持 e-Hall 的研究生节假日离返校登记。直接告诉 AI 本次行程即可；AI 先读取当前假期和已有联系方式，再一次性询问缺少的信息，整理表单并提交核对。已提供完整行程时直接办理，无需手写 JSON。
-
-```bash
-njucli ehall trip --format json
-njucli ehall trip-submit --stay
-njucli ehall trip-submit --from YYYY-MM-DD --to YYYY-MM-DD --destination 市或区县 --address "详细地址" --transport "交通方式"
-```
-
-全程留校用 `--stay`，外出填写日期、地点、地址和交通方式，默认使用当前开放假期。联系方式按账号保存并自动复用。`--dry-run` 是可选预览；多段复杂行程可选用 `--input`。参数和交互流程见[行程填报 Skill](skills/njucli-ehall/SKILL.md)。
-
-## 南大云盘
-
-支持 [NJU Box](https://box.nju.edu.cn/) 的资料库、目录扫描与搜索、文件和目录上传下载、复制移动、分享及上传链接、收藏、文件锁定、版本恢复与成员协作：
-
-```bash
-njucli box repos --format json
-njucli box scan --format json
-njucli box upload <repo-id> ./资料.pdf --parent /课程 --format json
-njucli box download <repo-id> /课程/资料.pdf --output ./资料.pdf --format json
-njucli box share <repo-id> /课程/资料.pdf --expire-days 7 --format json
-```
-
-分享结果直接返回 `url` 和管理链接所需的 `id`。已有统一认证凭据自动用于云盘官网登录；完整流程见[云盘 Skill](skills/njucli-box/SKILL.md)，接口及验证范围见[云盘证据](skills/njucli-box/references/interfaces.md)。
+完整命令通过 `njucli --help` 和 `njucli <domain> --help` 查看。
 
 ## 文档
 
