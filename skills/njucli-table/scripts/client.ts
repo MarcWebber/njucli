@@ -7,8 +7,8 @@ import type { BaseInput, ColumnInput, RowUpdate, SheetInput, ViewInput } from ".
 const SITE = "https://table.nju.edu.cn";
 const pathPart = encodeURIComponent;
 type Cells = Record<string, unknown>;
-export type TableRow = Cells & { _id: string };
-export interface TableBase { uuid: string; name: string; workspace_id: number; url: string }
+type TableRow = Cells & { _id: string };
+interface TableBase { uuid: string; name: string; workspace_id: number; url: string }
 interface Workspace {
   id: number | string;
   name: string;
@@ -17,12 +17,12 @@ interface Workspace {
   shared_table_list?: TableBase[];
   group_shared_dtables?: TableBase[];
 }
-export interface TableColumn { key: string; name: string; type: string; data: Cells | null }
-export interface TableSheet { _id: string; name: string; columns: TableColumn[]; views: Array<Cells & { _id: string; name: string }> }
+interface TableColumn { key: string; name: string; type: string; data: Cells | null }
+interface TableSheet { _id: string; name: string; columns: TableColumn[]; views: Array<Cells & { _id: string; name: string }> }
 interface Metadata { tables: TableSheet[] }
-export interface TableTemplate { name: string; display_name: string; description: string; category: string; link: string; card_image_url: string }
-export interface TableRowsOptions { page?: number | undefined; size?: number | undefined; view?: string | undefined }
-export interface TableCreateOptions {
+interface TableTemplate { name: string; display_name: string; description: string; category: string; link: string; card_image_url: string }
+interface TableRowsOptions { page?: number | undefined; size?: number | undefined; view?: string | undefined }
+interface TableCreateOptions {
   template?: string | undefined;
   definition?: BaseInput | undefined;
   workspace?: number | undefined;

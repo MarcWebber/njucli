@@ -51,7 +51,7 @@ export interface GraduateCourse {
   schedule: string;
 }
 
-export interface CourseOffering extends GraduateCourse {
+interface CourseOffering extends GraduateCourse {
   enrolled: number;
   capacity: number;
   remaining: number;

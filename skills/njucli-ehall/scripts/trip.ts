@@ -22,7 +22,7 @@ export const tripInputSchema = z.strictObject({
   trips: z.array(z.strictObject({ stops: z.array(stopSchema).min(1), returnTransport: text(40).optional() })).default([]),
 });
 
-export type TripInput = z.infer<typeof tripInputSchema>;
+type TripInput = z.infer<typeof tripInputSchema>;
 type Row = Record<string, unknown>;
 type Choice = { id: string; name: string };
 type Contacts = { phone: string | null; emergencyContact: string | null; emergencyPhone: string | null; onCampus: boolean | null; residence: string | null };

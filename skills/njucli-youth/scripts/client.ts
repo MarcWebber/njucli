@@ -40,7 +40,7 @@ export const ACTIVITY_STATES = ["all", "recruiting", "ongoing", "ended"] as cons
 export type ActivityState = (typeof ACTIVITY_STATES)[number];
 const STATE_QUERY: Record<ActivityState, string> = { all: "all", recruiting: "zmz", ongoing: "jxz", ended: "yjs" };
 
-export interface YouthActivity {
+interface YouthActivity {
   id: string;
   name: string;
   year: string | null;

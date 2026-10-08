@@ -6,11 +6,11 @@ import { join } from "node:path";
 import { AppError } from "../../../src/core/errors.js";
 import { readJsonFile, saveFile, writeJsonFile } from "../../../src/core/fs.js";
 
-export type MailCredentials = { address: string; password: string };
+type MailCredentials = { address: string; password: string };
 export type MailBinding = { address?: string; password: string };
 interface MailAccounts { current: string | null; mailboxes: MailCredentials[] }
 
-export interface MailQuery {
+interface MailQuery {
   folder?: string | undefined;
   unread?: boolean | undefined;
   limit?: number | undefined;

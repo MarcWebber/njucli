@@ -23,13 +23,13 @@ const shareSchema = z.object({ token: z.string(), link: z.string(), repo_id: z.s
   password: z.string().nullable().optional(), permissions: z.object({
     can_download: z.boolean().optional(), can_edit: z.boolean().optional(), can_upload: z.boolean().optional(),
   }).optional() });
-export interface BoxEntry {
+interface BoxEntry {
   id: string; repoId: string; path: string; name: string; type: z.output<typeof entrySchema>["type"];
   size: number | undefined; modified: number | undefined; permission: string | undefined;
   starred: boolean | undefined; locked: boolean | undefined;
 }
-export interface BoxLinkOptions { password?: string | undefined; expireDays?: number | undefined; previewOnly?: boolean | undefined }
-export interface BoxLink {
+interface BoxLinkOptions { password?: string | undefined; expireDays?: number | undefined; previewOnly?: boolean | undefined }
+interface BoxLink {
   id: string; url: string; repoId: string; path: string; isDir: boolean | undefined;
   expires: string | null | undefined; expired: boolean | undefined; protected: boolean;
   permissions: z.output<typeof shareSchema>["permissions"];
@@ -439,7 +439,7 @@ export class BoxClient {
   }
 }
 
-export function boxPath(value: string): string {
+function boxPath(value: string): string {
   value = requiredText(value, "云盘路径");
   if (!value.startsWith("/") || /[\x00-\x1f\\]/.test(value) || value.split("/").includes("..")) throw new AppError("INVALID_INPUT", "云盘路径应从 / 开始并使用明确的目录名称");
   return posix.normalize(value).replace(/\/$/, "") || "/";
