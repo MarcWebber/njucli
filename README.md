@@ -6,7 +6,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/MarcWebber/njucli?style=flat)](https://github.com/MarcWebber/njucli/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/MarcWebber/njucli?style=flat)](https://github.com/MarcWebber/njucli/forks)
 
-南京大学校园服务工具，每个 Skill 携带自己的业务脚本和资料，共享统一认证，也可通过 `njucli` 统一调用。
+南京大学校园服务工具，让 AI 帮你查课表、收邮件、管理云盘和处理校园事务。
 
 ## 安装
 
@@ -24,21 +24,19 @@ curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/inst
 njucli upgrade
 ```
 
-## 单独使用 Skill
+## 只安装一个 Skill
 
-从安装包或执行 `pnpm build` 后的源码中，复制所需的 `skills/njucli-*` 目录。安装该目录声明的依赖，即可独立运行：
+例如，只安装南大云盘：
 
 ```bash
-SKILL_DIR=/absolute/path/njucli-box
-npm install --omit=dev --ignore-scripts --prefix "$SKILL_DIR"
-node "$SKILL_DIR/scripts/run.mjs" box --help
+curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/install.sh | bash -s -- --skill box
 ```
 
-每个入口都提供 `account` 和 `auth`，共用本地账号与会话。代码归属、项目对比和构建方式见[Skill 组织说明](docs/skill-layout.md)。
+将 `box` 换成 `mail`、`tex` 等名称即可安装其他 Skill。再次运行同一命令即可更新。
 
 ## 现有 Skills
 
-安装时注册以下 16 个 Skill。点击名称查看登录前提、操作步骤与命令参数。
+点击名称查看使用方法。
 
 | Skill | 服务 |
 | --- | --- |

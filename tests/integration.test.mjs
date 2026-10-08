@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, readlink, realpath, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readlink, realpath, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createServer } from "node:http";
@@ -556,14 +556,15 @@ test("青年平台：CLI 分页筛选、文档详情与成绩单文件保存", a
   assert.equal((await stat(output)).mode & 0o777, 0o600);
 });
 
-test("安装：全局 Skill 链接、重复安装与同名内容保护", async (t) => {
+test("安装：全量与单个 Skill 安装、更新、切换及同名内容保护", async (t) => {
   const directory = await mkdtemp(join(tmpdir(), "njucli-install-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
-  const packageRoot = join(directory, "package");
+  const packageRoot = join(directory, "node_modules", "njucli");
   const skillsRoot = join(directory, "codex", "skills");
   for (const name of ["njucli-auth", "njucli-tex"]) {
     await mkdir(join(packageRoot, "skills", name), { recursive: true });
     await writeFile(join(packageRoot, "skills", name, "SKILL.md"), "first version");
+    await writeFile(join(packageRoot, "skills", name, "package.json"), JSON.stringify({ name }));
   }
   assert.deepEqual(await installSkills(packageRoot, skillsRoot), ["njucli-auth", "njucli-tex"]);
   await installSkills(packageRoot, skillsRoot);
@@ -576,6 +577,37 @@ test("安装：全局 Skill 链接、重复安装与同名内容保护", async (
   await assert.rejects(installSkills(packageRoot, occupiedRoot), /已被其他内容占用/);
   assert.equal(await readFile(join(occupiedRoot, "njucli-tex", "SKILL.md"), "utf8"), "user content");
   await assert.rejects(stat(join(occupiedRoot, "njucli-auth")), { code: "ENOENT" });
+
+  const standalone = join(directory, "node_modules", "njucli-tex");
+  const selectedRoot = join(directory, "selected");
+  await mkdir(standalone);
+  await writeFile(join(standalone, "package.json"), JSON.stringify({ name: "njucli-tex" }));
+  await writeFile(join(standalone, "SKILL.md"), "standalone");
+  assert.deepEqual(await installSkills(standalone, selectedRoot, "njucli-tex"), ["njucli-tex"]);
+  await installSkills(standalone, selectedRoot, "njucli-tex");
+  await assert.rejects(stat(join(selectedRoot, "njucli-auth")), { code: "ENOENT" });
+  await writeFile(join(standalone, "SKILL.md"), "updated standalone");
+  assert.equal(await readFile(join(selectedRoot, "njucli-tex", "SKILL.md"), "utf8"), "updated standalone");
+  await installSkills(standalone, skillsRoot, "njucli-tex");
+  assert.equal(await readFile(join(skillsRoot, "njucli-tex", "SKILL.md"), "utf8"), "updated standalone");
+  assert.equal(await readFile(join(packageRoot, "skills", "njucli-tex", "SKILL.md"), "utf8"), "first version");
+  await installSkills(packageRoot, skillsRoot);
+  assert.equal(await readFile(join(skillsRoot, "njucli-tex", "SKILL.md"), "utf8"), "first version");
+  await assert.rejects(installSkills(standalone, occupiedRoot, "njucli-tex"), /已被其他内容占用/);
+  await rm(join(selectedRoot, "njucli-tex"));
+  await symlink(join(occupiedRoot, "njucli-tex"), join(selectedRoot, "njucli-tex"), "dir");
+  await writeFile(join(occupiedRoot, "njucli-tex", "package.json"), JSON.stringify({ name: "njucli-tex" }));
+  await assert.rejects(installSkills(standalone, selectedRoot, "njucli-tex"), /已被其他内容占用/);
+  assert.equal(await readFile(join(selectedRoot, "njucli-tex", "SKILL.md"), "utf8"), "user content");
+
+  const linkedRepo = join(directory, "linked-repo");
+  const cliRoot = join(directory, "cli-skills");
+  await symlink(process.cwd(), linkedRepo, "dir");
+  const installer = spawn(process.execPath, [join(linkedRepo, "scripts", "install-skills.mjs"), standalone, "njucli-tex"], {
+    env: { ...process.env, NJUCLI_SKILLS_DIR: cliRoot }, stdio: "pipe",
+  });
+  assert.equal((await once(installer, "exit"))[0], 0);
+  assert.equal(await readFile(join(cliRoot, "njucli-tex", "SKILL.md"), "utf8"), "updated standalone");
 });
 
 test("升级：远端 main、JSON 输出、失败退出码与临时目录清理", async (t) => {

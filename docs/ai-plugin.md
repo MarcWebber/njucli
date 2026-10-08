@@ -33,9 +33,7 @@ TRAE 可按其[本地 MCP 配置](https://docs.trae.cn/ide_add-mcp-servers)接�
 
 ## 独立 Skill
 
-从安装包或构建后的源码复制所需 Skill 目录，执行 `npm install --omit=dev --ignore-scripts`。通过 `node scripts/run.mjs <domain> <command>` 使用业务功能，通过 `node scripts/run.mjs mcp` 启动该 Skill 的只读工具。
-
-各入口自带公共 `account`、`auth` 命令，认证源码统一位于 `src/auth/`。构建、依赖和更新方式见 [Skill 组织说明](skill-layout.md)。
+按需[安装单个 Skill](../README.md#只安装一个-skill)，然后让 AI 按该 Skill 完成任务。
 
 ## 任务使用
 

@@ -53,31 +53,27 @@ scripts/                构建、安装工具
 
 `src/auth/create.ts` 装配全部站点 driver，`AuthCoordinator` 负责依赖关系、状态探测与登录恢复，`BrowserSession` 负责同一次调用的浏览器上下文。凭据保存和 `auth` 命令也集中在该目录。业务 client 提供站点读取和错误识别，登录决策由认证层执行。
 
-每个入口使用相同的账号目录、Cookie 保存方式和认证源码。构建产物包含这份共享实现，修改认证后重新构建全部 Skill；已独立复制的 Skill 通过替换新版构建目录更新。构建生成的代码只作为产物维护。
+每个入口使用相同的账号目录、Cookie 保存方式和认证源码。构建产物包含这份共享实现，修改认证后重新构建全部 Skill。用户重新执行安装命令更新已安装的 Skill。
 
 ## 独立使用
 
-源码开发先执行：
+安装单个 Skill：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/install.sh | bash -s -- --skill box
+```
+
+安装脚本打包所选 Skill、安装其依赖并注册到 Skill 目录。重复执行即可更新。完整安装使用同一脚本，省略 `--skill`。
+
+## 源码开发
 
 ```bash
 pnpm install --frozen-lockfile
 pnpm build
+node skills/njucli-box/scripts/run.mjs box --help
 ```
 
-安装包已带有构建入口。从安装包或构建后的源码中复制一个完整 Skill 目录到目标位置，安装它声明的第三方依赖：
-
-```bash
-SKILL_DIR=/absolute/path/njucli-box
-npm install --omit=dev --ignore-scripts --prefix "$SKILL_DIR"
-node "$SKILL_DIR/scripts/run.mjs" box --help
-node "$SKILL_DIR/scripts/run.mjs" account current --format json
-node "$SKILL_DIR/scripts/run.mjs" auth login box --credentials /private/path/auth.json
-node "$SKILL_DIR/scripts/run.mjs" box repos --format json
-```
-
-每个 Skill 都带有公共 `account`、`auth` 命令；具备 MCP 工具的 Skill 使用 `node "$SKILL_DIR/scripts/run.mjs" mcp` 启动本业务的只读服务。统一安装仍使用 `njucli <domain> <command>` 和 `njucli mcp`。
-
-运行需要 Node.js 20+ 与已声明的依赖，网页登录需要本机 Chrome。从 Git 仓库取得的是 TypeScript 源码，需要先在完整仓库构建；可复制运行的单位是构建后的 Skill 目录。
+构建为各 Skill 生成 `scripts/run.mjs` 和 `package.json`。安装脚本只打包选定的 Skill；第三方依赖根据构建结果生成。
 
 ## 验证
 
@@ -90,7 +86,7 @@ node "$SKILL_DIR/scripts/run.mjs" box repos --format json
 | 独立运行 | 跨进程集成：16 个 Skill 分别复制到隔离目录，仅提供清单声明的第三方依赖；全部入口可启动，校园信息结果与统一 CLI 一致 |
 | 统一认证与账号 | 云盘和邮箱独立进程读取相同测试账号；云盘退出状态按统一格式落盘；认证辅助脚本可从复制目录加载 |
 | MCP | 14 个业务 Skill 独立 stdio 服务的工具定义合计 91 个，与统一 MCP 完整一致，全部为只读 |
-| 安装产物 | 单独复制的云盘 Skill 安装依赖后显示全部 37 个命令；实际 tarball 临时安装成功，统一 CLI 及 16 个 Skill 注册通过 |
+| 安装产物 | 临时目录实装：`--skill box` 仅安装云盘，入口可运行；完整名称、重复更新和切换为完整安装通过，16 个 Skill 注册成功 |
 | Skill 文档 | 16 个 frontmatter 校验通过，局部文件链接检查通过 |
 
 学校接口的实网范围见各 Skill 的接口记录。
