@@ -6,8 +6,11 @@ import { AUTH_CAPABILITIES, type SessionMetadata } from "./types.js";
 
 export class SessionStore {
   async list(account: AccountRecord): Promise<SessionMetadata[]> {
-    const value = await readJsonFile<SessionMetadata[]>(join(account.configDir, "sessions.json"));
-    return value ?? [];
+    const value = await readJsonFile<Array<SessionMetadata | { capability: "softse"; status: SessionMetadata["status"] }>>(join(account.configDir, "sessions.json"));
+    const sessions = value ?? [];
+    const hasSe = sessions.some((session) => session.capability === "se");
+    return sessions.filter((session) => !hasSe || session.capability !== "softse")
+      .map((session) => session.capability === "softse" ? { ...session, capability: "se" } : session);
   }
 
   async put(account: AccountRecord, metadata: SessionMetadata): Promise<void> {

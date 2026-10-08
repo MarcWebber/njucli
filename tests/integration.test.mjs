@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, readlink, realpath, rm, stat, symlink, writeFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, readFile, readlink, realpath, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createServer } from "node:http";
@@ -14,16 +14,16 @@ import { AuthCoordinator } from "../dist/src/auth/coordinator.js";
 import { SessionStore } from "../dist/src/auth/session-store.js";
 import { AUTH_CAPABILITIES } from "../dist/src/auth/types.js";
 import { registerCampusCommands } from "../dist/skills/njucli-campus/scripts/commands.js";
-import { registerCourseCommands } from "../dist/skills/njucli-course/scripts/commands.js";
-import { createCourseServices } from "../dist/skills/njucli-course/scripts/services.js";
+import { createEHallServices } from "../dist/skills/njucli-ehall/scripts/services.js";
 import { registerTexCommands } from "../dist/skills/njucli-tex/scripts/commands.js";
 import { registerMailCommands } from "../dist/skills/njucli-mail/scripts/commands.js";
-import { registerSoftSeCommands } from "../dist/skills/njucli-softse/scripts/commands.js";
+import { registerSeCommands } from "../dist/skills/njucli-se/scripts/commands.js";
 import { registerEHallCommands } from "../dist/skills/njucli-ehall/scripts/commands.js";
 import { CampusClient } from "../dist/skills/njucli-campus/scripts/client.js";
+import { createCampusServices } from "../dist/skills/njucli-campus/scripts/services.js";
 import { TexClient } from "../dist/skills/njucli-tex/scripts/client.js";
 import { MailClient } from "../dist/skills/njucli-mail/scripts/client.js";
-import { SoftSeClient } from "../dist/skills/njucli-softse/scripts/client.js";
+import { SeClient } from "../dist/skills/njucli-se/scripts/client.js";
 import { EHallTripClient } from "../dist/skills/njucli-ehall/scripts/trip.js";
 import { registerSoftwareCommands } from "../dist/skills/njucli-software/scripts/commands.js";
 import { SoftwareClient } from "../dist/skills/njucli-software/scripts/client.js";
@@ -119,7 +119,7 @@ test("课表：认证与业务共用查询、学期日期展开和 ICS 导出", 
   });
   const account = { name: "course", configDir: directory, browserDataDir: join(directory, "browser") };
   const auth = new AuthCoordinator({ drivers: {}, sessions: new SessionStore() });
-  const service = createCourseServices({ withBrowser: async (capability, operation, probe) => {
+  const service = createEHallServices({ withBrowser: async (capability, operation, probe) => {
     assert.equal(capability, "timetable");
     const session = { request };
     await auth.ensureSession(account, capability, () => probe(session));
@@ -127,7 +127,7 @@ test("课表：认证与业务共用查询、学期日期展开和 ICS 导出", 
   } });
   const run = async (...args) => {
     calls.length = 0;
-    const result = await command(registerCourseCommands, service, ["course", ...args]);
+    const result = await command(registerEHallCommands, service, ["ehall", ...args]);
     for (const name of ["appShow", "index.do", "20230211151103310.do", "dqxnxq.do"]) {
       assert.equal(calls.filter((call) => call.name === name).length, 1, `${args[0]}: ${name}`);
     }
@@ -169,6 +169,62 @@ test("课表：认证与业务共用查询、学期日期展开和 ICS 导出", 
   assert.equal(missing.error.code, "NOT_FOUND");
   assert.match(missing.error.message, /missing-term/);
   assert.equal(calls.some((call) => call.name === "cxxszhxqkb.do"), false);
+
+  const loans = [{ title: "算法", dueOn: "2026-09-03", overdue: false }];
+  const booking = { id: "booking", reservationDate: "2026-09-01" };
+  const campus = createCampusServices({
+    ehall: service,
+    library: { loans: async () => loans },
+    sports: { bookings: async (page, size) => {
+      assert.deepEqual([page, size], [0, 20]);
+      return [booking, { id: "other-day", reservationDate: "2026-09-02" }];
+    } },
+  });
+  const summary = await command(registerCampusCommands, campus, ["campus", "today", "2026-09-01"]);
+  assert.equal(summary.code, 0);
+  assert.equal(summary.data.course[0].name, "程序设计");
+  assert.deepEqual(summary.data.library, loans);
+  assert.deepEqual(summary.data.sports, [booking]);
+});
+
+test("e-Hall：合并后的成绩、研究生课表与已选课程使用对应会话", async (t) => {
+  const capabilities = [];
+  const request = await localHttp(t, async (req, res) => {
+    const url = new URL(req.url, "https://ehall.nju.edu.cn");
+    const path = url.pathname;
+    if (path === "/appShow" || path.endsWith("/index.do")) return res.end("ready");
+    const chunks = []; for await (const chunk of req) chunks.push(chunk);
+    const form = new URLSearchParams(Buffer.concat(chunks).toString());
+    const rows = (action, data) => res.end(JSON.stringify({ datas: { [action]: { rows: data } } }));
+    if (path.endsWith("/xscjcx.do")) {
+      assert.equal(JSON.parse(form.get("querySetting"))[0].value, "2026-2027-1");
+      return rows("xscjcx", [{ KCDM: "course-1", KCMC: "计算机系统", CJXSZ: "90", XF: 3, SFJG: "1" }]);
+    }
+    if (path.endsWith("/kfdxnxqcx.do")) return rows("kfdxnxqcx", [{ XNXQDM: "2026-2027-1", XNXQDM_DISPLAY: "秋季" }]);
+    if (path.endsWith("/xspkjgcx.do")) {
+      assert.equal(form.get("XNXQDM"), "2026-2027-1");
+      return rows("xspkjgcx", [{ KCDM: "course-1", KCMC: "计算机系统", JSXM: "教师", PKSJDD: "周一 教室A" }]);
+    }
+    if (path.endsWith("/loadStdCourseInfo.do")) return res.end(JSON.stringify({ results: [{
+      BJDM: "class-1", BJMC: "一班", KCDM: "course-1", KCMC: "计算机系统", RKJS: "教师",
+      KCKKDWMC: "学院", XQMC: "仙林", SKYYMC: "中文", XF: 3, PKSJDDMS: "周一 教室A",
+    }] }));
+    res.writeHead(404); res.end("unknown route");
+  });
+  const service = createEHallServices({ withBrowser: async (capability, operation) => {
+    capabilities.push(capability);
+    return operation({ request });
+  } });
+  const grades = await command(registerEHallCommands, service, ["ehall", "grades", "--term", "2026-2027-1"]);
+  assert.equal(grades.code, 0);
+  assert.equal(grades.data[0].score, "90");
+  const schedule = await command(registerEHallCommands, service, ["ehall", "graduate-schedule"]);
+  assert.equal(schedule.code, 0);
+  assert.equal(schedule.data.courses[0].timePlace, "周一 教室A");
+  const selected = await command(registerEHallCommands, service, ["ehall", "selected"]);
+  assert.equal(selected.code, 0);
+  assert.equal(selected.data[0].classId, "class-1");
+  assert.deepEqual(capabilities, ["ehall", "ehall", "selection"]);
 });
 
 test("云盘：命令、递归传输、分享回读与失败单次提交", async (t) => {
@@ -608,6 +664,29 @@ test("安装：全量与单个 Skill 安装、更新、切换及同名内容保�
   });
   assert.equal((await once(installer, "exit"))[0], 0);
   assert.equal(await readFile(join(cliRoot, "njucli-tex", "SKILL.md"), "utf8"), "updated standalone");
+
+  for (const name of ["njucli-ehall", "njucli-campus", "njucli-se"]) {
+    await mkdir(join(packageRoot, "skills", name));
+  }
+  const retired = ["njucli-academic", "njucli-course", "njucli-today", "njucli-softse", "njucli-doctor"];
+  for (const name of retired) {
+    await symlink(join(await realpath(packageRoot), "skills", name), join(skillsRoot, name), "dir");
+  }
+  await installSkills(packageRoot, skillsRoot);
+  for (const name of retired) await assert.rejects(lstat(join(skillsRoot, name)), { code: "ENOENT" });
+
+  const sePackage = join(directory, "node_modules", "njucli-se");
+  await mkdir(sePackage);
+  await symlink(join(await realpath(join(directory, "node_modules")), "njucli-softse"), join(selectedRoot, "njucli-softse"), "dir");
+  await installSkills(sePackage, selectedRoot, "njucli-se");
+  await assert.rejects(lstat(join(selectedRoot, "njucli-softse")), { code: "ENOENT" });
+  const preservedRoot = join(directory, "preserved");
+  await mkdir(preservedRoot);
+  await symlink(join(occupiedRoot, "njucli-tex"), join(preservedRoot, "njucli-softse"), "dir");
+  await mkdir(join(preservedRoot, "njucli-doctor"));
+  await installSkills(packageRoot, preservedRoot);
+  assert.equal(await readFile(join(preservedRoot, "njucli-softse", "SKILL.md"), "utf8"), "user content");
+  assert.equal((await stat(join(preservedRoot, "njucli-doctor"))).isDirectory(), true);
 });
 
 test("升级：远端 main、JSON 输出、失败退出码与临时目录清理", async (t) => {
@@ -641,6 +720,17 @@ test("认证：本地凭据、自动恢复与普通网络错误", async (t) => {
   t.after(() => rm(configDir, { recursive: true, force: true }));
   const account = { name: "integration", configDir, browserDataDir: join(configDir, "browser") };
   const credentials = { username: "sso-student", password: "synthetic-sso-secret" };
+  const sessionsPath = join(configDir, "sessions.json");
+  await writeJsonFile(sessionsPath, [{ capability: "softse", status: "valid" }]);
+  assert.deepEqual(await new SessionStore().list(account), [{ capability: "se", status: "valid" }]);
+  const oldSession = { capability: "softse", status: "valid" };
+  const seSession = { capability: "se", status: "expired" };
+  for (const mixed of [[oldSession, seSession], [seSession, oldSession]]) {
+    await writeJsonFile(sessionsPath, mixed);
+    assert.deepEqual(await new SessionStore().list(account), [seSession]);
+  }
+  await new SessionStore().put(account, { capability: "se", status: "expired" });
+  assert.deepEqual(JSON.parse(await readFile(sessionsPath, "utf8")), [{ capability: "se", status: "expired" }]);
   await writeJsonFile(join(configDir, "auth.json"), credentials);
   assert.equal((await stat(join(configDir, "auth.json"))).mode & 0o777, 0o600);
   const calls = [], fills = [];
@@ -880,15 +970,15 @@ test("认证：登录失败与后置探测失败保持失效状态", async (t) =
   const account = { name: "login", configDir, browserDataDir: join(configDir, "browser") };
   const sessions = new SessionStore();
   const drivers = Object.fromEntries(AUTH_CAPABILITIES.map((capability) => [capability, {
-    probe: async () => capability === "softse",
+    probe: async () => capability === "se",
     login: async () => { throw new Error("login unavailable"); },
   }]));
   const auth = new AuthCoordinator({ drivers, sessions });
   await sessions.put(account, { capability: "sso", status: "valid" });
   await assert.rejects(auth.ensureSession(account, "sso"), /login unavailable/);
   assert.equal((await sessions.list(account)).find((s) => s.capability === "sso").status, "expired");
-  assert.deepEqual(await auth.ensureSession(account, "softse"), { capability: "softse", status: "valid" });
-  for (const capability of ["sso", "softse"]) {
+  assert.deepEqual(await auth.ensureSession(account, "se"), { capability: "se", status: "valid" });
+  for (const capability of ["sso", "se"]) {
     await sessions.put(account, { capability, status: "valid" });
     await assert.rejects(auth.login(account, capability), /login unavailable/);
     assert.equal((await sessions.list(account)).find((s) => s.capability === capability).status, "expired");
@@ -977,7 +1067,7 @@ test("软件：官网目录、安装包去重、流式下载与本地覆盖", as
   assert.deepEqual(await readFile(output), payload);
 });
 
-test("SoftSE：课程目录遍历与空分类", async (t) => {
+test("SE：课程目录遍历与空分类", async (t) => {
   const requests = [];
   const pages = {
     "/course/index.php": `<div class="course_category_tree">
@@ -997,13 +1087,13 @@ test("SoftSE：课程目录遍历与空分类", async (t) => {
     requests.push(req.url);
     res.end(pages[req.url] ?? "<h1>未知页面</h1>");
   });
-  const result = await command(registerSoftSeCommands, new SoftSeClient(request), ["softse", "catalog"]);
+  const result = await command(registerSeCommands, new SeClient(request), ["se", "catalog"]);
   assert.equal(result.code, 0);
   assert.deepEqual(result.data.map(course => course.courseId), ["901", "902"]);
   assert.equal(requests.length, 4);
 });
 
-test("SoftSE：课程成员分页与末页补齐行", async (t) => {
+test("SE：课程成员分页与末页补齐行", async (t) => {
   const request = await localHttp(t, (req, res) => {
     const page = new URL(req.url, "http://localhost").searchParams.get("page");
     res.end(`<table id="participants"><tbody><tr>
@@ -1012,9 +1102,9 @@ test("SoftSE：课程成员分页与末页补齐行", async (t) => {
       <tr class="emptyrow"><th class="c0"></th><td class="c1"></td><td class="c2"></td></tr></tbody></table>
       ${page === "0" ? '<div class="pagination"><a href="/user/index.php?id=370&page=1">下一页</a></div>' : ""}`);
   });
-  const client = new SoftSeClient(request);
-  const first = await command(registerSoftSeCommands, client, ["softse", "participants", "370"]);
-  const last = await command(registerSoftSeCommands, client, ["softse", "participants", "370", "--page", "2"]);
+  const client = new SeClient(request);
+  const first = await command(registerSeCommands, client, ["se", "participants", "370"]);
+  const last = await command(registerSeCommands, client, ["se", "participants", "370", "--page", "2"]);
   assert.equal(first.code, 0);
   assert.equal(last.code, 0);
   assert.equal(first.data.nextPage, 2);

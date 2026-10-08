@@ -18,10 +18,6 @@ export class NjuOpacClient {
     private readonly baseUrl = OPAC_BASE_URL,
   ) {}
 
-  async probe(): Promise<void> {
-    await this.request("/", { method: "GET" });
-  }
-
   async search(
     query: string,
     field: LibrarySearchField = "all",

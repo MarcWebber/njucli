@@ -7,7 +7,7 @@ NjuCLI 为南京大学学生和 AI 助手提供校园服务。每个 Skill 携�
 | 路径 | 职责 |
 | --- | --- |
 | `skills/njucli-*/scripts/` | 本业务的 client、命令、展示、业务方法、MCP 定义和独立入口 |
-| `skills/njucli-*/references/` | 使用步骤与接口说明 |
+| `skills/njucli-*/SKILL.md`、`references/` | 入口说明及按需拆分的长流程、接口资料 |
 | `src/auth/` | 凭据、站点登录、会话探测与恢复 |
 | `src/account/` | 账号选择、配置目录和身份隔离 |
 | `src/core/` | 文件、日期、输入、输出与脱敏等共用函数 |
@@ -37,21 +37,19 @@ Skill 的 `run.ts` 在构建时生成 `run.mjs`，共享模块打入入口，第
 | `auth`、`account` | 登录、会话维护、状态、退出和多账号管理 | [认证 Skill](../skills/njucli-auth/SKILL.md) |
 | `youth` | 青年平台活动、志愿时长、第二课堂与报名 | [青年平台 Skill](../skills/njucli-youth/SKILL.md) |
 | `table` | 协同表格、模板、记录、公式与视图 | [协同表格 Skill](../skills/njucli-table/SKILL.md) |
-| `box` / `njubox` | 资料库、扫描搜索、上传下载、分享与上传链接、复制移动、收藏锁定、历史恢复和协作权限 | [云盘 Skill](../skills/njucli-box/SKILL.md) |
-| `campus` | 食堂、新闻、通知和文章正文 | [校园信息 Skill](../skills/njucli-campus/SKILL.md) |
+| `box` | 资料库、扫描搜索、上传下载、分享与上传链接、复制移动、收藏锁定、历史恢复和协作权限 | [云盘 Skill](../skills/njucli-box/SKILL.md) |
+| `campus` | 食堂、新闻、通知、文章正文与今日汇总 | [校园信息 Skill](../skills/njucli-campus/SKILL.md) |
 | `software` | 官方软件目录、安装包查询与下载 | [软件 Skill](../skills/njucli-software/SKILL.md) |
-| `course` | 本科课表、日期查询、ICS 导出；研究生可选课程、已选课程和选退课 | [课表选课 Skill](../skills/njucli-course/SKILL.md) |
-| `academic` | 研究生成绩、考试、课表和培养方案 | [教务 Skill](../skills/njucli-academic/SKILL.md) |
-| `ehall` | 服务搜索、待办、办件及研究生节假日行程登记 | [办事大厅 Skill](../skills/njucli-ehall/SKILL.md) |
+| `ehall` | 课表、选退课、成绩、考试、培养方案、待办、办件与行程登记 | [办事大厅 Skill](../skills/njucli-ehall/SKILL.md) |
 | `library` | 书目搜索、详情、馆藏与借阅 | [图书馆 Skill](../skills/njucli-library/SKILL.md) |
 | `sports` | 场馆、时段、预约记录及官方办理入口 | [体育 Skill](../skills/njucli-sports/SKILL.md) |
-| `softse` | 课程、名单、作业、附件、成绩及自助选课 | [SoftSE Skill](../skills/njucli-softse/SKILL.md) |
+| `se` | 课程、名单、作业、附件、成绩及自助选课 | [SE Skill](../skills/njucli-se/SKILL.md) |
 | `tex` | 项目、模板、正文编辑、文件上传、编译、PDF 与源码下载 | [TeX Skill](../skills/njucli-tex/SKILL.md) |
 | `mail` | 多邮箱绑定、邮件夹、列表、搜索、正文和附件 | [邮箱 Skill](../skills/njucli-mail/SKILL.md) |
-| `today` | 汇总当天课表、借阅与体育预约 | [今日汇总 Skill](../skills/njucli-today/SKILL.md) |
-| `doctor` | 检查账号、认证能力与站点连通性 | [服务检查 Skill](../skills/njucli-doctor/SKILL.md) |
 
-`mcp` 提供只读 stdio 工具；支持 MCP 的独立 Skill 也可单独启动本业务工具。文件下载和远端写入由具备终端能力的宿主调用 CLI。配置见 [AI 接入](ai-plugin.md)。
+`ehall schedule` 提供可按日期查询和导出 ICS 的课表；`ehall graduate-schedule` 读取研究生课表。两个接口分别由对应 client 处理。`campus today` 汇总当天课表、借阅与体育预约。
+
+`mcp` 提供 91 个只读 stdio 工具；支持 MCP 的独立 Skill 也可单独启动本业务工具。文件下载和远端写入由具备终端能力的宿主调用 CLI。配置见 [AI 接入](ai-plugin.md)。
 
 ## 账号与认证
 
@@ -60,7 +58,7 @@ Skill 的 `run.ts` 在构建时生成 `run.mjs`，共享模块打入入口，第
 ```text
 sso
 ├── ehall → timetable
-├── softse
+├── se
 ├── tex
 ├── sports
 ├── youth
@@ -79,7 +77,7 @@ selection、box：独立站点会话
 | `ehall.json` | 按本人身份保存的联系方式与住宿资料 |
 | `session-cookies.json` | 会话型与持久 Cookie |
 
-配置以 0600 权限原子保存。同一账号在读取 Cookie 前取得进程锁，保存后释放。查询使用 HTTP 会话，页面操作按需打开专用 Chrome 并继承当前 Cookie。`auth maintain` 检查 SSO，过期时用已存凭据恢复。登录凭据可通过 `--credentials` 导入，网站要求的交互在官方页面完成；详细步骤见 [认证说明](../skills/njucli-auth/references/usage.md)。
+配置以 0600 权限原子保存。同一账号在读取 Cookie 前取得进程锁，保存后释放。查询使用 HTTP 会话，页面操作按需打开专用 Chrome 并继承当前 Cookie。`auth maintain` 检查 SSO，过期时用已存凭据恢复。登录凭据可通过 `--credentials` 导入，网站要求的交互在官方页面完成；详细步骤见 [认证说明](../skills/njucli-auth/SKILL.md)。
 
 ## 输出与文件
 
@@ -89,7 +87,7 @@ selection、box：独立站点会话
 
 ## 全局安装与升级
 
-安装脚本从仓库 `main` 构建并安装 CLI，同时注册 16 个 Skill。`njucli upgrade` 使用同一流程，保留当前全局安装前缀。
+安装脚本从仓库 `main` 构建并安装 CLI，同时注册 12 个 Skill。`njucli upgrade` 使用同一流程，保留当前全局安装前缀。
 
 | 配置 | 用途 |
 | --- | --- |
@@ -109,7 +107,7 @@ node dist/cli.js campus sources --format json
 npm pack --dry-run
 ```
 
-`pnpm test` 先构建，再运行本地集成。用例使用本机 HTTP、临时文件和模拟 IMAP；独立 Skill 用例检查复制后的运行、账号共享和 MCP 工具一致性。安装产物另在临时目录核对，结果见 [Skill 组织说明](skill-layout.md#验证)。
+`pnpm test` 先构建，再运行本地集成。用例使用本机 HTTP、临时文件和模拟 IMAP；独立 Skill 用例检查复制后的运行、账号共享和 MCP 工具一致性。安装产物另在临时目录核对，检查范围见 [Skill 组织说明](skill-layout.md#验证)。
 
 ## 验收里程碑
 
@@ -119,11 +117,11 @@ npm pack --dry-run
 
 | 能力 | 已验证 | 待验证或待实现 |
 | --- | --- | --- |
-| 认证 | SSO、TeX、SoftSE、青年平台已有会话通过 HTTP 跨进程读取；`auth maintain` 返回 `kept-alive/valid` | 自然失效后的后台恢复与跨期限持续性 |
+| 认证 | SSO、TeX、SE、青年平台已有会话通过 HTTP 跨进程读取；`auth maintain` 返回 `kept-alive/valid` | 自然失效后的后台恢复与跨期限持续性 |
 | 校园信息与软件 | 新闻列表与正文、食堂、软件目录及安装包下载 | 其余来源逐项核对 |
 | 教务与选课 | 研究生成绩、可选课程、已选课程读取 | 本科日期课表与 ICS；研究生考试、课表与培养方案；真实选退课 |
 | 行程登记 | 查询与一次单站离返校登记提交、回读 | 全程留校、多次离返校与多站行程写入 |
-| SoftSE | 课程目录、课程名单和已加入课程读取 | 作业附件落地、自助选课；作业上传待实现 |
+| SE | 课程目录、课程名单和已加入课程读取 | 作业附件落地、自助选课；作业上传待实现 |
 | TeX | 项目创建、模板复制、改名、正文编辑、新文件上传、源码下载、编译、PDF 和日志；编译失败时阻止旧 PDF 下载 | 同名上传替换 |
 | 邮箱 | 两个邮箱独立绑定、切换、邮件夹、分页、搜索和正文读取，已读状态保持 | 真实附件下载 |
 | 云盘 | 资料库、扫描、已有分享、文件下载和内部链接；其他查询接口可读取 | 上传、创建分享、复制移动及其他管理写入 |

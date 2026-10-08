@@ -1,92 +1,66 @@
 # Skill 组织与独立运行
 
-2026-10-08：采用按 Skill 携带业务脚本与资料的组织方式，认证集中在 `src/auth/`。统一 CLI 和各 Skill 调用同一份业务实现；独立入口由源码构建，运行依赖随 Skill 声明。
-
-## 项目比较
-
-Star 数为本次读取 GitHub 页面显示的近似值，用于选择参考样本。目录归属、依赖和实际运行方式决定适用性。
-
-| 项目 | 页面 Star | 已核对的组织方式 | 对 NjuCLI 的启发 |
-| --- | ---: | --- | --- |
-| [anthropics/skills](https://github.com/anthropics/skills) | 180.1k | [PDF Skill](https://github.com/anthropics/skills/tree/main/skills/pdf) 同目录提供 `SKILL.md`、`scripts/`、`reference.md`、`forms.md` | 业务脚本和资料随 Skill 分发，入口说明按任务引导读取 |
-| [obra/superpowers](https://github.com/obra/superpowers) | 297k | [调试 Skill](https://github.com/obra/superpowers/tree/main/skills/systematic-debugging) 以流程说明为主，同目录放排查资料和辅助脚本 | 适合流程类能力；拥有 Skill 目录本身并不等于已经具备独立执行入口 |
-| [vercel-labs/agent-skills](https://github.com/vercel-labs/agent-skills) | 32.1k | [项目说明](https://github.com/vercel-labs/agent-skills#skill-structure) 定义脚本和资料目录，并提供逐 Skill 构建产物 | 共享构建工具可以留在仓库外层，交付按 Skill 组织 |
-| [openai/skills](https://github.com/openai/skills) | 27.9k | 页面声明目录已弃用，并指向新的插件仓库；保留按目录安装 Skill 的历史说明 | 参考目录粒度，当前接入方式另行核对 |
-
-[Agent Skills 规范](https://agentskills.io/specification#optional-directories)将可执行代码放在 `scripts/`，将按需阅读的文档放在 `references/`。Anthropic 的具体 Skill 也会把参考 Markdown 直接放在 Skill 根目录；目录名服务于实际用途。
-
-原 NjuCLI 采用统一 CLI 为中心的分层：业务在 `src/domains/`，命令在 `src/commands/`，绑定在 `src/app/production.ts`，Skill 主要提供调用说明。这便于统一发布和共享认证，但一个业务修改需要跨多个目录，复制单个 Skill 仍依赖外层安装包。当前需求强调 Skill 独立使用，因此将业务按 Skill 收拢，同时保留统一命令入口。
+业务按 Skill 组织，认证集中在 `src/auth/`。统一 CLI、独立 Skill 和 MCP 调用同一份业务实现。
 
 ## 归属
 
-```text
-skills/njucli-box/
-├── SKILL.md
-├── scripts/
-│   ├── client.ts       远端契约与解析
-│   ├── services.ts     业务方法及会话调用
-│   ├── commands.ts     参数处理与输出
-│   ├── mcp.ts          本业务只读工具
-│   ├── run.ts          独立入口源码
-│   └── run.mjs         构建生成的运行入口
-├── references/
-│   ├── usage.md        操作步骤、标识与完成条件
-│   └── interfaces.md   接口证据与验证范围
-└── package.json        构建生成的运行依赖
+| 位置 | 内容 |
+| --- | --- |
+| `skills/njucli-*/SKILL.md` | 触发条件、运行方法和常用操作 |
+| `skills/njucli-*/scripts/` | client、命令、展示、业务方法、MCP 和独立入口 |
+| `skills/njucli-*/references/` | 较长流程、参数表和接口资料，按需设置 |
+| `src/auth/` | 凭据、站点登录、会话探测与恢复 |
+| `src/account/`、`src/core/` | 账号隔离、文件、日期、输入、输出等共用能力 |
+| `src/app/`、`src/commands/`、`src/mcp/` | 共享运行环境、统一入口与协议处理 |
+| `scripts/` | 构建、安装和 Skill 注册 |
 
-src/auth/               统一认证、站点 driver、凭据与会话恢复
-src/account/            账号选择及隔离存储
-src/core/               文件、日期、参数、错误、输出及脱敏
-src/app/                共用运行环境及统一装配
-src/mcp/                共用协议处理与工具装配
-src/commands/           统一 CLI 装配与全包升级
-scripts/                构建、安装工具
-```
+现有 12 个 Skill：auth、campus、ehall、library、sports、se、tex、mail、software、box、youth、table。课表、选课、成绩、考试、培养方案和办事大厅归 `ehall`；`campus today` 复用课表、借阅和预约业务。组合所需的代码由构建打入独立入口。
 
-已有能力对应 16 个 Skill：认证、校园信息、教务、课表选课、e-Hall、图书馆、体育、SoftSE、TeX、邮箱、软件、云盘、青年平台、协同表格、今日汇总、服务检查。今日汇总复用课程、借阅与预约业务；服务检查复用图书馆探针。这些组合依赖由构建打入对应入口。
+认证、校园信息、图书馆、体育、软件学院课程、邮箱和正版软件的说明直接放在 `SKILL.md`。云盘、协同表格、TeX、青年平台另保留接口资料；教务与办事大厅另保留接口和行程填报说明，由入口链接按需读取。[接口索引](interface-evidence.md)指向各业务的说明。
 
-业务资料保存在所属 Skill 的 `references/`。[接口索引](interface-evidence.md)指向各 Skill 的协议说明。命令帮助来自实际注册代码，CLI 和 Skill 保持相同参数。
+业务类型从 client 或生产装配推导；CLI 与 MCP 复用参数枚举。需要认证的业务通过共享运行环境调用 `AuthCoordinator`，在同一会话中完成认证和请求。
 
-业务类型从 client 或生产装配推导，参数枚举由 CLI 和 MCP 共用。公开查询直接使用 client；需要认证的业务在 `services.ts` 中复用共享会话。
+## 结构参考
 
-## 统一认证
+| 项目 | 可采用的组织方式 |
+| --- | --- |
+| [Anthropic Skills](https://github.com/anthropics/skills/tree/main/skills/pdf) | 每个 Skill 携带脚本和参考资料，入口说明指导按需读取 |
+| [Superpowers](https://github.com/obra/superpowers/tree/main/skills/systematic-debugging) | 流程类 Skill 直接保存操作步骤和排查资料 |
+| [Vercel Agent Skills](https://github.com/vercel-labs/agent-skills#skill-structure) | 共享构建工具留在仓库外层，按 Skill 生成交付产物 |
 
-`src/auth/create.ts` 装配全部站点 driver，`AuthCoordinator` 负责依赖关系、状态探测与登录恢复，`BrowserSession` 负责同一次调用的浏览器上下文。凭据保存和 `auth` 命令也集中在该目录。业务 client 提供站点读取和错误识别，登录决策由认证层执行。
+[Agent Skills 规范](https://agentskills.io/specification#optional-directories)将可执行代码放在 `scripts/`，参考资料放在可选的 `references/`。NjuCLI 采用这一归属，并保留一份认证源码。
 
-每个入口使用相同的账号目录、Cookie 保存方式和认证源码。构建产物包含这份共享实现，修改认证后重新构建全部 Skill。用户重新执行安装命令更新已安装的 Skill。
-
-## 独立使用
-
-安装单个 Skill：
+## 独立安装
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/install.sh | bash -s -- --skill box
+curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/install.sh | bash -s -- --skill ehall
 ```
 
-安装脚本打包所选 Skill、安装其依赖并注册到 Skill 目录。重复执行即可更新。完整安装使用同一脚本，省略 `--skill`。
+将 `ehall` 换成所需 Skill，例如 `se`。安装脚本构建并安装所选 Skill 的依赖，注册到宿主 Skill 目录；再次执行即可更新。完整安装省略 `--skill`。
+
+11 个业务 Skill 各自提供只读 MCP，合计 91 项工具。
 
 ## 源码开发
 
 ```bash
 pnpm install --frozen-lockfile
 pnpm build
-node skills/njucli-box/scripts/run.mjs box --help
+node skills/njucli-ehall/scripts/run.mjs ehall --help
 ```
 
-构建为各 Skill 生成 `scripts/run.mjs` 和 `package.json`。安装脚本只打包选定的 Skill；第三方依赖根据构建结果生成。
+构建为各 Skill 生成 `scripts/run.mjs` 与依赖清单 `package.json`。共享源码打入运行入口；运行依赖根据构建结果声明。修改认证源码后重新构建全部 Skill，用户重新安装即可更新。
 
 ## 验证
 
-2026-10-08 本地验收结果：
+2026-10-08 本地验证：
 
-| 层级 | 结果 |
+| 检查 | 结果 |
 | --- | --- |
-| 类型与构建 | `pnpm lint`、TypeScript 编译及 16 个独立入口构建通过 |
-| 业务集成 | 本机 HTTP、文件、认证与跨进程恢复组合用例通过 |
-| 独立运行 | 跨进程集成：16 个 Skill 分别复制到隔离目录，仅提供清单声明的第三方依赖；全部入口可启动，校园信息结果与统一 CLI 一致 |
-| 统一认证与账号 | 云盘和邮箱独立进程读取相同测试账号；云盘退出状态按统一格式落盘；认证辅助脚本可从复制目录加载 |
-| MCP | 14 个业务 Skill 独立 stdio 服务的工具定义合计 91 个，与统一 MCP 完整一致，全部为只读 |
-| 安装产物 | 临时目录实装：`--skill box` 仅安装云盘，入口可运行；完整名称、重复更新和切换为完整安装通过，16 个 Skill 注册成功 |
-| Skill 文档 | 16 个 frontmatter 校验通过，局部文件链接检查通过 |
+| 类型与构建 | `pnpm lint` 通过，生成 12 个独立入口 |
+| 本地集成 | 32 项测试通过，覆盖教务命令、校园汇总、会话迁移和旧入口清理 |
+| 独立运行 | 12 个 Skill 在隔离目录启动，仅使用声明的依赖 |
+| MCP | 11 个独立服务合计 91 项工具，与统一服务的名称和 schema 一致 |
+| 安装 | 临时目录实装 `ehall`、`se` 和完整包通过；升级后的 12 个入口可用 |
+| 文档 | 12 个 Skill 格式校验通过，78 个本地链接有效 |
 
-学校接口的实网范围见各 Skill 的接口记录。
+学校接口的实网范围见[验收记录](design-v1.md#验收记录)。

@@ -3,7 +3,7 @@ import {
   COURSE_SELECTION_HOME_URL,
   COURSE_SELECTION_LOGOUT_URL,
   GraduateCourseSelectionClient,
-} from "../../../skills/njucli-course/scripts/selection-client.js";
+} from "../../../skills/njucli-ehall/scripts/selection-client.js";
 import {
   withBrowserSession,
 } from "../browser-session.js";

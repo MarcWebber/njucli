@@ -1,6 +1,6 @@
 # AI 客户端接入
 
-NjuCLI 提供统一 CLI、91 个只读 stdio MCP 工具和 16 个独立 Skill。安装步骤见 [README](../README.md#安装)。
+NjuCLI 提供统一 CLI、91 个只读 stdio MCP 工具和 12 个独立 Skill。安装步骤见 [README](../README.md#安装)。
 
 ## 选择入口
 
@@ -33,7 +33,15 @@ TRAE 可按其[本地 MCP 配置](https://docs.trae.cn/ide_add-mcp-servers)接�
 
 ## 独立 Skill
 
-按需[安装单个 Skill](../README.md#只安装一个-skill)，然后让 AI 按该 Skill 完成任务。
+按需[安装单个 Skill](../README.md#只安装一个-skill)，然后让 AI 按该 Skill 完成任务。11 个业务 Skill 可独立提供对应的只读 MCP 工具；`njucli mcp` 提供全部 91 项。
+
+例如安装软件学院课程 Skill：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/install.sh | bash -s -- --skill se
+```
+
+独立入口使用 `node "$SKILL_DIR/scripts/run.mjs" mcp`。日常汇总工具名为 `campus_today`。
 
 ## 任务使用
 
@@ -42,9 +50,11 @@ TRAE 可按其[本地 MCP 配置](https://docs.trae.cn/ide_add-mcp-servers)接�
 | [青年平台](../skills/njucli-youth/SKILL.md) | 查询活动、志愿时长与第二课堂，按用户要求报名或取消 |
 | [协同表格](../skills/njucli-table/SKILL.md) | 查找与复制模板，创建表格、公式和视图，按行 ID 填写记录 |
 | [云盘](../skills/njucli-box/SKILL.md) | 查询资料库和路径，上传下载或管理文件；分享后将返回的 `url` 交给用户，保留 `id` 供撤销 |
-| [行程填报](../skills/njucli-ehall/SKILL.md) | 读取当前假期和已有联系资料，一次补齐缺项；按用户行程提交并回读。多段行程可用 JSON 输入 |
+| [教务与办事大厅](../skills/njucli-ehall/SKILL.md) | 查询课表、选课、成绩、考试与培养方案；办理行程时一次补齐缺项，提交后回读 |
 | [论文写作](../skills/njucli-tex/SKILL.md) | 按用户材料修改正文、上传素材，编译后读取日志和 PDF |
 | [邮箱](../skills/njucli-mail/SKILL.md) | 绑定和切换邮箱，查询、搜索、读取正文并下载附件；读取保持原有已读状态 |
+| [软件学院课程](../skills/njucli-se/SKILL.md) | 查询课程、作业、名单与成绩，下载作业资料 |
+| [校园信息](../skills/njucli-campus/SKILL.md) | 查询新闻、通知和食堂；`campus today` 汇总当天课程、借阅和预约 |
 | [软件下载](../skills/njucli-software/SKILL.md) | 查询官方目录和安装包 ID，下载到指定位置 |
 
 上传、下载与远端写入使用 CLI。TeX 支持根目录单文件上传和同名替换；图片可使用 PNG、JPEG 或矢量 PDF，SVG 建议先转为 PDF。具体参数见对应 Skill，实网范围见[验证记录](design-v1.md#验收记录)。

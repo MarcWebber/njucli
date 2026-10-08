@@ -26,13 +26,13 @@ njucli upgrade
 
 ## 只安装一个 Skill
 
-例如，只安装南大云盘：
+例如，只安装教务与办事大厅：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/install.sh | bash -s -- --skill box
+curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/install.sh | bash -s -- --skill ehall
 ```
 
-将 `box` 换成 `mail`、`tex` 等名称即可安装其他 Skill。再次运行同一命令即可更新。
+将 `ehall` 换成 `se`、`box`、`mail` 等名称即可安装其他 Skill。再次运行同一命令即可更新。
 
 ## 现有 Skills
 
@@ -41,21 +41,24 @@ curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/inst
 | Skill | 服务 |
 | --- | --- |
 | [njucli-auth](skills/njucli-auth/SKILL.md) | 统一认证与会话维护 |
-| [njucli-campus](skills/njucli-campus/SKILL.md) | 校园信息 |
-| [njucli-academic](skills/njucli-academic/SKILL.md) | 研究生教务 |
-| [njucli-course](skills/njucli-course/SKILL.md) | 课表与选课 |
-| [njucli-ehall](skills/njucli-ehall/SKILL.md) | 办事大厅与行程登记 |
+| [njucli-campus](skills/njucli-campus/SKILL.md) | 校园信息与今日汇总 |
+| [njucli-ehall](skills/njucli-ehall/SKILL.md) | 课表、选课、成绩、考试、培养方案与办事大厅 |
 | [njucli-library](skills/njucli-library/SKILL.md) | 图书馆 |
 | [njucli-sports](skills/njucli-sports/SKILL.md) | 体育场馆 |
-| [njucli-softse](skills/njucli-softse/SKILL.md) | 软件学院课程平台 |
+| [njucli-se](skills/njucli-se/SKILL.md) | 软件学院课程平台 |
 | [njucli-tex](skills/njucli-tex/SKILL.md) | TeX 写作 |
 | [njucli-mail](skills/njucli-mail/SKILL.md) | 校园邮箱 |
 | [njucli-software](skills/njucli-software/SKILL.md) | 正版软件 |
 | [njucli-box](skills/njucli-box/SKILL.md) | 南大云盘 |
 | [njucli-youth](skills/njucli-youth/SKILL.md) | 青年平台 |
 | [njucli-table](skills/njucli-table/SKILL.md) | 协同表格 |
-| [njucli-today](skills/njucli-today/SKILL.md) | 今日汇总 |
-| [njucli-doctor](skills/njucli-doctor/SKILL.md) | 服务检查 |
+
+```bash
+njucli ehall schedule
+njucli ehall grades
+njucli se assignments --pending
+njucli campus today
+```
 
 完整命令通过 `njucli --help` 和 `njucli <domain> --help` 查看。
 

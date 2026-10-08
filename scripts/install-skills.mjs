@@ -3,6 +3,14 @@ import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+const REPLACED_SKILLS = {
+  "njucli-academic": "njucli-ehall",
+  "njucli-course": "njucli-ehall",
+  "njucli-today": "njucli-campus",
+  "njucli-softse": "njucli-se",
+  "njucli-doctor": null,
+};
+
 export async function installSkills(packageRoot, skillsRoot, skillName) {
   const root = await realpath(packageRoot);
   const source = skillName ? root : join(root, "skills");
@@ -33,6 +41,20 @@ export async function installSkills(packageRoot, skillsRoot, skillName) {
   for (const item of pending) {
     if (item.replace) await unlink(item.target);
     await symlink(item.source, item.target, "dir");
+  }
+  for (const [oldName, replacement] of Object.entries(REPLACED_SKILLS)) {
+    if (skillName && replacement !== skillName) continue;
+    const target = join(skillsRoot, oldName);
+    const existing = await lstat(target).catch((error) => {
+      if (error.code !== "ENOENT") throw error;
+      return null;
+    });
+    if (!existing?.isSymbolicLink()) continue;
+    const current = resolve(skillsRoot, await readlink(target));
+    const packages = dirname(root);
+    if (current === join(packages, oldName) || current === join(packages, "njucli", "skills", oldName)) {
+      await unlink(target);
+    }
   }
   return names;
 }

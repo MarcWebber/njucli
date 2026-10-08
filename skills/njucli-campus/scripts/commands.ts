@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 
-import type { CampusClient } from './client.js';
+import type { CampusServices } from './services.js';
 import { addFormatOption, runCommand, type CommandRuntime, type FormatOptions } from "../../../src/core/command.js";
 import { optionalPositiveInteger } from "../../../src/core/options.js";
 import { campusArticleText, campusArticlesText, campusSourcesText } from './text.js';
@@ -16,10 +16,21 @@ interface CampusArticlesOptions extends CampusArticleOptions {
 
 export function registerCampusCommands(
   program: Command,
-  service: CampusClient,
+  service: CampusServices,
   runtime: CommandRuntime,
 ): Command {
-  const campus = program.command("campus").description("查询校园公开信息");
+  const campus = program.command("campus").description("查询校园信息与日程汇总");
+
+  addFormatOption(campus.command("today [date]").description("汇总指定日期的课程、借阅与体育预约"))
+    .action(async (date: string | undefined, options: FormatOptions) => runCommand(runtime, options, async () => {
+      const data = await service.today(date);
+      return { data, text: [
+        `日期：${data.date}`,
+        `课程：${data.course.length} 项`,
+        `借阅：${data.library.length} 项`,
+        `体育预约：${data.sports.length} 项`,
+      ].join("\n") };
+    }));
 
   addFormatOption(campus.command("canteens [query]").description("查询官方学生食堂目录和电话（非实时菜单）"))
     .action(async (query: string | undefined, options: FormatOptions) => runCommand(runtime, options, async () => {

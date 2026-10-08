@@ -35,4 +35,6 @@ Codex 云端也支持自动评审：在 [Code review 设置](https://chatgpt.com
 
 ## 实现约定
 
-完整开发规范见 [AGENTS.md](AGENTS.md)。新增远端能力先验证实际契约，再接入现有领域 client、CLI 和只读 MCP；优先采用直接、可维护的实现。接口变化同时更新[接口证据](docs/interface-evidence.md)。
+完整开发规范见 [AGENTS.md](AGENTS.md)。业务实现与说明放在所属 `skills/njucli-*/`；教务、课表、选课和办事大厅归 `njucli-ehall`，软件学院课程归 `njucli-se`。认证集中在 `src/auth/`。
+
+新增远端能力先验证实际契约，再接入所属 Skill 的 client、命令和只读 MCP。简短说明直接写入 `SKILL.md`，较长流程和接口表放入 `references/`；接口索引见[校园服务接口](docs/interface-evidence.md)。

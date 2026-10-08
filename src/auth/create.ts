@@ -2,7 +2,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import type { AccountRecord } from "../account/types.js";
 import { withBrowserSession } from "./browser-session.js";
 import { AuthCoordinator } from "./coordinator.js";
-import { softSeSessionDriver } from "./drivers/softse-browser.js";
+import { seSessionDriver } from "./drivers/se-browser.js";
 import { boxSessionDriver } from "./drivers/box-browser.js";
 import { ssoSessionDriver } from "./drivers/sso-browser.js";
 import { selectionSessionDriver } from "./drivers/selection-browser.js";
@@ -11,7 +11,7 @@ import { SessionStore } from "./session-store.js";
 import { exchangeSportsAccessToken } from "./sports-token.js";
 import { AppError, asAppError } from "../core/errors.js";
 import { EHallPortalClient } from "../../skills/njucli-ehall/scripts/client.js";
-import { EHallTimetableClient } from "../../skills/njucli-course/scripts/client.js";
+import { EHallTimetableClient } from "../../skills/njucli-ehall/scripts/timetable-client.js";
 import { NjuOpacClient } from "../../skills/njucli-library/scripts/client.js";
 import { YouthClient } from "../../skills/njucli-youth/scripts/client.js";
 import { TableClient } from "../../skills/njucli-table/scripts/client.js";
@@ -57,7 +57,7 @@ export function createAuthCoordinator(): AuthCoordinator {
     drivers: {
       sso: ssoSessionDriver,
       selection: selectionSessionDriver,
-      softse: softSeSessionDriver,
+      se: seSessionDriver,
       tex: texSessionDriver,
       box: boxSessionDriver,
       ehall: { login: restoreEhallSession, probe: restoreEhallSession },

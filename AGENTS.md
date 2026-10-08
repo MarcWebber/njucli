@@ -17,9 +17,11 @@ NjuCLI 服务南京大学学生及其 AI 助手，围绕写作、邮件、上课
 | `src/core/` | 文件、输入、日期、输出与脱敏函数 |
 | `src/mcp/` | 只读 MCP，调用相同业务方法 |
 | `tests/` | 业务组合与独立 Skill 的少量本地集成测试 |
-| `skills/<任务>/references/` | 按需读取的流程、参数、接口证据与验收范围 |
+| `skills/<任务>/SKILL.md`、`references/` | 使用说明；较长流程和接口资料按需拆入 references |
 | `.codex-plugin/`、`.mcp.json` | 插件清单与本地 MCP 配置 |
 | `docs/` | 设计、接口契约和执行证据 |
+
+现有 12 个 Skill：auth、campus、ehall、library、sports、se、tex、mail、software、box、youth、table。教务、课表、选课和办事大厅统一归 `njucli-ehall`；`campus today` 组合课表、借阅和预约。
 
 调用关系为：统一 CLI 或独立 Skill 入口 → Skill 的业务方法 → 同目录 client；受保护操作复用同一次调用的认证会话。参数处理归入口，远端请求归 client，展示归 CLI/MCP 输出边界。
 
@@ -31,7 +33,7 @@ NjuCLI 服务南京大学学生及其 AI 助手，围绕写作、邮件、上课
 - Adapter、Provider 及等价中间层的引入以维护者明确要求为前提。
 - 命令保持 `njucli <domain> <command> [target] [options]`。JSON 使用具体动作的 `--format json` 或 `NJUCLI_FORMAT=json`；账号通过 `account use` 或 `NJUCLI_ACCOUNT` 选择。
 - 分页和枚举在 CLI/MCP 入口校验一次；日期在输入或进入日历计算时校验；接口限制以远端契约为准。
-- 响应按已确认字段解析；字段别名、请求方式和路径变更同步到 `docs/interface-evidence.md`。
+- 响应按已确认字段解析；字段别名、请求方式和路径变更同步到所属 Skill 的接口说明，索引见 `docs/interface-evidence.md`。
 - 普通网络、HTTP 和解析异常直接传到统一输出边界，后续动作由调用 Agent 决定。成功表示实际操作及必要回读已完成。
 - 本地下载与导出复用 `core/fs.ts` 的 `saveFile`，支持文本、字节与异步字节流，直接覆盖指定输出文件。新文件权限为 0600，已有文件保留原权限；会话配置使用原子写入。
 - 面向用户的文档使用中文、正向描述，聚焦已有能力、使用前提、实际步骤和结果。接口证据与实网验证状态各自明确记录。
@@ -40,10 +42,10 @@ NjuCLI 服务南京大学学生及其 AI 助手，围绕写作、邮件、上课
 
 | 工具 | 用途与调用方 |
 | --- | --- |
-| `BrowserSession.login / completeLogin` | 打开官方登录入口、等待账号/验证码/扫码认证完成；SSO、selection、SoftSE、WebVPN、TeX 复用 |
+| `BrowserSession.login / completeLogin` | 打开官方登录入口、等待账号/验证码/扫码认证完成；SSO、selection、SE、WebVPN、TeX 复用 |
 | `AuthCoordinator.ensureSession` | 业务前检查与恢复目标会话，供读写业务共同调用 |
 | `SessionStore` | 保存 capability 和 valid/expired/logged-out 状态 |
-| `core/guards.ts` 的 `requiredText` | TeX、SoftSE、图书馆共用文本整理与空值检查 |
+| `core/guards.ts` 的 `requiredText` | TeX、SE、图书馆共用文本整理与空值检查 |
 | `core/fs.ts` | 文件保存与会话 JSON 读写 |
 | `core/command.ts`、`core/output.ts` | 参数输出格式、统一结果和退出码 |
 | `core/redaction.ts` | 输出边界的凭据脱敏 |
@@ -52,7 +54,7 @@ NjuCLI 服务南京大学学生及其 AI 助手，围绕写作、邮件、上课
 
 ## 认证与个人数据
 
-- capability 在静态依赖图与生产类型表中配齐。个人课表使用 `timetable`，研究生选课使用 `selection`；SoftSE 和 TeX 使用 SSO 派生的 `softse`、`tex`。
+- capability 在认证依赖图与类型中配齐。个人课表使用 `timetable`，研究生选课使用 `selection`；SE 和 TeX 使用 SSO 派生的 `se`、`tex`。
 - 每次业务前调用 `ensureSession`，探测失效时自动登录，认证与业务共享当前 context；每个业务请求执行一次。`logged-out` 只记录状态。
 - `auth maintain` 检查 SSO 并使用已存凭据恢复失效会话；统一认证登录自动处理官方滑块，扫码由本人完成。
 - `auth login` 通过 `--username/--password` 或 `--credentials` 接收凭据，保存为 `auth.json` 的 `username/password`。`BrowserSession` 自动填写 authserver 官方账号登录表单；滑块支持 `skills/njucli-auth/scripts/login.mjs` 截图与坐标拖动，复用现有认证与会话保存；扫码由本人完成。
@@ -78,7 +80,7 @@ NjuCLI 服务南京大学学生及其 AI 助手，围绕写作、邮件、上课
 2. 新能力先用临时最小脚本验证入口、认证、请求和响应，默认只读，记录脱敏证据。纯重构直接依据现有契约开展。
 3. 将确认的请求路径收敛至所属 Skill 的 client，接入本 Skill 的命令、MCP 和统一生产装配。验证完成后移除临时请求代码；长期复用的辅助脚本随对应 Skill 保存。
 4. 调整受影响的集成用例，执行本地检查，清理重复实现与失效结构。
-5. 将确认的任务流程整理为 `skills/<任务名>/SKILL.md`，优先更新已有 Skill。写清触发条件、前置条件、实际命令、标识来源、完成条件；检查 frontmatter、链接和脚本。
+5. 将确认的任务流程整理到所属 `SKILL.md`。简短能力直接写在入口文档；仅将较长流程、参数表和接口资料拆入 `references/`。检查 frontmatter、链接和脚本。
 6. 同步 README、设计和所属 Skill 的接口证据，记录源码状态、实际结果和验证范围。独立运行结构见 `docs/skill-layout.md`。
 7. 检查安装产物，按维护者授权提交、推送或发布。
 
@@ -96,7 +98,7 @@ npm pack --dry-run
 
 `pnpm test` 先构建，再验证认证与文件存储、校园信息命令与解析、软件目录与流式下载、TeX 命令与 HTTP client、邮箱绑定命令与页面交接。邮箱用例隔离浏览器和 IMAP，覆盖本地凭据、多邮箱切换、默认地址派生、MIME 正文与附件。新增用例沿用这种轻量集成方式。
 
-独立 Skill 用例将各目录复制到临时位置，仅提供其声明的第三方依赖，核对命令、公共账号配置与分域 MCP 工具。运行产物以 `scripts/run.mjs` 为入口；源码中的共享模块由构建打入，认证源码保持一份。
+独立 Skill 用例将 12 个目录复制到临时位置，仅提供其声明的第三方依赖，核对命令、公共账号配置及 11 个业务入口的 91 项 MCP 工具。运行产物以 `scripts/run.mjs` 为入口；源码中的共享模块由构建打入，认证源码保持一份。
 
 源码/构建、本地集成、公开实网、认证实网分别记录。实网里程碑以对应 CLI 的真实结果与后置条件为依据；实网核对按当轮任务和授权范围进行。
 
