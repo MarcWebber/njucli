@@ -72,8 +72,21 @@ export class BrowserSession {
       new Headers(init.headers).forEach((value, name) => { headers[name] = value; });
       options.headers = headers;
     }
-    const data = init.body as string | undefined;
-    if (data !== undefined) options.data = data;
+    if (init.body instanceof FormData) {
+      const multipart: NonNullable<typeof options.multipart> = {};
+      const fields: Array<[string, FormDataEntryValue]> = [];
+      init.body.forEach((value, name) => fields.push([name, value]));
+      for (const [name, value] of fields) {
+        multipart[name] = typeof value === "string" ? value : {
+          name: value.name,
+          mimeType: value.type || "application/octet-stream",
+          buffer: Buffer.from(await value.arrayBuffer()),
+        };
+      }
+      options.multipart = multipart;
+    } else if (init.body !== undefined && init.body !== null) {
+      options.data = init.body as string;
+    }
     if (init.redirect === "manual") options.maxRedirects = 0;
 
     const response = await this.context.request.fetch(input.toString(), options);
@@ -82,6 +95,10 @@ export class BrowserSession {
 
   async page(): Promise<Page> {
     return this.context.pages()[0] ?? this.context.newPage();
+  }
+
+  async cookie(url: string, name: string): Promise<string | undefined> {
+    return (await this.context.cookies(url)).find((cookie) => cookie.name === name)?.value;
   }
 
   async login(url: string, isAuthenticated: (url: URL) => boolean): Promise<void> {

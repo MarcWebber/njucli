@@ -15,3 +15,7 @@ mail-credentials.json
 auth.json
 .pnpm-store/
 auth-credentials.json
+skills/*/scripts/run.mjs
+skills/njucli-auth/scripts/runtime.mjs
+skills/*/package.json
+skills/*/LICENSE

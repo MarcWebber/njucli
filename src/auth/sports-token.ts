@@ -2,9 +2,8 @@ import { AppError } from "../core/errors.js";
 import type { FetchLike, FetchResponse } from "../core/types.js";
 import {
   SPORTS_API_BASE_URL,
-  SPORTS_PUBLIC_APP_KEY,
-  createSportsSignature,
-} from "../domains/sports/signing.js";
+  sportsHeaders,
+} from "../../skills/njucli-sports/scripts/signing.js";
 
 const SPORTS_SSO_URL =
   "https://authserver.nju.edu.cn/authserver/login?service=" +
@@ -60,9 +59,7 @@ async function sportsPost<T>(
     method: "POST",
     headers: {
       "content-type": "application/x-www-form-urlencoded",
-      "app-key": SPORTS_PUBLIC_APP_KEY,
-      timestamp,
-      sign: createSportsSignature(path, form, timestamp),
+      ...sportsHeaders(path, form, timestamp),
       ...extraHeaders,
     },
     body: body.toString(),

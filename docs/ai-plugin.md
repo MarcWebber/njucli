@@ -1,61 +1,50 @@
-# AI 接入与论文写作
+# AI 客户端接入
 
-## 交付形态
+NjuCLI 提供统一 CLI、54 个只读 stdio MCP 工具和 14 个独立 Skill。安装步骤见 [README](../README.md#安装)。
 
-同一份代码提供 CLI、只读 stdio MCP 和 TeX 写作 Skill。插件不复制领域 client，不内置模型，也不把个人校园登录态传给插件市场。
+## 选择入口
 
-| 宿主能力 | 能做什么 |
+| 宿主能力 | 使用方式 |
 | --- | --- |
-| 可执行本机命令并读取 Skill 的 AI | 调用完整 `njucli tex`：创建项目、修改正文、上传素材、编译、读取日志和下载 |
-| 仅支持本地 stdio MCP 的 AI | 查询 38 个只读工具；TeX 包含项目、模板、文件、正文和编译日志；邮箱包含邮件夹、列表、搜索和正文；软件包含目录与安装包链接；SoftSE 包含可见课程目录与单门课程名单分页 |
-| 仅能访问远程 HTTP 工具的云端 AI | 本版不能直接连接；没有发布 HTTP 服务，也不托管个人账号会话 |
+| 读取 Skill 并执行本机命令 | 按 Skill 完成查询、下载和用户指定的写入 |
+| 支持本地 stdio MCP | 调用只读工具查询校园数据 |
+| 只支持远程 HTTP 工具 | 需要宿主另行提供本地执行环境 |
 
-根目录 `.codex-plugin/plugin.json` 是 Codex 插件清单，`.mcp.json` 是本地 MCP 配置，`skills/` 包含 5 个任务 Skill。全局安装会自动注册 Codex Skill；MCP 按下方配置接入。
+仓库的 `.codex-plugin/plugin.json` 提供插件清单，`.mcp.json` 提供 MCP 配置。全局安装自动将 Skill 注册到 `${CODEX_HOME:-~/.codex}/skills/`；其他宿主可通过 `NJUCLI_SKILLS_DIR` 指定目录。
 
-## 安装
+## MCP 配置
 
-准备 Node.js 20+（含 npm）、Git 和 curl，执行：
+将以下服务合并到宿主配置：
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/install.sh | bash
-njucli --help
-njucli auth login tex
+```json
+{
+  "mcpServers": {
+    "njucli": {
+      "command": "njucli",
+      "args": ["mcp"]
+    }
+  }
+}
 ```
 
-安装脚本从指定 GitHub 仓库获取 `main`，通过 `package.json` 锁定的 pnpm 与锁文件构建，再安装全局 `njucli` 命令；临时源码在结束时清理。5 个 Skill 通过目录链接安装到 `${CODEX_HOME:-~/.codex}/skills/`，链接指向完整包内的对应目录。已有同名目录或指向其他位置的链接会保留并报错，需先自行迁移。源码目录的普通 `pnpm install` 仅安装开发依赖。
+宿主需能在 PATH 找到 `njucli`，也可将 `command` 改为本机绝对路径。`mcp` 使用标准输入输出传输协议。同一账号的调用串行执行，避免争用专用 Chrome。
 
-升级时运行 `njucli upgrade`。命令重新安装远端 `main`，保留已有的全局安装前缀；Skill 链接随安装包更新，个人账号目录保持原位。升级进度写入 stderr，`--format json` 的最终结果使用统一输出格式。
+TRAE 可按其[本地 MCP 配置](https://docs.trae.cn/ide_add-mcp-servers)接入，客户端端到端验证待完成；豆包 App 的本地插件导入入口尚未确认。
 
-需要指定其他宿主的 Skill 目录时，可设置 `NJUCLI_SKILLS_DIR`，并在安装和升级时使用相同设置。此变量优先于 `CODEX_HOME`。`NJUCLI_INSTALL_PREFIX` 可指定 CLI 安装前缀，其 `bin` 目录需位于 PATH；默认使用 npm 当前全局前缀。安装产物同时保留插件清单、MCP 配置和本说明。
+## 独立 Skill
 
-统一认证使用 `auth login tex --username "统一认证账号" --password "统一认证密码"`，或以 `--credentials` 导入含 `username/password` 的 JSON。CLI 自动填写官方表单；[认证 Skill](../skills/njucli-auth/SKILL.md) 提供截图拖动脚本，复用同一 CLI 浏览器和会话，扫码由本人完成。
+从安装包或构建后的源码复制所需 Skill 目录，执行 `npm install --omit=dev --ignore-scripts`。通过 `node scripts/run.mjs <domain> <command>` 使用业务功能，通过 `node scripts/run.mjs mcp` 启动该 Skill 的只读工具。
 
-邮箱使用 `mail bind --address "邮箱地址" --password "邮箱客户端专用密码"`，或导入含 `address/password` 的 JSON。省略地址时从统一认证账号派生邮箱；显式邮箱独立保存。同一本地账号可绑定多个邮箱，以 `mail accounts` 查看、`mail use` 切换。无参数 `mail bind` 复用当前凭据，仅未绑定时打开官方向导。
+各入口自带公共 `account`、`auth` 命令，认证源码统一位于 `src/auth/`。构建、依赖和更新方式见 [Skill 组织说明](skill-layout.md)。
 
-配置位于 `~/.config/njucli/accounts/<account>/`，支持 `XDG_CONFIG_HOME`，权限 0600。`auth.json` 保存统一认证凭据；`mail.json` 保存默认邮箱 `current` 和 `mailboxes` 凭据数组。读取调用 `mail_folders`、`mail_list`、`mail_search`、`mail_read`，附件下载调用 CLI，保持已读状态。邮件内容作为外部数据处理。详见[邮箱 Skill](../skills/njucli-mail/SKILL.md)和[里程碑 M9](design-v1.md#验收里程碑)。
+## 任务使用
 
-将根目录 `.mcp.json` 的 `mcpServers.njucli` 合并到宿主配置，保留它已有的服务。宿主需能在 PATH 找到 `njucli`；否则把 `command` 改为本机 `command -v njucli` 返回的绝对路径。MCP 只使用 stdin/stdout；不要给 `mcp` 添加 `--format json`。客户端调用同一账号时应串行执行，避免争用 CLI 专用 Chrome。
+| 任务 | 工作流程 |
+| --- | --- |
+| [云盘](../skills/njucli-box/SKILL.md) | 查询资料库和路径，上传下载或管理文件；分享后将返回的 `url` 交给用户，保留 `id` 供撤销 |
+| [行程填报](../skills/njucli-ehall/SKILL.md) | 读取当前假期和已有联系资料，一次补齐缺项；按用户行程提交并回读。多段行程可用 JSON 输入 |
+| [论文写作](../skills/njucli-tex/SKILL.md) | 按用户材料修改正文、上传素材，编译后读取日志和 PDF |
+| [邮箱](../skills/njucli-mail/SKILL.md) | 绑定和切换邮箱，查询、搜索、读取正文并下载附件；读取保持原有已读状态 |
+| [软件下载](../skills/njucli-software/SKILL.md) | 查询官方目录和安装包 ID，下载到指定位置 |
 
-Codex 在下一轮对话可发现已安装 Skill。其他支持 Skill 和终端执行的宿主，可通过 `NJUCLI_SKILLS_DIR` 指定其全局 Skill 目录，或按本地插件导入流程选择完整安装包。写作 Skill 直接调用 CLI 执行用户指定的写作任务，MCP 提供只读查询。
-
-## 豆包与 TRAE
-
-豆包 App、豆包模型 API 和 TRAE 是不同接入目标。截至 2026-09-10，已核对 [TRAE 的官方 MCP 配置文档](https://docs.trae.cn/ide_add-mcp-servers)，可按其本地 stdio 配置方式接入本 CLI；尚未在 TRAE 客户端做端到端验收。
-
-尚未从豆包面向用户的官方文档确认可直接导入本地 CLI、Skill 或此插件包的入口，因此不能宣称“已支持豆包 App”。如果使用豆包模型自行搭建 Agent，需要宿主提供本地工具执行；模型本身不会因为收到插件文件就获得本机执行权。本版不增加浏览器注入桥接、公网 MCP 或托管会话服务。
-
-## 论文素材
-
-软件下载使用[软件下载 Skill](../skills/njucli-software/SKILL.md)。MCP 的 `software_list`、`software_show` 返回官方目录和安装包 ID，具有终端能力的 AI 再调用 `njucli software download` 保存到用户指定位置。
-
-`tex upload` 上传根目录单文件，保留文件名并替换同名文件，按原始字节核对，不新增图片专用 Adapter。PNG 在此前专用项目中已完成真实上传并进入 PDF；JPEG、SVG、矢量 PDF 复用该实现，但未逐种完成实网上传及编译验收。
-
-PNG/JPEG 位图、矢量 PDF 可由 LaTeX `graphicx` 引用；TikZ 图可以直接写入正文。SVG 可以作为上传文件输入，但直接用 `\includesvg` 编译还依赖服务端环境。[CTAN 的 svg 宏包说明](https://ctan.org/pkg/svg/)明确使用 Inkscape 完成转换，当前没有确认南大编译环境具备该能力。稳妥的工作流是在本地显式转成矢量 PDF 后上传；CLI 不会偷偷转换格式，也不会把位图 PDF 称为矢量图。
-
-AI 可以据用户提供的材料撰写章节、修改公式和排版、维护参考文献，并通过 CLI 保存、编译、核对结果。CLI 本身不是论文生成模型。毕业论文仍需核对院系模板、真实实验数据、引用与 AI 使用规定；编译成功不代表符合毕业提交要求。
-
-## 发布边界
-
-插件配置不含个人凭据。账号密码保存在本机账号目录，网页登录使用 CLI 专用 Chrome；读取结果可能包含论文、邮件或课程资料，由调用宿主处理。
-
-源码仓库为 [MarcWebber/njucli](https://github.com/MarcWebber/njucli)，公开可见。全局安装直接使用该仓库，也可在源码目录构建并安装本地 tarball。类型检查、打包、MCP 协议与实际客户端安装分别记录验证结果。
+上传、下载与远端写入使用 CLI。TeX 支持根目录单文件上传和同名替换；图片可使用 PNG、JPEG 或矢量 PDF，SVG 建议先转为 PDF。具体参数见对应 Skill，实网范围见[验证记录](design-v1.md#验收记录)。

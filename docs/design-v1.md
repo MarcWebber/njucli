@@ -1,368 +1,101 @@
-# NjuCLI V1 设计与实现
+# NjuCLI 设计与实现
 
-状态：实现与实网验收范围见下方里程碑
-更新日期：2026-09-26
+NjuCLI 为南京大学学生和 AI 助手提供校园服务。每个 Skill 携带业务脚本和资料，CLI 与 MCP 调用同一份实现；认证集中管理。
 
-## 结论
+## 代码组织
 
-V1 只服务学生及其 AI，优先上课、作业、选课、借书与运动。当前查询覆盖面已较广，但完整代办能力仍不足；不能用命令数量或入口链接代替实际任务完成。没有真实远端契约的能力不注册空壳命令。
-
-实现坚持三条边界：
-
-- 每个 leaf command 在注册时绑定一个 use case；没有巨型 `if/else` 动作入口，也不根据失败结果猜测备用接口。
-- 浏览器登录由一个 `AuthCoordinator` 管理。EHall、课表、SoftSE、TeX、体育、WebVPN 与 OPAC 是 SSO 根会话的能力节点；研究生选课维护目标站点 session。邮箱直接使用官方 IMAP 和本地凭据，统一认证账号与邮箱地址独立管理。禁止引入 Adapter、Provider 或其换名中间层，除非维护者明确要求。
-- 写动作不伪造成功。研究生选退课、SoftSE 自助选课和 TeX 写命令直接执行、单次提交并回读结果；写验收只操作另行授权的可撤销目标。自动验证码、抢占资源和未经验证的远端提交不进入 V1。
-
-## 已实现命令
-
-二进制名和 npm 包名均为 `njucli`。命令结构固定为 `njucli <domain> <command> [target] [options]`；顶层 `today`、`doctor`、`mcp` 和 `upgrade` 是独立入口。
+| 路径 | 职责 |
+| --- | --- |
+| `skills/njucli-*/scripts/` | 本业务的 client、命令、展示、业务方法、MCP 定义和独立入口 |
+| `skills/njucli-*/references/` | 使用步骤与接口说明 |
+| `src/auth/` | 凭据、站点登录、会话探测与恢复 |
+| `src/account/` | 账号选择、配置目录和身份隔离 |
+| `src/core/` | 文件、日期、输入、输出与脱敏等共用函数 |
+| `src/app/` | 共用运行环境和统一业务装配 |
+| `src/commands/`、`src/mcp/` | 统一入口和协议处理 |
+| `scripts/` | 构建、安装与 Skill 注册 |
 
 ```text
-njucli
-├── upgrade
-├── account
-│   ├── current
-│   ├── list
-│   ├── add <name>
-│   ├── use <name>
-│   └── remove <name>
-├── auth
-│   ├── status [capability]
-│   ├── login [capability] [--username <username> --password <password> | --credentials <path>]
-│   ├── refresh [capability]
-│   └── logout [capability]
-├── campus
-│   ├── canteens [query]
-│   ├── sources
-│   ├── articles --source <source> --section <section> [--page <n>]
-│   └── article <article-id> --source <source> --section <section>
-├── software
-│   ├── list [query]
-│   ├── show <id>
-│   └── download <id> <file-id> --output <path>
-├── course
-│   ├── terms
-│   ├── current-term
-│   ├── available [query] [--kind plan|public] [--page <n>] [--page-size <n>]
-│   ├── selected
-│   ├── select <class-id> [--kind plan|public]
-│   ├── withdraw <class-id>
-│   ├── schedule [--term <term-id>]
-│   ├── today [date] [--term <term-id>]
-│   ├── week [date] [--term <term-id>]
-│   ├── next [--term <term-id>]
-│   └── export <path> [--term <term-id>]
-├── academic
-│   ├── grades [--term <term-id>]
-│   ├── exams [--term <term-id>]
-│   ├── schedule [--term <term-id>]
-│   └── plan
-├── ehall
-│   ├── services [query]
-│   ├── tasks [--kind todo|done|started] [--page <n>] [--page-size <n>]
-│   ├── applications [--state active|completed|cancelled] [--page <n>] [--page-size <n>]
-│   └── link <app-id>
-├── library
-│   ├── search <query> [--field <field>] [--page <n>] [--page-size <n>]
-│   ├── book <book-id>
-│   ├── holdings <book-id>
-│   └── loans [--page <n>] [--page-size <n>]
-├── sports
-│   ├── venues [--sport-id <id>]
-│   ├── venue <venue-site-id>
-│   ├── slots --venue-site <venue-site-id> --date <date>
-│   ├── reserve-link --venue-site <venue-site-id> --date <date>
-│   ├── cancel-link <booking-id>
-│   ├── bookings [--page <n>] [--size <n>]
-│   └── booking <booking-id>
-├── softse
-│   ├── courses
-│   ├── catalog
-│   ├── participants <course-id> [--page <n>]
-│   ├── search <query> [--page <n>]
-│   ├── course <course-id>
-│   ├── assignments [course-id] [--pending]
-│   ├── assignment <activity-id>
-│   ├── download <activity-id> <file-name> --output <path> [--submitted]
-│   ├── grades <course-id>
-│   ├── enroll <course-id>
-│   └── submission-link <activity-id>
-├── tex
-│   ├── projects [query] [--page <n>]
-│   ├── templates [--page <n>]
-│   ├── create <name>
-│   ├── from-template <template-key>
-│   ├── rename <project-key> <name>
-│   ├── files <project-key> --version <version-no>
-│   ├── read <project-key> <file-key> --version <version-no>
-│   ├── write <project-key> <file-path> --version <version-no> --input <local-path>
-│   ├── upload <project-key> <local-file> --version <version-no>
-│   ├── compile <project-key> <file-path> --version <version-no> --output <path>
-│   ├── pdf <project-key> --version <version-no> --output <path>
-│   ├── log <project-key> --version <version-no>
-│   └── download <project-key> --version <version-no> --output <path>
-├── mail
-│   ├── bind [--address <address>] [--password <password> | --credentials <path>]
-│   ├── accounts
-│   ├── use <address>
-│   ├── status
-│   ├── unbind [address]
-│   ├── folders
-│   ├── list [--unread] [--folder <path>] [--limit <n>] [--before <uid>]
-│   ├── search <query> [--folder <path>] [--unread] [--limit <n>] [--before <uid>]
-│   ├── read <id>
-│   └── download <id> <attachment> --output <path>
-├── today [date]
-├── doctor
-└── mcp
+CLI / Skill / MCP
+  → 参数校验
+  → Skill 业务方法
+  → 共享认证与当前会话
+  → 本业务 client
+  → 文本 / JSON / MCP 输出
 ```
 
-每个普通 leaf command 支持 `--format text|json`；也可以用进程级 `NJUCLI_FORMAT=json`。`njucli mcp` 启动 stdio server，标准输出属于 MCP 协议，因此不提供 `--format`。根级只保留 Commander 的帮助和版本；没有 `--json`、`--profile`、`--account` 或用 flag 选择动作的入口。
+一个远端契约由一个 client 实现。CLI 与 MCP 校验输入，业务方法组合请求，client 处理远端字段，输出层负责展示和脱敏。写入提交一次，并回读指定目标；普通请求失败直接返回。
 
-日期接受 `YYYY-MM-DD`、`today` 和 `tomorrow`，统一按 `Asia/Shanghai` 解释。查询词与稳定 ID 使用位置参数；`--source`、`--section`、`--term`、`--date`、分页和输出格式只做筛选或修饰。
+Skill 的 `run.ts` 在构建时生成 `run.mjs`，共享模块打入入口，第三方依赖写入本 Skill 的 `package.json`。构建后的 Skill 目录可单独复制使用。目录选择、构建和安装步骤见 [Skill 组织说明](skill-layout.md)。
 
-分页与枚举只在 CLI/MCP 入口验证，不在 client 再验一次；每页条数不设没有远端证据的本地上限。日期在用户输入和学期数据进入计算时验证一次，周范围及日期展开不逐次重验。本地下载与导出共用 `saveFile`，替换指定输出文件；新文件权限为 0600，已有文件保留原权限。
+## 已实现能力
 
-## 全局安装与升级
+命令采用 `njucli <domain> <command> [target] [options]`，具体参数以 `njucli <domain> --help` 和各 Skill 为准。
 
-用户通过 `curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/install.sh | bash` 安装。脚本克隆远端 `main` 到临时目录，使用 `package.json` 指定的 pnpm 和 `--frozen-lockfile` 安装构建依赖，构建后将 tarball 安装为全局 CLI；结束时清理临时源码。
+| 入口 | 能力 | 说明 |
+| --- | --- | --- |
+| `auth`、`account` | 登录、会话状态、退出和多账号管理 | [认证 Skill](../skills/njucli-auth/SKILL.md) |
+| `box` / `njubox` | 资料库、扫描搜索、上传下载、分享与上传链接、复制移动、收藏锁定、历史恢复和协作权限 | [云盘 Skill](../skills/njucli-box/SKILL.md) |
+| `campus` | 食堂、新闻、通知和文章正文 | [校园信息 Skill](../skills/njucli-campus/SKILL.md) |
+| `software` | 官方软件目录、安装包查询与下载 | [软件 Skill](../skills/njucli-software/SKILL.md) |
+| `course` | 本科课表、日期查询、ICS 导出；研究生可选课程、已选课程和选退课 | [课表选课 Skill](../skills/njucli-course/SKILL.md) |
+| `academic` | 研究生成绩、考试、课表和培养方案 | [教务 Skill](../skills/njucli-academic/SKILL.md) |
+| `ehall` | 服务搜索、待办、办件及研究生节假日行程登记 | [办事大厅 Skill](../skills/njucli-ehall/SKILL.md) |
+| `library` | 书目搜索、详情、馆藏与借阅 | [图书馆 Skill](../skills/njucli-library/SKILL.md) |
+| `sports` | 场馆、时段、预约记录及官方办理入口 | [体育 Skill](../skills/njucli-sports/SKILL.md) |
+| `softse` | 课程、名单、作业、附件、成绩及自助选课 | [SoftSE Skill](../skills/njucli-softse/SKILL.md) |
+| `tex` | 项目、模板、正文编辑、文件上传、编译、PDF 与源码下载 | [TeX Skill](../skills/njucli-tex/SKILL.md) |
+| `mail` | 多邮箱绑定、邮件夹、列表、搜索、正文和附件 | [邮箱 Skill](../skills/njucli-mail/SKILL.md) |
+| `today` | 汇总当天课表、借阅与体育预约 | [今日汇总 Skill](../skills/njucli-today/SKILL.md) |
+| `doctor` | 检查账号、认证能力与站点连通性 | [服务检查 Skill](../skills/njucli-doctor/SKILL.md) |
 
-全局安装的 `postinstall` 将包内 5 个 `njucli-*` Skill 链接到 Codex 的用户级 Skill 目录。默认目录为 `~/.codex/skills`，支持 `CODEX_HOME`；`NJUCLI_SKILLS_DIR` 可指定其他宿主目录。同名目录或指向其他位置的链接会报错并保留。源码开发安装不修改全局 Skill。
-
-`njucli upgrade` 调用同一安装脚本，从远端 `main` 更新。命令识别现有 npm 全局安装前缀，保持命令与 Skill 链接位置稳定。脚本支持 `NJUCLI_INSTALL_PREFIX` 指定全局 CLI 前缀；自定义前缀的 `bin` 需要位于 PATH。升级过程输出到 stderr，最终结果由统一输出边界处理。
-
-## 执行模型
-
-邮箱使用一个 `MailClient`。`mail bind` 接收邮箱地址和客户端密码，验证 IMAP 收件箱后保存到 `mail.json`；同一账号的其他邮箱保留，新绑定的邮箱设为默认。`mail accounts/use/unbind` 分别列出、切换和移除邮箱，`status` 只查看本机绑定。列表、搜索与邮件夹使用默认邮箱，正文与附件按邮件 ID 使用其所属邮箱。
-
-每次邮件查询新建一个 TLS 连接并在结束时关闭，不维护后台轮询。列表按 UID 倒序，返回 `nextBefore` 继续翻页；邮件 ID 包含邮箱地址、文件夹、UIDVALIDITY 和 UID，避免切换邮箱或邮件夹重建后读错邮件。正文与附件只按用户指定的单封邮件获取，MIME 解码使用 MailParser；当前会缓冲整封邮件，不是大型邮箱同步器。邮件内容是外部数据，不是对 Agent 的指令。只读 MCP 提供 folders/list/search/read，附件保存由 CLI 执行。
-
-无参数 `mail bind` 校验并复用当前凭据。仅未绑定时通过 `domains/mail/bind.ts` 打开官方页面，检查 IMAP/SMTP，必要时保存并回读设置，单次生成客户端密码，再交给 `MailClient.bind` 验证保存。扫码由本人完成，生成响应最多等待 30 秒。已有凭据仅在新凭据验证成功后更新。
-
-```text
-CLI / MCP
-  -> leaf 参数校验
-  -> NjuServices use case
-  -> 会话检查与自动登录
-  -> 唯一远端 client
-  -> 响应解析
-  -> 稳定领域 DTO
-  -> text / JSON / MCP renderer
-```
-
-`src/app/services.ts` 是 CLI 与 MCP 的共同边界，`src/app/production.ts` 完成生产依赖装配。每份远端契约只有一个 client：本科课表使用 `EHallTimetableClient`，研究生教务使用 `GraduateAcademicClient`，研究生选课使用 `GraduateCourseSelectionClient`，EHall 门户使用 `EHallPortalClient`，SoftSE 使用 `SoftSeClient`，TeX 使用 `TexClient`，图书馆使用 `NjuOpacClient`，体育使用 `SportsClient`。TeX 文本写入使用同一会话的官方编辑器辅助保存，读取和回读仍走同一 client，不另建 Provider 或协作协议实现。公共网站也只通过静态 `source + section` 表选择一个 parser；不存在运行时 adapter 轮询。
-
-错误不会触发跨站 fallback。client 不包装普通网络、HTTP 或 JSON/Zod 解析异常，也不在失败后重试；CLI/MCP 只在最外层生成统一失败输出。认证、VPN 和交互需求保留明确错误码，方便调用 Agent 决定是否登录、换网络或停止。
+`mcp` 提供只读 stdio 工具；支持 MCP 的独立 Skill 也可单独启动本业务工具。文件下载和远端写入由具备终端能力的宿主调用 CLI。配置见 [AI 接入](ai-plugin.md)。
 
 ## 账号与认证
 
-`auth login [capability] --username <username> --password <password>` 接收统一认证账号和密码，也可通过 `--credentials <path>` 导入含 `username/password` 的 JSON。省略 capability 时登录 SSO。`BrowserSession.login / completeLogin` 自动填写 authserver 正式账号登录表单，滑块可由认证 Skill 的截图拖动脚本完成，扫码由本人完成；各站点按自身成功地址和接口核对会话。
-
-### 本地账号
-
-首次使用按需创建 `default`。`account add/use/current/list/remove` 管理本地账号，`NJUCLI_ACCOUNT` 为当前进程指定账号。配置默认位于 `~/.config/njucli/accounts/<account>/`；`XDG_CONFIG_HOME` 可覆盖配置根目录。
-
-| 文件 | 内容 |
-| --- | --- |
-| `auth.json` | 统一认证 `username/password` |
-| `mail.json` | 默认邮箱 `current` 与 `mailboxes: [{ address, password }]` |
-| `session-cookies.json` | CLI 浏览器的会话型 Cookie |
-
-这些文件以 0600 权限原子保存。每个账号有独立的 Playwright 浏览器目录，持久 Cookie 由 Chrome 维护。
-
-统一认证 username 与邮箱 address 分别保存。同一账号可绑定多个邮箱；`mail bind --password` 省略地址时使用 `username@smail.nju.edu.cn`，username 已为完整邮箱地址则直接使用。显式地址优先，邮箱绑定和切换不改动 SSO 凭据。
-
-### 会话依赖
-
-生产装配维护九个 capability，登录与探测返回布尔结果，落盘时记录 capability/status：
+`src/auth/create.ts` 装配站点登录逻辑，`AuthCoordinator.ensureSession` 在业务前检查和恢复会话。认证与业务共用当前账号的浏览器 context，各 Skill 复用同一份认证源码。
 
 ```text
-SSO 根会话
-├── ehall
-│   └── timetable
+sso
+├── ehall → timetable
 ├── softse
 ├── tex
 ├── sports
-└── vpn
-    └── opac
+└── vpn → opac
 
-selection（同一 account 浏览器目录中的独立选课会话）
+selection、box：独立站点会话
 ```
 
-SoftSE 通过 `/login/index.php?authCAS=CAS` 登录，以 `/my/` 与退出链接核对。TeX 使用 `/oauth/login`，固定复用 CLI 专用可见 Chrome，并通过 `/console` 和 `/api/user/info` 核对。选课站使用自己的登录表单及验证码，没有已确认的 CAS 跳转。体育一次性 `oauth_token` 交换的 access token 仅供当前命令使用。
+`account use` 设置默认账号，`NJUCLI_ACCOUNT` 指定当前进程的账号。配置默认位于 `~/.config/njucli/accounts/<account>/`，可通过 `XDG_CONFIG_HOME` 修改根目录。
 
-### 探测与登录
+| 文件 | 内容 |
+| --- | --- |
+| `auth.json` | 统一认证账号与密码 |
+| `mail.json` | 已绑定邮箱及当前邮箱 |
+| `ehall.json` | 按本人身份保存的联系方式与住宿资料 |
+| `session-cookies.json` | 浏览器会话 Cookie |
 
-每次业务执行前，`ensureSession` 探测目标站点；有效则直接执行业务，失效则按依赖登录。统一认证表单复用 `auth.json`。本地 `valid/expired/logged-out` 是记录，不阻止后续业务登录。网络和解析异常直接返回。
+配置以 0600 权限原子保存。各账号使用独立的 CLI 浏览器目录。登录凭据可通过 `--credentials` 导入，网站要求的交互在官方页面完成；详细步骤见 [认证说明](../skills/njucli-auth/references/usage.md)。
 
-- `auth status [capability]` 在线探测并更新状态。
-- `auth refresh [capability]` 检查并恢复指定能力；省略时处理已记录的能力。
-- `auth logout [capability]` 清除指定能力及依赖子能力的会话；省略时处理全部能力。保存的账号密码仍供后续登录使用。
+## 输出与文件
 
-认证与业务在同一命令的 `AsyncLocalStorage` 作用域共用 browser context，结束后保存并关闭。登录在业务请求前完成，每个业务动作提交一次。统一认证滑块支持认证 Skill 脚本截图、坐标拖动；扫码等待本人完成。
+普通命令支持 `--format text|json`，也可设置 `NJUCLI_FORMAT=json`。JSON 结果为 `{ "ok": true, "data": ... }`，失败为 `{ "ok": false, "error": ... }`。凭据和认证参数在统一输出边界脱敏。MCP 的标准输出专用于协议。
 
-## 校园公开信息
+日期使用 `Asia/Shanghai`，接受 `YYYY-MM-DD`、`today` 和 `tomorrow`。下载与导出统一调用 `saveFile` 覆盖指定输出文件；新文件权限为 0600，已有文件保留权限。邮件通过 IMAP `EXAMINE` 和 `BODY.PEEK` 读取，保持已读状态。
 
-`campus` 已实现八个固定信息源：
+## 全局安装与升级
 
-```text
-nju
-academic-affairs
-graduate-school
-graduate-admission
-itsc
-youth-league
-research
-asset-management
-```
+安装脚本从仓库 `main` 构建并安装 CLI，同时注册 14 个 Skill。`njucli upgrade` 使用同一流程，保留当前全局安装前缀。
 
-`campus sources` 返回 source、可用 section 和基地址；`articles` 与 `article` 必须显式给出 source 和 section。每个组合只绑定一个 allowlisted host 和一套确定性 selector。列表中的跨站文章链接会被跳过，不会由当前 source parser 跟随抓取。
+| 配置 | 用途 |
+| --- | --- |
+| `NJUCLI_INSTALL_PREFIX` | CLI 安装前缀，其 `bin` 需在 PATH 中 |
+| `CODEX_HOME` | Codex 配置根目录，Skill 默认安装到其中的 `skills/` |
+| `NJUCLI_SKILLS_DIR` | 指定 Skill 安装目录，优先于 `CODEX_HOME` |
 
-已有公开 smoke 记录覆盖七个可直连来源的非空列表和详情；团委来源返回 `VPN_REQUIRED`。
-
-## 正版软件
-
-`SoftwareClient` 读取南大正版软件目录、官方正文链接和安装包；Adobe 离线页与 Adobe CC 官网是两个明确入口。`software list/show/download` 与 MCP 的 `software_list/software_show` 共用这一实现。下载按实时目录中的文件 ID 选择，复用 `saveFile` 流式保存；校内下载使用用户已经接通的校园网或官方 VPN。许可、适用系统及安装步骤以官方说明为准。
-
-## 个人课表
-
-`course schedule/today/week/next/export` 使用 EHall 本科 `jwapp` 契约 `nju-ehall-wdkb-v1`；研究生结构化课表由 `academic schedule` 提供，日期展开和 ICS 尚未接通。固定的本科请求链包括 EHall 应用落地、角色切换、学期信息与结构化课表，不跨本科和研究生接口补数。
-
-远端的 `KSJC`、`JSJC`、`SKXQ`、`SKZC` 被映射为节次、星期和具体教学周，再结合学期开始日期展开为自然日 occurrence。当前 1–13 节钟点映射已经固化，但仍需用当前学期官方作息实网复核。缺少学期开始日期、节次越界或响应结构改变都会直接失败。
-
-已实现：
-
-- `terms`、`current-term` 和整学期 `schedule`。
-- 指定日期的 `today`、所在自然周的 `week`、当前时间之后的 `next`。
-- 从同一稳定 DTO 导出包含 `Asia/Shanghai` 时间的 ICS。
-
-## 研究生选课
-
-研究生选课使用 `yjsxk.nju.edu.cn` 当前页面公开的固定请求链路，不作为本科课表的 fallback。`course available` 只覆盖页面当前明确暴露的 `plan`（方案内）和 `public`（公选课/跨院系）两个范围，并固定带 `query_sfym=0` 查询未满课程。结果保留教学班 ID、课程代码、课程名、教师、院系、校区、授课语言、学分、上课时间、当前人数、容量、剩余名额和冲突标记。
-
-已实现：
-
-- `course available [query] --kind plan|public`：查询一个范围中当前报告仍有名额的课程；余量是 `KXRS - DQRS` 的查询时快照。
-- `course selected`：读取当前已选课程。
-- `course select <class-id> --kind plan|public`：取得当前 CSRF token，提交一次 `choiceCourse`，读取官方异步结果，再以教学班 ID 回查已选课程。
-- `course withdraw <class-id>`：先确认目标在已选课程中，取得 CSRF 后只提交一次 `cancelCourse`，再确认目标不在已选课程中。回读失败不重试提交。
-
-提交失败或连接中断后不会自动重放，因为无法确定首个请求是否已经生效；用户需要运行 `course selected` 复核。CLI 不做验证码识别或绕过，不轮询课程余量抢课，也不支持重修课和资格校验等尚未完整接线的分支。当前实网已经验证方案内、公选课、已选课程能够返回非空结构；真实选退课 mutation 尚未执行，因此编译通过和官方前端契约都不等于真实提交验收完成。
-
-## 研究生教务
-
-`academic` 使用 EHall `gsapp` 的四个独立官方应用，但统一装在一个 `GraduateAcademicClient` 中，并共用 `ehall` 认证能力：
-
-- `grades` 读取已发布成绩，输出学期、课程代码/名称、类别、学分、显示成绩和是否通过。
-- `exams` 读取当前或指定学期的考试与考查安排，不读取监考功能。
-- `schedule` 读取研究生课表的课程、教师、星期、节次、地点和页面已有的时间地点说明。
-- `plan` 读取学生绑定的培养方案、课程类别学分要求和方案课程。
-
-这些 endpoint 和字段来自已核对的官方前端，未增加本科接口 fallback。开发探测只记录行数和字段名；仍待编译 CLI 取得本人真实数据并核对，状态见 M3。
-
-## 网上办事大厅
-
-`ehall services` 搜索官方服务目录；`tasks` 查询待办、已办或我发起的任务；`applications` 查询进行中、已完成或已撤销的办件。DTO 不携带原始 `formUrl`、`processInstanceId` 或带认证参数的链接。`ehall link` 只按数字 `appId` 生成 `https://ehall.nju.edu.cn/appShow?appId=...`，由用户在官方页面继续办理。
-
-V1 不自动填写或提交 EHall 申请。成绩认定等表单涉及动态附件、流程节点和 readback，当前只允许从服务目录取得入口，避免把个人正式账号当测试账号。
-
-## 软件学院教学支持系统
-
-`softse` 使用软件学院 Moodle 当前 HTML 契约：`courses` 读取我的课程，`catalog` 遍历可见课程目录，`search` 搜索课程，`participants` 分页读取单门课程名单，`course` 读取章节与活动，`assignment` 读取要求正文、语义化提交状态、ISO 截止时间和附件链接，`grades` 读取课程成绩表。`assignments [course-id] --pending` 读取作业详情后按截止时间排序，省略课程 ID 时遍历 `courses` 返回的课程；草稿和重新开放的作业都保留。课程列表仅提供 ID、名称和链接，不从列表推断自助选课资格。名单中的 `userId` 是 Moodle 用户 ID，学号须有独立字段契约；认证参数留在会话中。
-
-`catalog` 从 `/course/index.php` 的课程树逐层发现分类和分页链接，串行读取，并按规范化 URL 与课程 ID 去重。正常空分类由页面标识与选中的分类确认。`participants <course-id> --page <n>` 每页 20 人，返回 `{ courseId, page, nextPage, items }`；成员包含 `userId/name/url/roles/groups`，`url` 使用页面提供的课程内资料链接。读取权限由远端当前会话决定，命令只读取指定课程的指定页面。CLI 与只读 MCP 共用现有 `SoftSeClient` 和认证装配。
-
-`softse enroll` 从自助选课页原样收集隐藏字段，只提交一次，并重新访问选课页，要求官方成员关系判断将其重定向至目标课程且课程结构有效。需要选课密钥时只读取 `NJUCLI_SOFTSE_ENROLMENT_KEY`，不允许把密钥写在参数中。该写链路只依据页面契约实现，不在个人正式课程上执行开发验证。
-
-`softse download` 只下载当前作业列出的唯一同名附件，默认是要求附件，`--submitted` 是本人已交文件；使用同一会话和二进制响应，保存到指定输出路径，已有文件直接替换。不接受任意 URL，也不向其他站点转发认证请求。
-
-作业文件上传还需要 Moodle repository multipart 契约、文件限制和提交后状态回读。当前只提供 `submission-link` 交接到官方编辑页，名称明确表示没有上传或提交。
-
-## TeX
-
-`njucli tex <command>` 使用本站 TeXPage 契约，不套用 Overleaf 接口。`projects` 查询项目并按稳定项目标识合并普通项与置顶项；结果保留名称、项目标识、版本号、官方编辑地址和分页状态。`files` 只返回文件标识、路径和目录标记；`read` 只接受当前版本文件列表中的 UTF-8 文本，不输出临时签名下载地址。
-
-`download` 下载指定版本的源码 ZIP，校验 ZIP 文件头后保存到指定输出路径，已有文件直接替换。`templates` 分页读取官方模板目录，返回模板标识、名称和下一页状态，供 `from-template` 使用。`create` 和 `from-template` 分别通过唯一 JSON 请求创建空白项目和模板副本；`rename` 单次提交新名称，随后按稳定项目标识和名称核对。不猜测模板标识或模板 API。
-
-`write` 从本地 UTF-8 文件读取正文，要求目标项目版本中已有该文本文件。它在同一 CLI context 打开官方编辑器、定位目标路径，仅填入一次正文，交由网站自身协作协议保存；不自行实现 CRDT 或上传覆盖 Adapter。手动提交模式在修改前拒绝；自动同步时通过只读请求核对服务器正文，相同才返回成功。等待超时不重写，明确要求查询确认；Windows 换行统一为 LF。
-
-`compile` 复用上述编辑器定位，在同一会话中点击一次官方编译按钮，按 Socket.IO requestId 核对本次响应，再检查编译日志，最后下载 PDF。服务端在 LaTeX 失败后可能仍返回成功状态和旧 PDF，因此必须先拒绝错误日志；不能只校验文件头。`pdf` 只读取最近编译结果并执行同一日志检查；`log` 返回日志原文供 Agent 定位错误。两种 PDF 下载均替换指定本地输出文件；编译或下载失败时不会执行本地保存。
-
-`upload` 将单个本地文件传入同一官方编辑器的上传控件，只选择一次文件，不实现第二套对象存储上传协议。目标固定为根目录，保留本地文件名；不存在则创建，同名文件默认替换，不增加覆盖开关。网站本身限制隐藏文件和大于等于 50 MiB 的文件，文件也不能替换目录。同名时原生组件在传输前提示冲突，CLI 点击一次覆盖；等待对应项目、版本、名称、根目录及本次覆盖状态的登记响应，再由 `TexClient` 列文件并下载该文件，逐字节核对本地内容。结果不明时不自动重传，也不删除远端对象；只返回必要的文件标识、路径、字节数。同名替换已实现，仍待授权后单独实网验收。
-
-TeX 已完成的实网范围见[验收记录](#验收记录)。当前不提供目录上传、分享、删除或手动提交命令。
-
-## 图书馆
-
-图书馆模块实现一个现代汇文 `meta-local` client，契约名为 `nju-huiwen-meta-local-v1`：
-
-- 按全字段、题名、作者、ISBN 或索书号检索。
-- 查询书目详情与复本馆藏，保留馆藏地、索书号、架位标记、状态和是否可借。
-- 查询当前读者借阅，保留题名、应还日和逾期状态。
-
-这份字段契约来自同产品族公开部署的真实响应；由于 `opac.nju.edu.cn` 在当前网络返回“请使用南大 VPN 访问”，南大部署本身尚未完成校园网/WebVPN 实网 smoke。生产装配通过 `vpn -> opac` 会话链访问 WebVPN 包装后的 OPAC；契约不匹配时不会改用第三方书目数据。
-
-续借和预约馆藏的 endpoint、资格校验与 readback 尚未验证，因此 MVP 不注册 `renew` 或 `reserve` 命令。
-
-## 体育场馆
-
-体育模块实现单一 `SportsClient`，覆盖：
-
-- 场馆与具体 venue site 列表和详情。
-- 按 venue site 与日期读取各场地、各时间片状态；文本输出按 space 状态即时统计余量。
-- 我的预约分页列表与单条预约详情。
-- CAS 落地 `oauth_token` 到业务 access token 的交换、角色选择与已验证签名规则。
-
-`sports reserve-link` 返回指定场地的官方预约页、目标日期和 venue site ID，日期仍需在页面选择；`cancel-link` 返回官方预约记录页和目标订单 ID，供人继续取消。余量仍由明确的 `sports slots` 命令查询。两个交接命令均不提交订单或取消，不宣称办理成功。
-
-预约、支付和取消场地仍缺少完整的验证码与 readback 契约，因此 MVP 不注册 `sports book` 或 `sports cancel` 命令，也不会绕过页面挑战或跳过服务端要求的订单状态。
-
-真实 NJU 账号的角色、token 生命周期、实时余量和订单状态仍需真人登录 smoke。
-
-## 聚合与诊断
-
-顶层 `today [date]` 依次读取当天课表、读者借阅和体育预约。任一调用失败时整个命令直接失败，不返回部分成功或空数组兜底；调用 Agent 可以改为分别执行三个领域命令。EHall 待办已由独立命令提供，未硬塞进 `today` 以免一次聚合触发更多授权域。
-
-`doctor` 当前检查正在使用的 account、可用认证 capability、南京大学官网连通性和 OPAC 直连网络门禁。它不是完整业务验收：成功只说明探测项通过，不代表课表、馆藏和体育三条授权链路均有非空数据。
-
-## MCP
-
-`njucli mcp` 启动 stdio MCP server，提供课表、研究生选课查询、教务、EHall、SoftSE、TeX、图书馆、体育、公告和日常聚合的只读工具。TeX 工具固定为 `tex_projects`、`tex_templates`、`tex_files`、`tex_read` 和 `tex_log`；结果直接使用 `NjuServices` 的领域 DTO。
-
-MCP 不开放 mutation，也不实现另一套 HTTP client、认证或 fallback。它与 CLI 复用同一个 service 和最外层失败输出。
-
-插件只是这一 CLI/MCP 的分发清单及写作 Skill，不增加内部动态插件系统。Skill 让有终端能力的 AI 调用现有 TeX 写命令；纯 MCP 宿主只能读取。本地插件包不等于豆包 App 兼容，客户端安装需另行验收。安装和论文素材边界见 [AI 接入与论文写作](ai-plugin.md)。
-
-## 输出与错误
-
-JSON 使用固定 envelope：
-
-```json
-{
-  "ok": true,
-  "data": []
-}
-```
-
-失败时 stdout 在 JSON 模式下仍是单个可解析对象；文本模式把错误和提示写到 stderr：
-
-```json
-{
-  "ok": false,
-  "error": {
-    "code": "AUTH_REQUIRED",
-    "message": "课表会话未登录或已经失效",
-    "hint": "运行 njucli auth login timetable",
-    "auth_command": "njucli auth login timetable"
-  }
-}
-```
-
-当前只对输入、认证、VPN、用户交互、未找到和少数领域结构错误保留语义码。其他网络、HTTP 和解析异常原样冒泡到统一输出边界，不在各 client 重复包装。失败信息和 JSON/MCP 结构化数据在输出边界对 Cookie、JWT、token、ticket、密码、验证码及授权查询参数脱敏；不依赖脱敏器识别任意姓名、学号或自由文本个人信息，验收记录须主动省略这些内容。
+源码开发安装只安装依赖。安装步骤见 [README](../README.md#安装)。
 
 ## 验证与验收
-
-自动测试只保留少量本地集成用例，使用 Node 内置 runner，不做单测或 E2E，不维护大套 fixture。提交前执行：
 
 ```bash
 pnpm lint
@@ -372,111 +105,25 @@ node dist/cli.js campus sources --format json
 npm pack --dry-run
 ```
 
-`pnpm test` 包含构建；测试使用本机 HTTP、临时凭据和模拟 IMAP，不连接学校服务。这些检查不等于生产实网可用。以下是更新实网里程碑所需的证据，只有在任务要求、网络和授权条件具备时核对，不属于日常自动测试：
-
-1. 登录后验证 EHall、timetable、softse、tex、sports、WebVPN、OPAC 与独立 selection 会话的真实关系、跨进程复用和每次业务前的在线探测；至少相隔 15 分钟复验持续可用性。
-2. 本科课表返回非空 occurrence，并与当前学期页面逐字段核对日期、节次、教师和地点。
-3. 体育返回真实场馆、具体场地和余量，并核对角色选择、token 生命周期和预约详情。
-4. OPAC 在校园网或 WebVPN 下完成 search、book、holdings 和 loans smoke，确认南大部署与已实现的汇文契约一致。
-5. 用个人账号只验证 `academic`、`ehall` 和 `softse` 读取结果；不得创建办件、选课、上传或提交。
-6. 只有维护者另行准备可撤销课程时，才验证一次研究生选退课、SoftSE 选课与 readback；正式课程不得用于 mutation smoke。
-7. library/sports/EHall/SoftSE 上传写接口在契约和 readback 方案齐备之前不注册命令。
-8. TeX 按指定验收项目核对文件正文与下载 ZIP；写验收另行限定项目、允许动作及 CLI 执行入口，浏览器许可不扩大为 CLI 或全账号写许可。
+`pnpm test` 先构建，再运行本地集成。用例使用本机 HTTP、临时文件和模拟 IMAP；独立 Skill 用例检查复制后的运行、账号共享和 MCP 工具一致性。安装产物另在临时目录核对，结果见 [Skill 组织说明](skill-layout.md#验证)。
 
 ## 验收里程碑
 
-2026-09-25 凭据与邮箱更新：账号密码改为本地 JSON，支持多个独立邮箱和默认地址派生；本地 7 个集成用例通过。邮箱列表、分页、搜索、正文和已读状态保持完成实网核对。统一认证已自动填写账号密码并提交，官方滑块在 180 秒内未完成，本次 SSO 登录未成功。
-
-2026-09-25 范围：增加官方软件目录与下载。CLI 实网读取目录与安装包条目；tarball 安装后的 CLI 成功下载 Adobe CC 安装包，大小为 311,485,111 字节。TeX 显式刷新返回 valid，新进程查询为 8 个项目；SSO 根会话探测为 expired，真实过期后的自动重建仍需独立核对。
-
-2026-09-22 范围：精简内部实现、恢复少量本地集成测试并完善开发流程和 TeX Skill。没有访问学校服务，不改变下列实网里程碑。
-
-2026-09-21 本轮范围：补齐邮箱只读实现，修复 EHall 登录误判、业务 ID 脱敏与重复认证，并清理中间包装。研究生日期课表/ICS、作业上传和申请提交没有在本轮完成，不改变其里程碑状态。
-
-交付只认学生任务的实际结果。每项必须用编译后的 CLI、新进程、真实南京大学服务执行，并与官方结果核对。源码、离线模拟、浏览器 DOM 和原始接口成功分别记录，不升级成 CLI 已交付；未通过的项目保持未通过，不用完成百分比替代。
-
-| 里程碑 | 通过条件 | 当前状态与下一步 |
-|---|---|---|
-| M0 登录可复用 | 在 CLI 隔离浏览器登录后，新进程读取本人非空业务数据；至少相隔 15 分钟再次读取成功；会话可恢复时自动恢复，不能恢复时准确要求登录，不重放业务请求 | **SoftSE 复用通过**：独立进程读取、显式刷新、真实跨 15 分钟读取均为 6 条非空课程；远端子会话真实失效后的静默重建未单独触发，其他认证分支仍需独立验收 |
-| M1 作业资料落地 | 列出作业，区分待交/草稿/已交；要求和截止时间与页面一致；附件真正下载、可正常打开且与官方文件内容一致；再次下载更新指定输出文件 | **待验收**：SoftSE 复用已通过；下一步用编译 CLI 下载真实附件并核对内容 |
-| M2 代交指定作业 | 对指定验收作业上传指定文件，按真实设置完成保存/最终提交；重新查询为 submitted，目标文件内容与本地一致；不能只生成草稿 | **未实现**：需获准读取学生编辑页，确认本站上传与提交契约；真实写入只使用另行授权的可撤销作业 |
-| M3 上课和个人教务 | 日期课表的时间、地点、教学周与官方页面一致；ICS 导入后事件正确；成绩、考试、培养方案取得本人真实数据并核对关键字段。本科/研究生分别验收 | **未通过**：研究生日期课表与 ICS 尚未接通，其他读取需完成 CLI 实网核对；不以本科成功覆盖研究生 |
-| M4 选退课 | 查询真实可选/已选课程；指定验收班单次选入后在已选中出现，另行单次退课后消失；不重复提交，不占用正式课程席位测试 | **待受控验收**：已有代码和离线检查；需 selection 会话及维护者准备的验收教学班 |
-| M5 找书和续借 | 南大真实馆藏返回校区、馆藏地、索书号和复本状态；按稳定借阅标识续借一次，回查应还日或续借次数确实变化 | **未实现**：先验证南大 OPAC 读取及借阅唯一 ID，再实现续借；需要校园网/WebVPN 和授权借阅目标 |
-| M6 预约和取消场馆 | 查询指定场地、日期、时段的余量；完成官方必要挑战后单次预约，回查确认订单匹配；取消同一验收订单后回查取消状态 | **未实现**：需确认本站写契约、指定可撤销场地时段；不得跳过资格、验证码或费用条件 |
-| M7 一项学生申请 | 先确定一个高频学生申请及固定契约，用真实授权材料提交一次，拿到稳定申请 ID，并能回查该 ID 的办理状态 | **未实现**：目录和链接不计申请能力；需明确申请类型、材料、唯一 ID 和受控撤销方式，不填随机资料 |
-| M8 TeX 写作与源码落地 | 编译 CLI 查询项目及模板、读取文件、下载正文一致的 ZIP；在授权目标单次创建或按模板创建、重命名及替换正文，新进程核对结果；上传文本与二进制文件并核对内容，同名默认替换；编译后下载内容正确的 PDF，编译失败不得交付旧 PDF | **已有能力通过，同名上传替换待实网验收**：创建、模板、改名、正文编辑及编译已通过；9 月 8 日追加 TeX/BibTeX/PNG 新文件上传，安装产物回读三文件一致，图片与参考文献编译进入单页 PDF；错误编译拒绝旧 PDF 的既有验收通过 |
-| M9 邮箱日常读取 | 本机绑定一次，独立进程列出真实邮件、搜索、读取 MIME 正文并下载内容正确的附件；前后已读标记不变；退出 CLI 后再次查询无需扫码 | **读取实网通过，附件待验收**：9 月 25 日编译 CLI 复用绑定，列出 6 个文件夹，读取两页各 5 封且无重复，搜索命中并读取 410 字符正文，回读未读状态不变。附件下载仅通过本地合成 MIME 测试 |
-
-M0 按认证分支独立记录，SoftSE 分支通过即可推进 M1 验收，不被 OPAC/VPN 拖住；selection 维持已证实的独立会话。SoftSE 的后续顺序为 M1 → M2；TeX 的已验收范围不替代其他里程碑。跨 15 分钟的复验必须真实经过该时间，不修改元数据或时钟冒充。
-
-### 待完成验收
-
-负责人是实现方：执行、定位失败、修代码、复验和更新记录，不要求用户代跑整套测试。用户只承担必须本人完成的学校认证、必要人工挑战和受控写目标授权；这些前提不满足时明确阻塞，不扩大权限或操作正式数据。
-
-M1 使用已有命令，不增加验收框架。ID 和文件名从真实只读结果中取得；输出和下载文件不存进仓库。只有会话要求重新登录时才执行 `auth login softse`。
-
-```bash
-node dist/cli.js softse courses --format json
-node dist/cli.js softse assignments <course-id> --format json
-node dist/cli.js softse assignment <activity-id> --format json
-node dist/cli.js softse download <activity-id> "<file-name>" --output "<output-path>" --format json
-```
-
-下载验收核对文件内容、格式、大小和 SHA-256，再次下载核对指定输出文件确实更新。摘要只用于标识文件，不能单独证明内容正确。M1 只涉及读取和指定本地输出文件写入，不需要远端业务写授权。
-
-只有 M2 的本站表单契约明确后才接上传命令；保存可能已经正式提交，不能假设存在无影响草稿。任何写里程碑都必须先确定目标、允许的动作与撤销办法；离线写检查通过仍不算真实写入通过。
-
 ### 验收记录
 
-以下记录各日期的实际验收；早期钥匙串和确认流程属于历史版本，当前行为以本文实现章节为准。时间均为 UTC；各构建基于 `main@9be09b6` 的未提交修改，源码摘要按排序后的 `src` 路径、NUL、文件内容、NUL 计算。
+下表汇总已完成的实网核对。具体接口保存在[各 Skill 的接口说明](interface-evidence.md)。
 
-| 范围 | 执行时间与入口 | 已核对结果 |
-|---|---|---|
-| SoftSE 会话复用 | 2026-09-05 13:33–13:52；新进程 `softse courses` → `auth refresh softse` → `softse courses`，并用安装产物读取 | 课程均为 6 条，实际间隔超过 15 分钟；安装入口可用。仅证明跨进程、跨时间复用，未单独触发远端子会话过期重建 |
-| TeX 写作 | 2026-09-05 15:22–15:45；编译 CLI 创建/模板创建、改名、写入、编译及下载 | 234 字节正文新进程回读一致；模板副本 14 项；PDF 50,577 字节、1 页，文本与渲染通过；源码 ZIP 内容一致 |
-| TeX 编译失败 | 同一写作验收中，错误正文 → `tex compile` → `tex log`，随后恢复正文 | 失败时退出码 1，不下载残留旧 PDF；日志定位错误；恢复后重新编译通过 |
-| TeX 新文件上传 | 2026-09-07 16:57–17:01；`tex upload` → 安装产物新进程 `files/read/download` → `compile/log` | 合成 TeX 283 字节、BibTeX 151 字节、PNG 76 字节逐字节回读一致；ZIP 1,132 字节，原有正文不变；图片和参考文献进入 29,552 字节单页 PDF |
-| 早期本地验证 | 2026-09-07 17:34；类型检查、构建、CLI/MCP smoke、实际 tarball 临时安装 | 66 个 leaf 帮助、8 个公开来源目录项、非法参数与确认门禁、本地文件替换和日期计算通过；未请求学校服务，不提升实网等级 |
-| TeX 插件包 | 2026-09-09 18:32；`pnpm lint/build`、插件/Skill 校验、本地 tarball 安装后的 `njucli --help` 与 stdio MCP | 插件清单、MCP 配置和 Skill 均进入安装产物；握手列出 30 个只读工具，其中新增 5 个 TeX 工具。安装产物实网读取专用项目 1 个、文件 4 项、正文 234 字节、日志 4,994 字节、模板 9 项；没有执行远端 mutation。未安装到 Codex/TRAE/豆包客户端 |
-| 根会话失效后的 TeX 复用 | 2026-09-10，07:48 完成核对；独立进程 `node dist/cli.js auth status sso --format json` → `auth status tex --format json` → `tex projects --format json` | SSO 为 expired，TeX 为 valid，项目读取成功返回 8 项；没有清理会话、重新登录或执行业务写入。仅证明有效子站会话不被根会话状态阻断，不提升根会话续期、子站过期重建或定期保活的验收等级 |
-| 邮箱与精简版本，本机 | 2026-09-21；macOS / Node v25.9.0；`pnpm install --frozen-lockfile`、`pnpm lint/build`、全部 leaf 帮助、MCP stdio、实际 tarball 临时安装 | 76 个 leaf 帮助、34 个只读 MCP 工具、安装产物 mail 帮助/status 通过；合成邮件分页/中文 MIME/附件及原样未读标记检查通过；临时钥匙串条目跨进程保存、读取、解绑和账号删除清理通过。未增加测试目录或框架 |
-| 早期实网 | 2026-09-21；编译 CLI `campus canteens`、`tex projects`、`academic schedule`、修复后的 `auth status ehall`；无凭据 IMAP TLS 探测 | 食堂返回 14 项；IMAP 证书有效且收到 OK greeting。TeX 为 AUTH_REFRESH_FAILED，教务读取为 AUTH_REQUIRED；EHall 修正后明确返回 expired。邮箱尚未绑定，不能计入真实收件验收；未执行个人账号业务写入 |
-| 内部精简，本地集成 | 2026-09-22；基于 `main@9be09b6` 的已有未提交工作区；`pnpm lint`、`pnpm test`、Skill 校验、CLI 帮助与来源目录、`npm pack --dry-run` | 3 个集成用例通过：认证依赖/刷新/退出落盘、校园文章查询解析、TeX 单次提交/回读/错误传递与失败日志阻止旧 PDF。仍有 76 个 leaf 命令。未运行 E2E，未访问学校账号，未提交或发布 |
+| 能力 | 已验证 | 待验证或待实现 |
+| --- | --- | --- |
+| 认证 | SSO 登录后跨进程读取；SoftSE 跨进程及间隔超过 15 分钟复用；TeX 子会话独立可用 | 各站点会话真正过期后的恢复 |
+| 校园信息与软件 | 新闻列表与正文、食堂、软件目录及安装包下载 | 其余来源逐项核对 |
+| 教务与选课 | 研究生成绩、可选课程、已选课程读取 | 本科日期课表与 ICS；研究生考试、课表与培养方案；真实选退课 |
+| 行程登记 | 查询与一次单站离返校登记提交、回读 | 全程留校、多次离返校与多站行程写入 |
+| SoftSE | 课程目录、课程名单和已加入课程读取 | 作业附件落地、自助选课；作业上传待实现 |
+| TeX | 项目创建、模板复制、改名、正文编辑、新文件上传、源码下载、编译、PDF 和日志；编译失败时阻止旧 PDF 下载 | 同名上传替换 |
+| 邮箱 | 两个邮箱独立绑定、切换、邮件夹、分页、搜索和正文读取，已读状态保持 | 真实附件下载 |
+| 云盘 | 资料库、扫描、已有分享、文件下载和内部链接；其他查询接口可读取 | 上传、创建分享、复制移动及其他管理写入 |
+| 图书馆 | 本地接口集成 | 南大校园网或 WebVPN 下的馆藏与借阅；续借、预约待实现 |
+| 体育 | 本地接口集成 | 登录后场馆、时段与预约读取；预约、取消提交待实现 |
 
-2026-09-25 最新核对（北京时间）：编译 CLI 的 `mail bind` 复用、6 个文件夹、两页各 5 封的分页、搜索命中、410 字符正文以及未读状态回读均已核对；多邮箱管理和默认地址派生通过本地集成，未使用多个真实邮箱实测。近期抽查没有附件，附件下载保持本地合成 MIME 验证范围。SSO 自动填表和提交已到达官方滑块，因 180 秒内未完成人工挑战而未登录成功。
-
-本轮源码从 7,403 行减至 6,637 行，净减 766 行。最终 lint 与 7 项本地集成通过；91 文件 tarball 临时安装后可读取真实邮箱，36 个 MCP 工具完成注册且 `mail_list` 实网返回非空结果。统计基准与完整核对见[代码精简与产物核对](interface-evidence.md#代码精简与产物核对2026-09-25)。
-
-
-对应历史源码摘要：
-
-- 本轮邮箱与精简版本：`985aee15350ad27a81c526c655341ae096f755258d37d6f8a9225f8c1ebf104b`。本轮算法为按路径排序的 `src/**/*.ts`，依次拼接相对路径、换行和文件原字节后取 SHA-256；基于 `main@9be09b6` 的已有未提交工作区，不代表已提交或发布。
-
-2026-09-21 源码行数按 `src/**/*.ts` 统计，包含空行，排除 dist、依赖和文档：7,579 → 7,543。原有文件净减少 264 行，新增邮箱 client/commands 两文件 228 行。
-
-2026-09-22 同口径源码 7,543 → 7,246，减少 297 行：移除会话结果包装、单实现存储接口、动态认证注册及派生工厂，复用 client 方法类型，合并校园栏目重复结构。原有单测在本轮开始前已删除；新增一个 153 行的本地集成测试文件。源码加测试合计 7,399 行，比本轮起点净少 144 行，现有业务命令保留。
-
-- SoftSE 安装产物：`1d36d360ba6106a67bdd85e587e15fe816a2f1b932fce442bd54c351cf0bfb03`。
-- TeX 写作及错误编译验收：`125554c465f42bef2a89d1bdfb36b3c7bb53282376e9477c07ba2c684dbe2350`。
-- TeX 新文件上传：`24ae54d298dc1e10a1551c61b603790fd1d6f5e46252df6b32ff00100e40b433`。
-- 最近本地验证：`2b1d71efb498e1149aa60b3c1ef2e5600ff98cf772ab50efe6e6268bba1d2620`。
-- TeX 插件包：`83dd89172bf411481fc45e3005bac524fab7b7ad23397ea2173743ea759bf5e8`。
-- 根会话失效后的 TeX 复用：源码同 TeX 插件包；本次未重新构建，实际运行的 `dist` 按相同算法计算摘要为 `44e6fc6390a4a0fac0f28fa00a69a0d1220eea6e557dcbd45908384a57b833ae`。
-
-TeX 上传验收的授权仅覆盖向「NjuCLI-CLI-验收-20260905-写作闭环」上传上述三份合成文件；不扩大到个人资料、其他项目或后续任意文件。同名上传替换仍待单独授权和实网验收；本地输出替换已验证，不代表远端替换通过。
-
-未对个人账号选退正式课程、提交作业、预约、续借或提交申请。未发布 npm 包或 tag。
-
-## 范围限制
-
-V1 尚未注册交换项目、校园卡、宿舍、图书续借/预约、体育预约提交，以及 EHall 表单填写。这些能力需要固定远端契约、认证边界和安全 readback，不提前创建空命令。
-
-范围外：抢课、绕过验证码/VPN/访问频率、在线支付、校园卡充值、修改密码、静默复制用户浏览器 Cookie，以及教师、行政或资产管理业务。高频学生申请按 M7 逐项核实、授权与验收。
-
-
-2026-09-26 认证续验：通过 29 行认证 Skill 脚本复用生产 `auth.login` 与同一浏览器，截图后按坐标拖动滑块。第二次拖动通过官方验证，SSO 回跳成功，会话保存后新进程 `auth status sso` 返回 `valid`；`academic grades` 返回 18 条。该脚本只执行截图和指定坐标拖动，图像判断由调用者完成。
-
-本轮继续精简后 `src/**/*.ts` 为 6,579 行，较前一轮净减少 58 行，较最初工作区快照净减少 824 行。删除未使用的账号/软件测试注入、URL 工具、常量与请求透传方法，将无状态认证类改为对象；`completeLogin` 明确表达自动填表和等待回跳的行为。认证 Skill 的 29 行脚本另计。
-
-2026-09-26 第二邮箱验证：官方设置中开启 IMAP/SMTP 并回读保存成功后，同一份新凭据通过绑定。两个真实邮箱独立保留，新邮箱为当前邮箱；新进程读取 6 个邮件夹、3 封邮件与 692 字符正文，未读状态保持。本地凭据权限 0600。
+实网写入验收使用用户指定的目标和材料。查询结果、个人文件和凭据保存在本地指定位置。

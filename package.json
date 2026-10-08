@@ -30,10 +30,10 @@
   },
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
-    "build": "pnpm clean && tsc -p tsconfig.json",
+    "build": "pnpm clean && tsc -p tsconfig.json && node scripts/build-skills.mjs",
     "postinstall": "node scripts/install-skills.mjs",
     "lint": "tsc -p tsconfig.json --noEmit",
-    "test": "pnpm build && node --test tests/integration.test.mjs",
+    "test": "pnpm build && node --test tests/*.test.mjs",
     "dev": "tsx src/cli.ts"
   },
   "dependencies": {
@@ -48,6 +48,7 @@
   "devDependencies": {
     "@types/mailparser": "^3.4.6",
     "@types/node": "^24.3.0",
+    "esbuild": "0.28.2",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2"
   },

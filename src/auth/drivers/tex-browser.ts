@@ -1,6 +1,6 @@
 import type { AccountRecord } from "../../account/types.js";
 import { AppError } from "../../core/errors.js";
-import { texRequest } from "../../domains/tex/client.js";
+import { texRequest } from "../../../skills/njucli-tex/scripts/client.js";
 import { withBrowserSession } from "../browser-session.js";
 import type { AuthSessionDriver } from "../types.js";
 

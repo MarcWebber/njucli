@@ -12,7 +12,8 @@ export function registerUpgradeCommand(program: Command, runtime: CommandRuntime
   addFormatOption(program.command("upgrade").description("从 GitHub main 升级全局 CLI 和 Skill"))
     .action(async (options: FormatOptions) => runCommand(runtime, options, async () => {
       const directory = await mkdtemp(join(tmpdir(), "njucli-upgrade-"));
-      const packageRoot = fileURLToPath(new URL("../../", import.meta.url));
+      // Source runs from src/commands; compiled modules run from dist/src/commands.
+      const packageRoot = fileURLToPath(new URL(import.meta.url.endsWith(".ts") ? "../../" : "../../../", import.meta.url));
       const modules = dirname(packageRoot.replace(/\/$/, ""));
       const environment = { ...runtime.environment };
       if (basename(modules) === "node_modules" && basename(dirname(modules)) === "lib") {

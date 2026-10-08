@@ -1,15 +1,13 @@
 import { createInterface } from 'node:readline';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { AccountStore } from '../../../dist/account/store.js';
-import { withBrowserSession } from '../../../dist/auth/browser-session.js';
-import { createProductionServices } from '../../../dist/app/production.js';
-import { saveFile } from '../../../dist/core/fs.js';
+import { withBrowserSession, createAuthServices, createRuntime, saveFile } from './runtime.mjs';
 const input = createInterface({ input: process.stdin, output: process.stdout });
 const screenshot = join(tmpdir(), 'njucli-slider.png');
-await withBrowserSession(await new AccountStore().current(), false, async (session) => {
+const runtime = createRuntime();
+await withBrowserSession(await runtime.accountStore.current(), false, async (session) => {
   const page = await session.page();
-  const login = createProductionServices().auth.login('sso').then(
+  const login = createAuthServices(runtime).login('sso').then(
     result => console.log(JSON.stringify(result)),
     error => { console.error(error.message); process.exitCode = 1; },
   ).finally(() => { input.close(); process.stdin.pause(); });

@@ -7,6 +7,7 @@ export const AUTH_CAPABILITIES = [
   "ehall",
   "softse",
   "tex",
+  "box",
   "timetable",
   "sports",
   "opac",

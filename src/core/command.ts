@@ -1,4 +1,4 @@
-import type { Command } from "commander";
+import { Command } from "commander";
 import { asAppError } from "./errors.js";
 import {
   renderError,
@@ -12,6 +12,30 @@ export interface CommandRuntime {
   environment: NodeJS.ProcessEnv;
   output: OutputSink;
   setExitCode(code: number): void;
+}
+
+export function createCommandRuntime(): CommandRuntime {
+  return {
+    environment: process.env,
+    output: {
+      stdout: (value) => process.stdout.write(value),
+      stderr: (value) => process.stderr.write(value),
+    },
+    setExitCode: (code) => { process.exitCode = code; },
+  };
+}
+
+export function createProgram(name: string): Command {
+  return new Command().name(name).enablePositionalOptions().version("0.1.0")
+    .showHelpAfterError().showSuggestionAfterError();
+}
+
+export function addHelpActions(program: Command): Command {
+  for (const group of program.commands) {
+    if (group.commands.length) group.action(() => group.outputHelp());
+  }
+  program.action(() => program.outputHelp());
+  return program;
 }
 
 export interface FormatOptions {
