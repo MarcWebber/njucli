@@ -1,56 +1,58 @@
 ---
 name: njucli-youth
-description: 查询南京大学青年平台的志愿时长、活动、第二课堂成绩单、社会实践、社团和票券；按用户要求报名或取消志愿活动及培训。
+description: 查询南京大学青年平台的志愿服务时长、活动、第二课堂成绩单、社会实践与社团，办理志愿活动报名与取消。用户涉及青年平台或 njucli youth 时使用。
 ---
 
 # 青年平台
 
-将 `SKILL_DIR` 设为本 Skill 目录的绝对路径。首次登录可运行 `node "$SKILL_DIR/scripts/run.mjs" auth login youth`；`youth menus` 返回当前账号的官网入口，`youth profile` 查询本人资料。
+以下命令在本 Skill 目录运行。首次使用需登录：`node scripts/run.mjs auth login youth`。
 
 ## 志愿时长与活动
 
 ```bash
-node "$SKILL_DIR/scripts/run.mjs" youth years --format json
-node "$SKILL_DIR/scripts/run.mjs" youth hours --format json
-node "$SKILL_DIR/scripts/run.mjs" youth hours --year YEAR_ID --format json
-node "$SKILL_DIR/scripts/run.mjs" youth activities --mine --year YEAR_ID --format json
-node "$SKILL_DIR/scripts/run.mjs" youth activities "校园" --state recruiting --page 1 --size 20 --format json
-node "$SKILL_DIR/scripts/run.mjs" youth activity ACTIVITY_ID --format json
+node scripts/run.mjs youth years --format json
+node scripts/run.mjs youth hours --format json
+node scripts/run.mjs youth hours --year YEAR_ID --format json
+node scripts/run.mjs youth activities --mine --format json
+node scripts/run.mjs youth activities "校园" --state recruiting --page 1 --size 20 --format json
+node scripts/run.mjs youth activity ACTIVITY_ID --format json
 ```
 
-学年 ID 来自 `years`；省略学年查询全部。总时长采用官方加权结果；活动 `hours: null` 表示尚未认定。活动的 `id` 用于查详情及报名，`registrationId` 用于取消和评价。活动状态为 `recruiting/ongoing/ended/all`，默认招募中；`--mine` 查询本人全部报名。
+`YEAR_ID` 来自 `years`。`hours` 查询官方加权时长，省略学年时查询全部；活动的 `hours` 为 `null` 表示尚未认定。
 
-## 其他查询
-
-下表命令均接在 `node "$SKILL_DIR/scripts/run.mjs"` 后，可加 `--format json`。列表支持 `--page/--size`，按返回的实际 `page/size/total` 翻页；社团固定每页 12 条，其他列表最多每页 500 条。
-
-| 任务 | 命令 |
-| --- | --- |
-| 志愿组织与培训 | `youth teams [query]`、`youth team ID`、`youth trainings [query]` |
-| 申报类别与本人申请 | `youth categories`、`youth applications`、`youth application ID` |
-| 第二课堂成绩单 | `youth transcript [query]`、`youth transcript-export --output ./transcript.pdf` |
-| 青马课程与成绩 | `youth courses`、`youth course ID`、`youth course-grades` |
-| 本人社会实践与行程 | `youth practices`、`youth practice ID`、`youth practice-journals` |
-| 实践团队招募 | `youth practice-teams [query] [--year ID]`、`youth practice-team ID` |
-| 实践资料库 | `youth practice-resources [query] [--year ID]`、`youth practice-resource ID` |
-| 社团 | `youth clubs [--mine]`、`youth club ID`；支持 `--category/--stars/--department` 筛选 |
-| 实习岗位与骨干招募 | `youth jobs [query] [--mine]`、`youth recruitments [--mine]` |
-| 票务活动与本人票券 | `youth tickets [query] [--mine]` |
-| 评选记录 | `youth awards --kind team/report/student/advisor/volunteer` |
-| 科创申报与投诉 | `youth projects`、`youth complaints` |
-
-列表保留官网字段，详情含正文和附件链接。申报要求及开放状态查看 `categories` 的 `sqyq/sqks/sqjs/dqrsfksq/bksqyy/bdxList`；部分模块对研究生账号返回空列表。
+`activities --mine` 查看本人已报名的活动列表，结果中包含 `registrationId`。
+`activities [关键词]` 搜索活动，`--state` 可选 `recruiting`（招募中，默认）、`ongoing`、`ended`、`all`。列表用 `--page`、`--size` 翻页，以返回的 `page/size/total` 判断是否读完。
+`activity` 查看活动详情，`ACTIVITY_ID` 取自活动列表中的 `id`。
 
 ## 报名、取消与评价
 
-先读活动详情及开放时间，使用用户提供的活动认识、自我优势和 QQ；需要报名密码时加 `--password`。
-
 ```bash
-node "$SKILL_DIR/scripts/run.mjs" youth enroll ACTIVITY_ID --understanding "活动认识" --strengths "自我优势" --qq QQ号码 --format json
-node "$SKILL_DIR/scripts/run.mjs" youth cancel REGISTRATION_ID --format json
-node "$SKILL_DIR/scripts/run.mjs" youth rate REGISTRATION_ID --stars 5 --comment "评价内容" --format json
-node "$SKILL_DIR/scripts/run.mjs" youth training-enroll TRAINING_ID --format json
-node "$SKILL_DIR/scripts/run.mjs" youth training-cancel TRAINING_ID --format json
+node scripts/run.mjs youth enroll ACTIVITY_ID --understanding "活动认识" --strengths "个人优势" --qq 12345678 --format json
+node scripts/run.mjs youth cancel REGISTRATION_ID --format json
+node scripts/run.mjs youth rate REGISTRATION_ID --stars 5 --comment "评价内容" --format json
+node scripts/run.mjs youth training-enroll TRAINING_ID --format json
+node scripts/run.mjs youth training-cancel TRAINING_ID --format json
 ```
 
-培训 ID 来自 `trainings`。材料完整后提交一次；成功返回回读的报名、取消状态或评价。失败后先查询当前记录。查询及成绩单下载已实网验证；报名、取消和评价已通过本地集成，实网写入待验证。核对字段时读取[接口说明](references/interfaces.md)。
+报名须向用户收齐活动认识、个人优势及 QQ 后再提交；若活动设置了密码，须传 `--password`。
+取消和评价使用本人活动列表中的 `registrationId`。
+培训报名和取消使用 `training-enroll / training-cancel`，`TRAINING_ID` 取自 `youth trainings`。
+
+提交结果不明时，活动报名或取消查 `activities --mine`，培训报名或取消查 `trainings` 的 `bmzt`；评价到官方页面核对。确认状态后再决定后续操作。
+
+## 第二课堂成绩单与其他查询
+
+```bash
+node scripts/run.mjs youth transcript --format json
+node scripts/run.mjs youth transcript-export --output ./transcript.pdf --format json
+```
+
+其他常用查询接在 `node scripts/run.mjs` 后：
+
+- 社团信息：`youth clubs [--mine]`、`youth club ID`（每页固定 12 条）
+- 社会实践：`youth practices`、`youth practice-teams`
+- 青马工程：`youth courses`、`youth course-grades`
+- 票务活动：`youth tickets [--mine]`
+- 组织与培训：`youth teams`、`youth trainings`
+
+部分模块对研究生账号返回空列表。更多查询见 `node scripts/run.mjs youth --help`，接口字段见[接口说明](references/interfaces.md)。

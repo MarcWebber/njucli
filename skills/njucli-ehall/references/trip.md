@@ -1,9 +1,11 @@
 # 行程填报
 
+以下命令在 `njucli-ehall` Skill 目录运行。
+
 ## 查询
 
 ```bash
-node "$SKILL_DIR/scripts/run.mjs" ehall trip --format json
+node scripts/run.mjs ehall trip --format json
 ```
 
 从 `data` 读取 `holiday/defaults/missing/transportOptions/records`。`status` 为 `open` 时可填报，`submitted` 表示当期已有登记，`closed` 表示无需登记。
@@ -13,8 +15,8 @@ node "$SKILL_DIR/scripts/run.mjs" ehall trip --format json
 ## 直接提交
 
 ```bash
-node "$SKILL_DIR/scripts/run.mjs" ehall trip-submit --stay --format json
-node "$SKILL_DIR/scripts/run.mjs" ehall trip-submit --from YYYY-MM-DD --to YYYY-MM-DD --destination 市或区县 --address "详细地址" --transport "交通方式" --format json
+node scripts/run.mjs ehall trip-submit --stay --format json
+node scripts/run.mjs ehall trip-submit --from YYYY-MM-DD --to YYYY-MM-DD --destination 市或区县 --address "详细地址" --transport "交通方式" --format json
 ```
 
 第一条用于全程留校；第二条用于单次离返校、单个目的地。默认采用当前开放假期，指定假期时用 `--holiday <data.holiday.id>`。目的地须在官方地区字典中唯一匹配，城市级名称即可；交通方式取 `transportOptions`。用户提供班次或返校交通时，分别加 `--service-number`、`--return-transport`。
@@ -43,7 +45,7 @@ node "$SKILL_DIR/scripts/run.mjs" ehall trip-submit --from YYYY-MM-DD --to YYYY-
 站点及不同次离返校的日期均不得重叠；离校和返校日期由首站开始、末站结束日期生成。
 
 ```bash
-node "$SKILL_DIR/scripts/run.mjs" ehall trip-submit --input /path/to/trip.json --format json
+node scripts/run.mjs ehall trip-submit --input /path/to/trip.json --format json
 ```
 
 临时输入文件以 0600 权限保存，完成后清理。联系人由 CLI 按账号保存和复用。只读 MCP 使用 `ehall_trip`；[接口说明](interfaces.md#研究生节假日行程登记)包含字段和验证范围。

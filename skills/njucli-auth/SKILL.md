@@ -1,48 +1,48 @@
 ---
 name: njucli-auth
-description: 使用本机 NjuCLI 登录南京大学统一认证、保存凭据、自动处理官方滑块，检查、恢复和维护登录会话。
+description: 登录南京大学统一身份认证、保存本地凭据、查询与维护会话状态、协助处理登录滑块验证。在涉及校园登录或会话失效时使用。
 ---
 
-# 统一认证
+# 统一身份认证
 
-将 `SKILL_DIR` 设为本 Skill 目录的绝对路径。网页登录需要本机 Google Chrome；扫码由本人完成。
+以下命令在本 Skill 目录运行。网页登录需要 Google Chrome；扫码由本人完成。
 
 ## 登录与状态
 
-首次登录可导入含 `username/password` 的 JSON：
+通过 JSON 文件导入统一认证账号与密码（内容包含 `username` 和 `password`）：
 
 ```bash
-node "$SKILL_DIR/scripts/run.mjs" auth login --credentials /private/path/auth.json
-node "$SKILL_DIR/scripts/run.mjs" auth status sso --format json
-node "$SKILL_DIR/scripts/run.mjs" auth login box
-node "$SKILL_DIR/scripts/run.mjs" account use ACCOUNT
+node scripts/run.mjs auth login --credentials /path/to/auth.json
+node scripts/run.mjs auth status sso --format json
+node scripts/run.mjs auth login box
+node scripts/run.mjs account use ACCOUNT
 ```
 
-省略登录目标时使用 `sso`。支持 `ehall/timetable/selection/se/tex/sports/youth/table/vpn/opac/box` 等站点，具体选项见 `auth --help`。`account use` 或 `NJUCLI_ACCOUNT` 选择本地账号。凭据保存于账号目录的 `auth.json`；已有凭据时自动填写账号并处理官方滑块。业务命令会按需恢复会话，登录后以 `auth status` 的 `valid` 为准。
+省略登录目标时默认使用 `sso`。也支持单独登录 `box`、`selection`、`ehall`、`timetable`、`se`、`tex`、`sports`、`youth`、`table`、`vpn`、`opac` 等站点。
 
-## 维护会话
+`account use` 或环境变量 `NJUCLI_ACCOUNT` 用于选择本地账号。业务命令会按需恢复登录，`auth status` 返回 `valid` 表示会话可用。
+
+## 会话维护
 
 ```bash
-NJUCLI_ACCOUNT=default node "$SKILL_DIR/scripts/run.mjs" auth maintain --format json
+node scripts/run.mjs auth maintain --format json
 ```
 
-有效会话返回 `kept-alive`，重新登录成功返回 `restored`；结果保存于账号目录的 `auth-maintenance.json`。用户要求持续维护时，将命令交给宿主定时任务每两小时执行并固定账号。电脑休眠期间由后续业务调用按需恢复；`kept-alive` 表示本次访问成功。
+会话有效时返回 `kept-alive`，用已存凭据恢复成功后返回 `restored`。用户要求定时维护时，可每两小时执行一次，并用 `NJUCLI_ACCOUNT` 固定要维护的账号。
 
-| 结果 | 处理 |
-| --- | --- |
-| `AUTH_REJECTED` | 按学校返回原因核对账号或更新凭据 |
-| `AUTH_CHALLENGE_FAILED` | 已尝试三张滑块图，重新执行并查看当前页面 |
-| `AUTH_RESTORE_FAILED` | 检查网络、凭据和官方验证 |
-| `USER_ACTION_REQUIRED` | 在官方页面完成扫码或其他交互 |
+遇到登录错误时：
 
-## 滑块协助
+- `AUTH_REJECTED`：按学校返回的原因检查账号状态和凭据。
+- `AUTH_CHALLENGE_FAILED`：滑块验证尝试超限，请重新运行或使用下方滑块脚本。
+- `USER_ACTION_REQUIRED`：需要手机扫码或其他人工操作，请在官方页面完成。
+- `AUTH_RESTORE_FAILED`：自动恢复会话失败，请检查网络或重新登录。
 
-在交互式终端运行：
+## 滑块验证辅助
+
+统一认证已内置滑块识别。若多次验证失败，可在交互式终端运行辅助脚本：
 
 ```bash
-node "$SKILL_DIR/scripts/login.mjs"
+node scripts/login.mjs
 ```
 
-向同一进程输入 `shot` 读取当前截图，再根据图片确定按钮中心和横向距离，输入 `drag x y dx`。坐标使用截图 CSS 像素，每张图重新定位。成功返回 `sso/valid` 并保存会话，再用 `auth status sso` 核对；完成后删除系统临时目录中的 `njucli-slider.png`。
-
-登录入口为[南大统一身份认证](https://authserver.nju.edu.cn/authserver/login)，各站点沿用官方登录页面。已有 SSO、TeX、软件学院和青年平台会话及 `maintain` 已实网核对；自然失效后的后台恢复与跨期限持续性待验证。
+输入 `shot` 获取截图，再输入 `drag x y dx` 拖动滑块。`x/y` 是滑块按钮中心，`dx` 是向右移动的距离，均按当前截图的 CSS 像素计算。验证成功后保存会话；完成后删除临时截图 `njucli-slider.png`。

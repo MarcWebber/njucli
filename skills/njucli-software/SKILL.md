@@ -1,20 +1,27 @@
 ---
 name: njucli-software
-description: 使用 NjuCLI 查找南京大学正版软件、选择对应系统的官方安装包并下载到本地。适用于 Adobe、WPS、MathType、Origin 等校园软件下载需求。
+description: 查询并下载南京大学提供的正版软件安装包，包括 Adobe Creative Cloud、WPS、MathType、Origin 等校园授权软件。用户涉及校园正版软件下载时使用。
 ---
 
 # 正版软件
 
-将 `SKILL_DIR` 设为本 Skill 目录的绝对路径。
+以下命令在本 Skill 目录运行。
+校内安装包下载需要连接校园网或官方 VPN；Adobe CC 在线安装器支持公网直连下载。
+
+## 查询与下载
 
 ```bash
-node "$SKILL_DIR/scripts/run.mjs" software list --format json
-node "$SKILL_DIR/scripts/run.mjs" software show adobe-cc --format json
-node "$SKILL_DIR/scripts/run.mjs" software download adobe-cc FILE_ID --output ./CreativeCloud.dmg --format json
+node scripts/run.mjs software list --format json
+node scripts/run.mjs software show adobe-cc --format json
+node scripts/run.mjs software download adobe-cc FILE_ID --output ./CreativeCloud.dmg --format json
 ```
 
-软件 ID 来自 `list`，安装包 ID 使用 `show` 返回的 `files[].id`。按用户系统选取原始 ID：Adobe CC 的 `macarm64` 为 Apple Silicon、`osx10` 为 Intel Mac，`win64/winarm64` 为相应 Windows 架构。下载到指定位置，已有输出文件会被覆盖；交付返回的绝对路径和字节数。
+软件 ID 取自 `list`（如 `adobe-cc`、`adobe`、`wps-365`、`mathtype`、`origin`）。
 
-`adobe-cc` 提供 Adobe 官方在线安装器；安装后以“学工号@nju.edu.cn”进入南大统一认证，再安装所需产品。`adobe` 为学校离线包目录；`wps-365/mathtype/origin` 使用学校提供的安装包。校内下载服务器需要校园网或官方 VPN，安装和激活按用户指定的操作办理。
+按用户的系统和架构选包，`FILE_ID` 使用 `show` 返回的完整 `files[].id`。Adobe CC 的 ID 中，`macarm64` 表示 Apple Silicon，`osx10` 表示 Intel Mac，`win64`、`winarm64` 表示对应的 Windows 架构。
 
-来源：[南大正版软件目录](https://itsc.nju.edu.cn/zbrj/list.htm)、[Adobe 离线包](https://itsc.nju.edu.cn/0e/53/c50138a593491/page.htm)、[Adobe CC 直接下载页](https://helpx.adobe.com/cn/download-install/apps/download-install-apps/creative-cloud-apps/download-creative-cloud-desktop-app-using-direct-links.html)。目录、链接及 Adobe CC macarm64 下载已实网验证；校内安装包完整下载待校园网验收。
+下载保存到 `--output` 指定位置，同名文件直接覆盖；完成后交付文件绝对路径与大小。
+
+## 登录与授权说明
+
+Adobe CC 安装器使用“学工号@nju.edu.cn”登录南大统一认证，再选择所需产品。`adobe` 是学校提供的离线包目录；WPS、Origin、MathType 等软件按学校说明安装和激活。
