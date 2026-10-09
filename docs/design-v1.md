@@ -77,7 +77,9 @@ selection、box：独立站点会话
 | `ehall.json` | 按本人身份保存的联系方式与住宿资料 |
 | `session-cookies.json` | 会话型与持久 Cookie |
 
-配置以 0600 权限原子保存。同一账号在读取 Cookie 前取得进程锁，保存后释放。查询使用 HTTP 会话，页面操作按需打开专用 Chrome 并继承当前 Cookie。`auth maintain` 检查 SSO，过期时用已存凭据恢复。登录凭据可通过 `--credentials` 导入，网站要求的交互在官方页面完成；详细步骤见 [认证说明](../skills/njucli-auth/SKILL.md)。
+配置以 0600 权限原子保存。同一账号在读取 Cookie 前取得进程锁，保存后释放。查询使用 HTTP 会话，页面操作按需打开专用 Chrome 并继承当前 Cookie。SSO 登录与 `auth maintain` 通过 CAS 为 EHall `/login?service=...` 取得服务票据，跳转至官方门户后回读用户接口的 `hasLogin`；过期时用已存凭据恢复。维护每次执行一次，周期执行间隔依据实际闲置期限设置，最长有效期由学校决定。登录凭据可通过 `--credentials` 导入，网站要求的交互在官方页面完成；详细步骤见 [认证说明](../skills/njucli-auth/SKILL.md)。
+
+`auth daemon start/status/stop` 管理常驻的 CLI 后台进程。启动时固定本地账号、配置根目录、Node 和当前 CLI/Skill 的绝对入口，macOS launchd 以 `RunAtLoad` 启动 `auth daemon run`，并按 `KeepAlive.Crashed` 恢复崩溃进程。CLI 在同一进程内串行调用维护业务，默认每轮结束后等待 600 秒，每轮维护结束后释放账号锁。普通网络失败交给下个周期处理；学校拒绝凭据、缺少凭据或要求本人操作时结束进程，由用户处理后重启。进程记录、配置和日志权限为 0600，日志使用统一脱敏输出。状态展示进程 PID、启动注册情况与最近维护结果；停止信号结束等待或等待当前维护完成，再清理进程记录并退出，launchd 同时卸载启动配置。
 
 ## 输出与文件
 

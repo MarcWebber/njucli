@@ -57,6 +57,7 @@ NjuCLI 服务南京大学学生及其 AI 助手，围绕写作、邮件、上课
 - capability 在认证依赖图与类型中配齐。个人课表使用 `timetable`，研究生选课使用 `selection`；SE 和 TeX 使用 SSO 派生的 `se`、`tex`。
 - 每次业务前调用 `ensureSession`，探测失效时自动登录，认证与业务共享当前 context；每个业务请求执行一次。`logged-out` 只记录状态。
 - `auth maintain` 检查 SSO 并使用已存凭据恢复失效会话；统一认证登录自动处理官方滑块，扫码由本人完成。
+- `auth daemon start/status/stop` 管理 CLI 常驻后台保活进程，macOS launchd 负责生命周期。CLI 默认每轮结束后等待 600 秒，固定启动账号与配置根目录，每轮复用账号锁、当次 Cookie 与统一脱敏输出；停止时完成当前维护并清理进程记录，移除登录自动运行配置。
 - `auth login` 通过 `--username/--password` 或 `--credentials` 接收凭据，保存为 `auth.json` 的 `username/password`。`BrowserSession` 自动填写 authserver 官方账号登录表单；滑块支持 `skills/njucli-auth/scripts/login.mjs` 截图与坐标拖动，复用现有认证与会话保存；扫码由本人完成。
 - `mail bind` 通过 `--address/--password` 或 `--credentials` 接收邮箱凭据。省略地址时从统一认证 username 派生邮箱；显式地址独立保存。同一本地账号允许多个邮箱，`mail.json` 保存 `{ current, mailboxes: [{ address, password }] }`，通过 `mail accounts/use/unbind` 管理。
 - 两份凭据文件位于 `~/.config/njucli/accounts/<account>/`，由 `XDG_CONFIG_HOME` 覆盖根目录，权限 0600。日志、仓库和交付记录使用脱敏结果，个人业务数据保存在指定位置。

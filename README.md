@@ -62,6 +62,18 @@ njucli campus today
 
 完整命令通过 `njucli --help` 和 `njucli <domain> --help` 查看。
 
+业务命令按需恢复校园登录。`njucli auth maintain` 执行一次统一认证与 EHall 会话维护；周期维护和登录状态核对见[认证 Skill](skills/njucli-auth/SKILL.md#会话维护)。
+
+macOS 可启动 CLI 后台保活进程（需要已存统一认证凭据）：
+
+```bash
+njucli auth daemon start
+njucli auth daemon status --format json
+njucli auth daemon stop
+```
+
+常驻 CLI 进程默认每 10 分钟维护一次，`start --interval 300` 可调整为每五分钟。退出终端后继续运行，登录 Mac 后自动运行；状态返回进程 PID，详见[后台保活](skills/njucli-auth/SKILL.md#后台保活)。
+
 ## 文档
 
 [Skills](skills/) · [AI 客户端接入](docs/ai-plugin.md) · [贡献指南](CONTRIBUTING.md) · [问题反馈](https://github.com/MarcWebber/njucli/issues)

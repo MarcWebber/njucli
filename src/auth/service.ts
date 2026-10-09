@@ -4,9 +4,15 @@ import { join } from "node:path";
 import { withBrowserSession } from "./browser-session.js";
 import { readJsonFile, writeJsonFile } from "../core/fs.js";
 import { AppError } from "../core/errors.js";
+import { authDaemonStatus, runAuthDaemon, startAuthDaemon, stopAuthDaemon, type AuthDaemonStatus } from "./daemon.js";
+import type { OutputSink } from "../core/output.js";
 
 export type AuthServices = {
   maintain(): Promise<AuthMaintenance>;
+  daemonStart(intervalSeconds: number): Promise<AuthDaemonStatus>;
+  daemonStatus(): Promise<AuthDaemonStatus>;
+  daemonStop(): Promise<AuthDaemonStatus>;
+  daemonRun(intervalSeconds: number, signal: AbortSignal, output: OutputSink): Promise<void>;
   status(capability?: AuthCapability): Promise<SessionMetadata[]>;
   login(capability?: AuthCapability, credentials?: AuthCredentials): Promise<SessionMetadata>;
   logout(capability?: AuthCapability): Promise<AuthCapability[]>;
@@ -14,7 +20,11 @@ export type AuthServices = {
 
 export function createAuthServices(runtime: SkillRuntime): AuthServices {
   const { accountStore, auth } = runtime;
-  return {
+  const services: AuthServices = {
+    daemonStart: async (intervalSeconds) => startAuthDaemon(await accountStore.current(), intervalSeconds),
+    daemonStatus: async () => authDaemonStatus(await accountStore.current()),
+    daemonStop: async () => stopAuthDaemon(await accountStore.current()),
+    daemonRun: async (intervalSeconds, signal, output) => runAuthDaemon(await accountStore.current(), services.maintain, intervalSeconds, signal, output),
     maintain: async () => {
       const account = await accountStore.current();
       return withBrowserSession(account, true, async () => {
@@ -51,4 +61,5 @@ export function createAuthServices(runtime: SkillRuntime): AuthServices {
       return withBrowserSession(account, true, () => auth.logout(account, capability));
     },
   };
+  return services;
 }

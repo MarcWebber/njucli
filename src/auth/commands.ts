@@ -20,6 +20,40 @@ export function registerAuthCommands(
       return { data, text: data.action === "restored" ? "已自动恢复统一认证会话" : "已维护统一认证会话" };
     }));
 
+  const daemon = auth.command("daemon").description("管理 macOS 后台会话保活服务");
+  addFormatOption(daemon.command("start").description("启动后台保活，登录 Mac 后自动运行")
+    .option("--interval <seconds>", "维护间隔（正整数秒）", "600"))
+    .action(async (options: FormatOptions & { interval: string }) => runCommand(runtime, options, async () => {
+      const data = await service.daemonStart(parseInterval(options.interval));
+      return { data, text: `已启用 ${data.account} 后台保活，每 ${data.intervalSeconds} 秒维护一次` };
+    }));
+  addFormatOption(daemon.command("status").description("查看后台保活与最近维护结果"))
+    .action(async (options: FormatOptions) => runCommand(runtime, options, async () => {
+      const data = await service.daemonStatus();
+      return { data, text: `${data.account}\t${data.running ? `运行中（PID ${data.pid}）` : data.enabled ? "已启用，进程已退出或正在启动" : "已停止"}\n日志：${data.logPath}\n最近成功：${data.lastSuccess?.checkedAt ?? "待首次维护"}` };
+    }));
+
+  addFormatOption(daemon.command("run", { hidden: true })
+    .option("--interval <seconds>", "维护间隔（正整数秒）", "600"))
+    .action(async (options: FormatOptions & { interval: string }) => runCommand(runtime, options, async () => {
+      const interval = parseInterval(options.interval);
+      const controller = new AbortController();
+      const stop = () => controller.abort();
+      process.once("SIGTERM", stop);
+      process.once("SIGINT", stop);
+      try { await service.daemonRun(interval, controller.signal, runtime.output); }
+      finally {
+        process.removeListener("SIGTERM", stop);
+        process.removeListener("SIGINT", stop);
+      }
+      return { data: { stopped: true }, text: "后台保活已停止" };
+    }));
+  addFormatOption(daemon.command("stop").description("停止后台保活并取消登录自动运行"))
+    .action(async (options: FormatOptions) => runCommand(runtime, options, async () => {
+      const data = await service.daemonStop();
+      return { data, text: `已停止 ${data.account} 后台保活` };
+    }));
+
   addFormatOption(auth.command("status [capability]").description("检查认证状态"))
     .action(async (capability: string | undefined, options: FormatOptions) => runCommand(runtime, options, async () => {
       const data = await service.status(parseCapability(capability));
@@ -51,6 +85,14 @@ export function registerAuthCommands(
     }));
 
   return auth;
+}
+
+function parseInterval(value: string): number {
+  const interval = Number(value);
+  if (!Number.isSafeInteger(interval) || interval <= 0 || interval * 1000 > 2_147_483_647) {
+    throw new AppError("INVALID_INPUT", "维护间隔应为 1–2147483 秒的整数");
+  }
+  return interval;
 }
 
 function parseCapability(value: string | undefined): AuthCapability | undefined {

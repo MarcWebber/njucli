@@ -5,6 +5,10 @@ import { join } from "node:path";
 import { createServer } from "node:http";
 import { once } from "node:events";
 import { spawn } from "node:child_process";
+import childProcess from "node:child_process";
+import os from "node:os";
+import { syncBuiltinESMExports } from "node:module";
+import { promisify } from "node:util";
 import { setTimeout as delay } from "node:timers/promises";
 import { test } from "node:test";
 import { Command } from "commander";
@@ -33,6 +37,8 @@ import { BrowserSession, withBrowserSession } from "../dist/src/auth/browser-ses
 import { texSessionDriver } from "../dist/src/auth/drivers/tex-browser.js";
 import { ssoSessionDriver } from "../dist/src/auth/drivers/sso-browser.js";
 import { registerAuthCommands } from "../dist/src/auth/commands.js";
+import { createAuthServices } from "../dist/src/auth/service.js";
+import { runAuthDaemon } from "../dist/src/auth/daemon.js";
 import { registerYouthCommands } from "../dist/skills/njucli-youth/scripts/commands.js";
 import { TableClient } from "../dist/skills/njucli-table/scripts/client.js";
 import { registerTableCommands } from "../dist/skills/njucli-table/scripts/commands.js";
@@ -878,6 +884,114 @@ test("认证：定时维护自动恢复失效会话并保存，后续调用复�
   assert.equal((await stat(join(account.configDir, "auth-maintenance.json"))).mode & 0o777, 0o600);
 });
 
+test("认证：后台服务固定账号与 CLI 常驻入口，校验参数，启动失败清理，停止取消自动运行", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "njucli-daemon-"));
+  const platform = Object.getOwnPropertyDescriptor(process, "platform");
+  const entry = process.argv[1];
+  const homeMock = t.mock.method(os, "homedir", () => join(directory, "home"));
+  const loaded = new Set();
+  let failBootstrap = false, commands = 0;
+  const originalExecFile = childProcess.execFile;
+  const commandMock = () => { throw new Error("use the asynchronous command interface"); };
+  commandMock[promisify.custom] = async (file, args) => {
+    commands++;
+    if (file === "/usr/bin/plutil") {
+      return { stdout: args.includes("-o") ? await readFile(args.at(-1), "utf8") : "", stderr: "" };
+    }
+    assert.equal(file, "/bin/launchctl");
+    if (args[0] === "print") {
+      if (!loaded.has(args[1])) throw Object.assign(new Error("service absent"), { code: 113 });
+    } else if (args[0] === "bootstrap") {
+      if (failBootstrap) throw Object.assign(new Error("bootstrap rejected"), { code: 5 });
+      const plist = JSON.parse(await readFile(args[2], "utf8"));
+      loaded.add(`${args[1]}/${plist.Label}`);
+    } else if (args[0] === "bootout") {
+      setTimeout(() => loaded.delete(args[1]), 15);
+    } else throw new Error(`unexpected launchctl action: ${args[0]}`);
+    return { stdout: "", stderr: "" };
+  };
+  childProcess.execFile = commandMock;
+  Object.defineProperty(process, "platform", { value: "darwin" });
+  process.argv[1] = await realpath(join("dist", "cli.js"));
+  syncBuiltinESMExports();
+  t.after(async () => {
+    homeMock.mock.restore(); childProcess.execFile = originalExecFile; syncBuiltinESMExports();
+    Object.defineProperty(process, "platform", platform);
+    process.argv[1] = entry;
+    await rm(directory, { recursive: true, force: true });
+  });
+  const account = { name: "daemon", configDir: join(directory, "config/njucli/accounts/daemon"), browserDataDir: join(directory, "data/njucli/accounts/daemon/browser") };
+  const service = createAuthServices({ accountStore: { current: async () => account } });
+  assert.equal((await command(registerAuthCommands, service, ["auth", "daemon", "start"])).error.code, "AUTH_REQUIRED");
+  assert.equal((await service.daemonStatus()).enabled, false);
+  const before = commands;
+  for (const interval of ["0", "-1", "1.5", "abc", "2147484"]) {
+    assert.equal((await command(registerAuthCommands, service, ["auth", "daemon", "start", "--interval", interval])).error.code, "INVALID_INPUT");
+  }
+  assert.equal(commands, before);
+  await writeJsonFile(join(account.configDir, "auth.json"), { username: "synthetic-user", password: "synthetic-secret" });
+  failBootstrap = true;
+  await assert.rejects(service.daemonStart(600), /bootstrap rejected/);
+  const stopped = await service.daemonStatus();
+  assert.equal(stopped.enabled, false);
+  await assert.rejects(stat(stopped.plistPath), { code: "ENOENT" });
+  failBootstrap = false;
+  const started = await command(registerAuthCommands, service, ["auth", "daemon", "start", "--interval", "120"]);
+  assert.equal(started.data.enabled, true);
+  assert.equal(started.data.intervalSeconds, 120);
+  const plist = JSON.parse(await readFile(started.data.plistPath, "utf8"));
+  assert.deepEqual(plist.ProgramArguments, [process.execPath, process.argv[1], "auth", "daemon", "run", "--interval", "120", "--format", "json"]);
+  assert.deepEqual(plist.EnvironmentVariables, { NJUCLI_ACCOUNT: "daemon", XDG_CONFIG_HOME: join(directory, "config"), XDG_DATA_HOME: join(directory, "data") });
+  assert.equal(plist.RunAtLoad, true);
+  assert.deepEqual(plist.KeepAlive, { Crashed: true });
+  assert.equal(JSON.stringify(plist).includes("synthetic-secret"), false);
+  assert.equal((await stat(started.data.plistPath)).mode & 0o777, 0o600);
+  assert.equal((await stat(started.data.logPath)).mode & 0o777, 0o600);
+  assert.equal((await command(registerAuthCommands, service, ["auth", "daemon", "start"])).error.code, "INVALID_INPUT");
+  await writeFile(started.data.logPath, '{"ok":false,"error":{"code":"AUTH_REQUIRED","message":"synthetic failure"}}\n');
+  assert.equal((await service.daemonStatus()).lastResult.error.code, "AUTH_REQUIRED");
+  assert.equal((await command(registerAuthCommands, service, ["auth", "daemon", "stop"])).data.enabled, false);
+  await assert.rejects(stat(started.data.plistPath), { code: "ENOENT" });
+  assert.equal((await service.daemonStop()).enabled, false);
+});
+
+test("认证：同一 CLI 进程循环维护，保存 PID，完成当前操作后停止并清理进程记录", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "njucli-daemon-loop-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const account = { name: "loop", configDir: directory, browserDataDir: join(directory, "browser") };
+  const path = join(directory, "auth-daemon.json");
+  let calls = 0, inFlight = 0, maximum = 0, output = "";
+  const controller = new AbortController();
+  const maintain = async () => {
+    calls++; inFlight++; maximum = Math.max(maximum, inFlight);
+    assert.equal(JSON.parse(await readFile(path, "utf8")).pid, process.pid);
+    await delay(5);
+    inFlight--;
+    if (calls === 1) throw new Error("synthetic network unavailable");
+    if (calls === 3) controller.abort();
+    return { checkedAt: new Date().toISOString(), action: "kept-alive", status: "valid" };
+  };
+  await runAuthDaemon(account, maintain, 0.01, controller.signal, { stdout: (value) => { output += value; }, stderr: () => {} });
+  assert.equal(calls, 3);
+  assert.equal(maximum, 1);
+  assert.deepEqual(output.trim().split("\n").map((line) => JSON.parse(line).ok), [false, true, true]);
+  await assert.rejects(stat(path), { code: "ENOENT" });
+  const idleController = new AbortController();
+  let ready;
+  const firstOutput = new Promise((resolve) => { ready = resolve; });
+  const idle = runAuthDaemon(account, async () => ({ checkedAt: new Date().toISOString(), action: "kept-alive", status: "valid" }), 600, idleController.signal,
+    { stdout: () => ready(), stderr: () => {} });
+  await firstOutput;
+  idleController.abort();
+  await idle;
+  await assert.rejects(stat(path), { code: "ENOENT" });
+  let rejected = 0;
+  await assert.rejects(runAuthDaemon(account, async () => { rejected++; throw new AppError("AUTH_REJECTED", "synthetic credential rejection"); }, 0.01, new AbortController().signal,
+    { stdout: () => {}, stderr: () => {} }), { code: "AUTH_REJECTED" });
+  assert.equal(rejected, 1);
+  await assert.rejects(stat(path), { code: "ENOENT" });
+});
+
 test("认证：纯 HTTP 查询跨调用保存会话与持久 Cookie，清除后不恢复旧身份", async (t) => {
   const directory = await mkdtemp(join(tmpdir(), "njucli-http-session-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
@@ -917,6 +1031,64 @@ test("认证：纯 HTTP 查询跨调用保存会话与持久 Cookie，清除后�
     assert.equal(JSON.parse(await (await session.request(`${origin}/check`)).text()).cookie, "");
   });
   assert.deepEqual(JSON.parse(await readFile(path, "utf8")), []);
+  await assert.rejects(stat(account.browserDataDir), { code: "ENOENT" });
+});
+
+test("认证：SSO 经 EHall 登录入口交换会话，跨调用回读真实登录状态", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "njucli-cas-portal-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const account = { name: "cas", configDir: directory, browserDataDir: join(directory, "browser") };
+  let rootValid = true, portalValid = true, exchanges = 0;
+  const server = createServer((req, res) => {
+    const url = new URL(req.url, "https://ehall.nju.edu.cn");
+    if (url.pathname === "/authserver/login") {
+      if (!rootValid) return res.end("login form");
+      const service = new URL(url.searchParams.get("service"));
+      res.writeHead(302, { location: `${service.pathname}${service.search}` });
+      return res.end();
+    }
+    if (url.pathname === "/login") {
+      const service = new URL(url.searchParams.get("service"));
+      assert.equal(service.pathname, "/ywtb-portal/official/index.html");
+      exchanges++;
+      res.writeHead(302, {
+        location: service.pathname,
+        "set-cookie": `MOD_AUTH_CAS=synthetic-${exchanges}; Path=/; HttpOnly`,
+      });
+      return res.end();
+    }
+    if (url.pathname === "/jsonp/userInfo.json") {
+      return res.end(JSON.stringify({ hasLogin: portalValid && Boolean(req.headers.cookie?.includes("MOD_AUTH_CAS=")) }));
+    }
+    res.end("portal page");
+  }).listen(0, "127.0.0.1");
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  await once(server, "listening");
+  const origin = `http://127.0.0.1:${server.address().port}`;
+  const run = (operation) => withBrowserSession(account, true, async (session) => {
+    const request = session.request;
+    session.request = async (input, init) => {
+      const target = new URL(input);
+      const response = await request(`${origin}${target.pathname}${target.search}`, init);
+      const final = new URL(response.url);
+      const host = final.pathname === "/authserver/login" ? "authserver.nju.edu.cn" : "ehall.nju.edu.cn";
+      return { ...response, url: `https://${host}${final.pathname}${final.search}` };
+    };
+    session.page = async () => { throw new Error("existing CAS session must use HTTP"); };
+    return operation();
+  });
+  assert.equal(await run(() => ssoSessionDriver.login(account)), true);
+  assert.equal(exchanges, 1);
+  assert.ok(JSON.parse(await readFile(join(directory, "session-cookies.json"), "utf8"))
+    .some((cookie) => cookie.name === "MOD_AUTH_CAS"));
+  assert.equal(await run(() => ssoSessionDriver.probe(account)), true);
+  assert.equal(exchanges, 2);
+  portalValid = false;
+  assert.equal(await run(() => ssoSessionDriver.probe(account)), false);
+  assert.equal(await run(() => ssoSessionDriver.login(account)), false);
+  rootValid = false;
+  portalValid = true;
+  assert.equal(await run(() => ssoSessionDriver.probe(account)), false);
   await assert.rejects(stat(account.browserDataDir), { code: "ENOENT" });
 });
 

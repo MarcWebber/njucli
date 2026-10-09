@@ -4,7 +4,7 @@ import { withBrowserSession } from "./browser-session.js";
 import { AuthCoordinator } from "./coordinator.js";
 import { seSessionDriver } from "./drivers/se-browser.js";
 import { boxSessionDriver } from "./drivers/box-browser.js";
-import { ssoSessionDriver } from "./drivers/sso-browser.js";
+import { EHALL_LOGIN_URL, ssoSessionDriver } from "./drivers/sso-browser.js";
 import { selectionSessionDriver } from "./drivers/selection-browser.js";
 import { texSessionDriver } from "./drivers/tex-browser.js";
 import { SessionStore } from "./session-store.js";
@@ -15,8 +15,6 @@ import { EHallTimetableClient } from "../../skills/njucli-ehall/scripts/timetabl
 import { NjuOpacClient } from "../../skills/njucli-library/scripts/client.js";
 import { YouthClient } from "../../skills/njucli-youth/scripts/client.js";
 import { TableClient } from "../../skills/njucli-table/scripts/client.js";
-
-const EHALL_URL = "https://ehall.nju.edu.cn/new/index.html";
 
 const VPN_TEST_URL = "https://www-nju-edu-cn-s.atrust.nju.edu.cn/";
 
@@ -31,7 +29,7 @@ export function createAuthCoordinator(): AuthCoordinator {
     const client = new EHallPortalClient(session.request);
     if (await client.hasSession())
       return true;
-    const response = await session.request(`https://ehall.nju.edu.cn/login?service=${encodeURIComponent(EHALL_URL)}`);
+    const response = await session.request(EHALL_LOGIN_URL);
     if (!response.ok)
       throw new Error(`EHall 登录返回 HTTP ${response.status}`);
     return client.hasSession();
