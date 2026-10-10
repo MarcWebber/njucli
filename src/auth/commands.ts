@@ -20,8 +20,8 @@ export function registerAuthCommands(
       return { data, text: data.action === "restored" ? "已自动恢复统一认证会话" : "已维护统一认证会话" };
     }));
 
-  const daemon = auth.command("daemon").description("管理 macOS 后台会话保活服务");
-  addFormatOption(daemon.command("start").description("启动后台保活，登录 Mac 后自动运行")
+  const daemon = auth.command("daemon").description("管理 CLI 后台会话保活进程");
+  addFormatOption(daemon.command("start").description("启动后台保活并注册登录自动运行")
     .option("--interval <seconds>", "维护间隔（正整数秒）", "600"))
     .action(async (options: FormatOptions & { interval: string }) => runCommand(runtime, options, async () => {
       const data = await service.daemonStart(parseInterval(options.interval));

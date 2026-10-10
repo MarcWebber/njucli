@@ -5,7 +5,11 @@ description: 登录南京大学统一身份认证、保存本地凭据、查询�
 
 # 统一身份认证
 
-以下命令在本 Skill 目录运行。网页登录需要 Google Chrome；扫码由本人完成。
+以下命令在本 Skill 目录运行；扫码由本人完成。
+
+## 运行前提
+
+已保存会话的查询通过 HTTP 执行，网页登录及页面操作按需启动本机浏览器。当前浏览器入口使用 Playwright 的 `chrome` 通道，后台进程的启动与停止使用本机 `launchd`。
 
 ## 登录与状态
 
@@ -22,19 +26,21 @@ node scripts/run.mjs account use ACCOUNT
 
 `account use` 或环境变量 `NJUCLI_ACCOUNT` 用于选择本地账号。业务命令会按需恢复登录，`auth status` 返回 `valid` 表示会话可用。CLI 使用专用浏览器与账号目录，普通浏览器中的登录由该浏览器独立保存。
 
+凭据和 Cookie 保存在 `~/.config/njucli/accounts/<账号>/`，可通过 `XDG_CONFIG_HOME` 设置配置根目录，文件权限为 0600。浏览器资料目录由 `XDG_DATA_HOME` 设置数据根目录。同一账号的调用通过进程锁串行读写 Cookie。
+
 ## 会话维护
 
 ```bash
 node scripts/run.mjs auth maintain --format json
 ```
 
-该命令每次执行维护一次：访问 CAS 统一认证，为 EHall 登录入口取得新的服务票据，完成跳转后以用户接口的 `hasLogin` 核对结果，并保存更新的 Cookie。会话有效时返回 `kept-alive`，用已存凭据恢复成功后返回 `restored`。
+该命令检查统一认证与 EHall 会话，并保存更新的 Cookie。会话有效时返回 `kept-alive`，用已存凭据恢复成功后返回 `restored`。
 
-用户要求定时维护时，按实际闲置期限设置执行间隔，并用 `NJUCLI_ACCOUNT` 固定要维护的账号。学校决定会话的闲置期限和最长有效期；最长有效期到达后，已存凭据用于重新建立会话。`CASTGC` 标识 CAS 根会话，EHall 的 `MOD_AUTH_CAS` 保存本站会话，URL 中的 `ticket=ST-...` 用于本次登录交换。维护成功表示本次认证链路与回读成功，持续有效时间通过周期执行和后续状态核对。
+学校决定会话的闲置期限和最长有效期；到期后使用已存凭据重新登录。用户要求持续维护时，启动下方后台进程，并按实际闲置期限设置间隔。
 
 ## 后台保活
 
-macOS 支持启动常驻的 CLI 后台进程，持续维护当前账号。先保存统一认证凭据，再启动进程：
+先保存统一认证凭据，再启动常驻 CLI 进程，持续维护当前账号：
 
 ```bash
 node scripts/run.mjs auth daemon start
@@ -42,11 +48,11 @@ node scripts/run.mjs auth daemon status --format json
 node scripts/run.mjs auth daemon stop
 ```
 
-默认启动后立即维护一次，之后在同一 CLI 进程内每 600 秒维护一次。使用 `start --interval 300` 可设为每五分钟；间隔支持 1–2147483 秒的整数。调整已启用进程的间隔时，先 `stop` 再 `start`。通过构建后的 CLI 或本 Skill 的 `scripts/run.mjs` 启动。
+启动后立即维护一次，之后每轮结束后等待 600 秒。使用 `start --interval 300` 可设为五分钟；间隔支持 1–2147483 秒的整数。调整间隔时先 `stop` 再 `start`。通过构建后的 CLI 或本 Skill 的 `scripts/run.mjs` 启动。
 
-进程固定启动时的账号与配置目录，每轮复用同一账号的 Cookie 和进程锁。launchd 管理进程的启动、停止、崩溃恢复和登录后自动启动。退出终端后继续运行；电脑运行期间按间隔维护，休眠期间暂停网络访问，唤醒后恢复执行。普通网络失败会输出脱敏错误，下个周期再执行维护。学校拒绝凭据、凭据缺失或要求本人操作时，进程结束；处理对应原因后，先 `stop` 再 `start`。停止时完成正在进行的维护并保存 Cookie，然后结束进程。
+进程固定启动时的账号与配置目录，每轮复用账号 Cookie 和进程锁，退出终端后继续运行。launchd 负责登录后启动与崩溃恢复。普通网络失败后在下个周期再维护；学校拒绝凭据、凭据缺失或要求本人操作时结束进程，处理原因后重新启动。
 
-`status` 的 `running/pid` 显示 CLI 进程状态，`enabled` 表示已注册登录后自动启动，`lastSuccess` 是最近成功的维护记录，`lastResult` 是后台最近输出。进程记录 `auth-daemon.json` 和日志 `auth-daemon.log` 位于账号目录，权限 0600；启动配置位于 `~/Library/LaunchAgents/cn.edu.nju.njucli.auth.<账号>.plist`。`stop` 结束进程并移除启动配置，保留账号、Cookie 与日志。需要保持退出状态时，先停止后台进程，再执行 `auth logout`。
+`status` 返回 `running/pid`（进程状态）、`enabled`（启动注册情况）、`lastSuccess`（最近成功维护）和 `lastResult`（最近输出）。账号目录中的 `auth-daemon.json` 与 `auth-daemon.log` 保存进程记录和脱敏日志，权限为 0600。`stop` 结束进程并移除启动配置；退出账号前先停止后台进程，再执行 `auth logout`。
 
 遇到登录错误时：
 

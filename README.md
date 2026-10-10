@@ -10,13 +10,13 @@
 
 ## 安装
 
-需要 Node.js 20+、Git 和 curl。网页登录需要 Google Chrome，目前主要在 macOS 上验证。
+需要 Node.js 20+、Git、curl 和 Bash。网页登录及页面操作使用本机浏览器，运行前提见[认证 Skill](skills/njucli-auth/SKILL.md#运行前提)。
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/install.sh | bash
 ```
 
-同时安装全局 `njucli` 和 Codex Skills。
+同时安装全局 `njucli` 和 Skills。Skill 默认注册到 `${CODEX_HOME:-~/.codex}/skills/`，可通过 `NJUCLI_SKILLS_DIR` 指定其他客户端的目录。使用 `NJUCLI_INSTALL_PREFIX` 指定 CLI 安装前缀时，将其 `bin` 目录加入 PATH。
 
 升级：
 
@@ -64,7 +64,7 @@ njucli campus today
 
 业务命令按需恢复校园登录。`njucli auth maintain` 执行一次统一认证与 EHall 会话维护；周期维护和登录状态核对见[认证 Skill](skills/njucli-auth/SKILL.md#会话维护)。
 
-macOS 可启动 CLI 后台保活进程（需要已存统一认证凭据）：
+保存统一认证凭据后，可启动 CLI 后台保活进程：
 
 ```bash
 njucli auth daemon start
@@ -72,7 +72,7 @@ njucli auth daemon status --format json
 njucli auth daemon stop
 ```
 
-常驻 CLI 进程默认每 10 分钟维护一次，`start --interval 300` 可调整为每五分钟。退出终端后继续运行，登录 Mac 后自动运行；状态返回进程 PID，详见[后台保活](skills/njucli-auth/SKILL.md#后台保活)。
+常驻 CLI 进程默认每轮结束后等待 10 分钟，`start --interval 300` 可设为五分钟。退出终端后继续运行，状态返回进程 PID；运行前提、启动与停止方式见[后台保活](skills/njucli-auth/SKILL.md#后台保活)。
 
 ## 文档
 

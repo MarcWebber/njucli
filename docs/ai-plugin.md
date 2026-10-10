@@ -1,6 +1,6 @@
 # AI 客户端接入
 
-NjuCLI 提供统一 CLI、91 个只读 stdio MCP 工具和 12 个独立 Skill。安装步骤见 [README](../README.md#安装)。
+NjuCLI 提供统一 CLI、只读 stdio MCP 工具和独立 Skill。安装步骤见 [README](../README.md#安装)。
 
 ## 选择入口
 
@@ -29,11 +29,9 @@ NjuCLI 提供统一 CLI、91 个只读 stdio MCP 工具和 12 个独立 Skill。
 
 宿主需能在 PATH 找到 `njucli`，也可将 `command` 改为本机绝对路径。`mcp` 使用标准输入输出传输协议。同一账号的调用由共享认证串行处理，读取最新 Cookie 后执行。
 
-TRAE 可按其[本地 MCP 配置](https://docs.trae.cn/ide_add-mcp-servers)接入，客户端端到端验证待完成；豆包 App 的本地插件导入入口尚未确认。
-
 ## 独立 Skill
 
-按需[安装单个 Skill](../README.md#只安装一个-skill)，然后让 AI 按该 Skill 完成任务。11 个业务 Skill 可独立提供对应的只读 MCP 工具；`njucli mcp` 提供全部 91 项。
+按需[安装单个 Skill](../README.md#只安装一个-skill)，然后让 AI 按该 Skill 完成任务。各业务 Skill 可独立提供对应的只读 MCP 工具；`njucli mcp` 提供全部工具，工具清单由客户端发现。
 
 例如安装软件学院课程 Skill：
 
@@ -57,4 +55,4 @@ curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/inst
 | [校园信息](../skills/njucli-campus/SKILL.md) | 查询新闻、通知和食堂；`campus today` 汇总当天课程、借阅和预约 |
 | [软件下载](../skills/njucli-software/SKILL.md) | 查询官方目录和安装包 ID，下载到指定位置 |
 
-上传、下载与远端写入使用 CLI。TeX 支持根目录单文件上传和同名替换；图片可使用 PNG、JPEG 或矢量 PDF，SVG 建议先转为 PDF。具体参数见对应 Skill，实网范围见[验证记录](design-v1.md#验收记录)。
+上传、下载与远端写入使用 CLI。具体参数见对应 Skill，远端契约与验证范围见[校园服务接口](interface-evidence.md)。
