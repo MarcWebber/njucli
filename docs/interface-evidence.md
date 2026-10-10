@@ -25,7 +25,9 @@
 
 SSO 的 CAS `service` 使用 EHall `/login?service=https%3A%2F%2Fehall.nju.edu.cn%2Fywtb-portal%2Fofficial%2Findex.html`。CAS 签发本次服务票据后回跳至该入口，由 EHall 建立本站 Cookie，最终到达 `/ywtb-portal/official/index.html`。登录、状态与维护以 `/jsonp/userInfo.json` 的 `hasLogin: true` 回读结果为成功条件。根会话由 `CASTGC` 标识，EHall 使用 `MOD_AUTH_CAS`；Cookie 由当次 HTTP 或浏览器 context 更新并保存。
 
-已实网核对 CAS 到 EHall 的会话交换、Cookie 跨进程保存，以及同一后台进程的连续维护和停止清理。自然过期后的恢复、重启与休眠恢复、跨学校会话最长有效期的持续运行仍待实网核对。后台命令与配置见[后台保活](../skills/njucli-auth/SKILL.md#后台保活)。
+已实网核对 CAS 到 EHall 的会话交换、Cookie 跨进程保存，以及同一后台进程的连续维护和停止清理。自然过期后的恢复、休眠恢复、跨学校会话最长有效期的持续运行仍待实网核对。后台命令与配置见[后台保活](../skills/njucli-auth/SKILL.md#后台保活)。
+
+校内实测 [p.nju 上网认证页面](https://p.nju.edu.cn/portal/index.html)使用 `GET /api/portal/v1/getinfo` 读取当前网络账号，`GET /api/portal/v1/ipoeonline` 读取网络接入状态。无 Cookie 请求可返回本人网络身份；这两个响应未包含 token 或设置 Cookie。以全新会话访问 CAS 仍进入登录表单，目前尚未确认从网络身份兑换 CAS 会话的接口。后台保活沿用已验证的 CAS 与 EHall 流程。
 
 ## 软件学院课程
 

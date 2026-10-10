@@ -9,7 +9,7 @@ description: 登录南京大学统一身份认证、保存本地凭据、查询�
 
 ## 运行前提
 
-已保存会话的查询通过 HTTP 执行，网页登录及页面操作按需启动本机浏览器。当前浏览器入口使用 Playwright 的 `chrome` 通道，后台进程的启动与停止使用本机 `launchd`。
+已保存会话的查询通过 HTTP 执行，网页登录及页面操作按需启动本机浏览器。当前浏览器入口使用 Playwright 的 `chrome` 通道。后台保活由 Node.js 启动独立 CLI 进程，在 Unix 系统上使用相同的命令和 XDG 目录规则。Windows 的后台进程行为待验证。
 
 ## 登录与状态
 
@@ -50,9 +50,11 @@ node scripts/run.mjs auth daemon stop
 
 启动后立即维护一次，之后每轮结束后等待 600 秒。使用 `start --interval 300` 可设为五分钟；间隔支持 1–2147483 秒的整数。调整间隔时先 `stop` 再 `start`。通过构建后的 CLI 或本 Skill 的 `scripts/run.mjs` 启动。
 
-进程固定启动时的账号与配置目录，每轮复用账号 Cookie 和进程锁，退出终端后继续运行。launchd 负责登录后启动与崩溃恢复。普通网络失败后在下个周期再维护；学校拒绝凭据、凭据缺失或要求本人操作时结束进程，处理原因后重新启动。
+进程固定启动时的账号与配置目录，每轮复用账号 Cookie 和进程锁，退出终端后继续运行。系统重启或进程退出后通过 `start` 恢复。普通网络失败后在下个周期再维护；学校拒绝凭据、凭据缺失或要求本人操作时结束进程，处理原因后重新启动。后台保活停止时，业务命令仍会按需检查和恢复会话。
 
-`status` 返回 `running/pid`（进程状态）、`enabled`（启动注册情况）、`lastSuccess`（最近成功维护）和 `lastResult`（最近输出）。账号目录中的 `auth-daemon.json` 与 `auth-daemon.log` 保存进程记录和脱敏日志，权限为 0600。`stop` 结束进程并移除启动配置；退出账号前先停止后台进程，再执行 `auth logout`。
+`status` 返回 `running/pid`（进程状态）、`intervalSeconds`（维护间隔）、`lastSuccess`（最近成功维护）和 `lastResult`（最近输出）。账号目录下的 `auth-daemon/process.json` 与 `auth-daemon/output.log` 保存进程记录和脱敏日志，权限为 0600。默认路径为 `~/.config/njucli/accounts/<账号>/auth-daemon/`；设置 `XDG_CONFIG_HOME` 后位于该根目录的 `njucli/accounts/<账号>/auth-daemon/`。
+
+`stop` 等待当前维护结束后清理进程记录。退出账号、删除账号或升级 CLI 前先停止后台进程；升级后重新启动，使用新的 CLI 入口。
 
 遇到登录错误时：
 
