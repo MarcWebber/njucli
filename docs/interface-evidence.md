@@ -46,16 +46,22 @@ SSO 的 CAS `service` 使用 EHall `/login?service=https%3A%2F%2Fehall.nju.edu.c
 
 ## 图书馆
 
-[图书馆官网](https://lib.nju.edu.cn/)的纸本检索和“我的图书馆”指向 `opac.nju.edu.cn`。实现参考 [WUST Library Mini Program](https://github.com/LingHangStudio/wust-library-mini-program) 的汇文接口；南大部署仍待校园网实测。
+[图书馆官网](https://lib.nju.edu.cn/)的纸本检索和“我的图书馆”指向 [OPAC](https://opac.nju.edu.cn/)，当前为图星/超星平台。2026-10-10 在校园网中依据官网实际请求、响应及页面核对以下契约。请求头携带南大的 `groupCode: 200027`，成功以 `success: true` 为准；成功响应的 `errCode` 包括 200、80000、9000065 等业务码。
 
-| 请求 | 结果字段 |
+| 请求 | 参数与结果 |
 | --- | --- |
-| `POST /meta-local/opac/search/` | `actualTotal/dataList`；书目 ID 为 `bibId` |
-| `GET /meta-local/opac/bibs/{id}/infos` | `map.baseInfo.map` |
-| `GET /meta-local/opac/bibs/{id}/holdings` | `holdings` 为 JSON 字符串，`itemsAvailable` 判断可借数量 |
-| `GET /meta-local/opac/users/loans?page=&pageSize=` | `dueDate/isOverdue` |
+| `POST /find/unify/indexSearch` | `searchFieldContent/searchField/matchMode/page/rows/indexSearch`；返回 `numFound/searchResult`，书目 ID 为 `recordId` |
+| `POST /find/unify/getPItemAndOnShelfCountAndDuxiuImageUrl` | `items: [{ recordId, title, isbn }]`；按 ID 返回 `pCount/onShelfCount`，供检索结果显示实时数量 |
+| `GET /find/searchResultDetail/getDetail?recordId=` | `clearTitle/authorOther` |
+| `POST /find/physical/groupitems` | `recordId/page/rows/isUnify/sortType/callNo/entrance`；返回 `totalCount/list`，逐页读取全部馆藏 |
+| `GET /oga/userinfo` | 通过 `userId` 确认读者会话；个人资料仅用于探测 |
+| `POST /find/loanInfo/loanList` | `page/rows/searchType/searchContent/sortType/startDate/endDate`；返回 `searchResult`，应还日期为 `normReturnDate` |
 
-检索请求使用 JSON，分页从 1 开始；响应 `code` 为 0 或 200 时读取 `data`。检索和馆藏经 WebVPN，借阅另需读者登录。
+检索字段 `all/title/author/isbn/callno` 分别映射 `keyWord/title/author/isbn/callNo`；匹配方式分别为 `2/2/1/1/3`。分页从 1 开始。馆藏使用 `libName/locationName/shelfNo/processType`，同时满足在架 `processTypeCode=411` 和可借 `circAttr=0` 时标记可借。检索数量按官网的第二次批量查询刷新；馆藏详情汇总本次逐册结果。
+
+书目与馆藏直接访问 OPAC。读者登录依赖 SSO，CAS service 为 `http://opac.nju.edu.cn:8081/CASSSO2/caslogin.jsp`；官网页面完成回跳并写入 `jwt` Cookie 后，以 `jwtOpacAuth` 请求头回读 `/oga/userinfo`。Cookie 经共享 `BrowserSession`、账号锁和原子文件保存，后续借阅调用复用当次会话；令牌字段在输出边界脱敏。
+
+实网通过五种检索字段、检索翻页和空结果、书目详情、8 册及跨页 90 册馆藏、读者登录、跨进程探测和当前借阅空列表。统一 CLI、独立 Skill 与两套 MCP 查询均已核对。正数借阅及逾期映射由本地集成验证。运行前提见[HTTPS 配置](../skills/njucli-library/references/network.md)，原始现象和截图见[校园网验证报告](reports/2026-10-10-intranet.md)。
 
 ## 体育场馆
 
@@ -68,22 +74,28 @@ SSO 的 CAS `service` 使用 EHall `/login?service=https%3A%2F%2Fehall.nju.edu.c
 | `/api/reservation/day/info` | `venueSiteId/searchDate/hasReserveInfo=1`；结果 `spaceTimeInfo/reservationDateSpaceInfo` |
 | `/api/orders/mine`、`/api/orders/{id}` | 订单列表与详情；列表分页从 0 开始 |
 
-请求携带 `cgAuthorization` 和 `scripts/signing.ts` 生成的签名。时段状态来自 `reservationStatus`，CLI 输出为 `state`。已有登录后接口探测、官方路由和 CLI 链接核对；实时余量与订单查询待完整实网验收。
+请求携带 `cgAuthorization` 和 `scripts/signing.ts` 生成的签名。时段状态来自 `reservationStatus`，CLI 输出为 `state`。2026-10-10 实网通过 35 个场地列表、场地详情、当日 7 个时段、14 条预约列表与可读取的预约详情。列表中的两条记录在详情接口返回学校的归属校验拒绝；CLI 保留该错误。官网详情按钮指向的记录已核对。具体查询与权限范围见[校园网验证报告](reports/2026-10-10-intranet.md)。
 
 ## 校园信息
 
 信息源涵盖南京大学、本科生院、研究生院、研究生招生、信息化中心、团委、科研和资产管理网站；地址与栏目路径集中在 `skills/njucli-campus/scripts/sources/`。列表与正文读取 HTML，文章 ID 与来源、栏目绑定。食堂名称和电话来自[后勤服务页](https://www.nju.edu.cn/xyfw/hqfw.htm)的“膳食中心”表格。
 
-七个可直连来源的列表与详情已核对；团委来源在验证网络下要求 VPN。今日汇总复用课表、借阅和体育查询。
+七个可直连来源的列表与详情已核对；2026-10-10 追加通过团委通知列表（14 条）、下一页标识与一篇正文的校园网实测。今日汇总复用课表、借阅和体育查询。
 
 ## 正版软件
 
 来源为[南大正版软件目录](https://itsc.nju.edu.cn/zbrj/list.htm)、[Adobe 离线包](https://itsc.nju.edu.cn/0e/53/c50138a593491/page.htm)和 [Adobe CC 直接下载页](https://helpx.adobe.com/cn/download-install/apps/download-install-apps/creative-cloud-apps/download-creative-cloud-desktop-app-using-direct-links.html)。安装包从页面的 HTTPS 链接取得，下载主机为 `download.nju.edu.cn`、`ccmdl.adobe.com` 或 `ccmdls.adobe.com`。
 
-目录、链接及 Adobe CC `macarm64` 下载已实网验证；校内安装包完整下载待校园网验收。
+目录、链接及 Adobe CC `macarm64` 下载已实网验证；2026-10-10 追加通过校内 MathType 英文安装包完整下载（45,413,408 字节），文件头为 Windows PE，保存权限为 0600。
 
 ## 校园邮箱
 
 [南大邮箱](https://mail.nju.edu.cn/)使用 `imap.exmail.qq.com:993` TLS；客户端专用密码需配合官网 IMAP/SMTP 开关。查询使用 `EXAMINE/BODY.PEEK`，保持邮件已读状态。邮件 ID 编码邮箱地址、邮件夹、`uidValidity` 与 UID，正文和附件按 ID 定位所属邮箱；附件编号从 1 开始。
 
 两个真实邮箱的绑定、切换、分页、搜索和正文已验证。真实附件下载及自动生成专用密码的完整绑定向导待实网验收。
+
+## 校医院接入评估
+
+[医院官网](https://hospital.nju.edu.cn/)的“自助服务”指向 [自助服务平台](https://ndyy.nju.edu.cn/zzfw/)。2026-10-10 已通过 `/zzfw/asLogin.aspx` 复用 SSO，回到 `/zzfw/Pages/Default.Aspx`，并读取 `/zzfw/ashx/PageInit.ashx` 的 `homeInfo/menuInfo`。实际菜单包括体检、疫苗、急救课程、活动和结核筛查预约，以及报告、大学生医保入口。
+
+独立 `njucli-hospital` Skill 可以按既有结构接入，认证能力由 SSO 派生。当前证据覆盖官网、认证和菜单；业务列表字段、报告下载与预约提交的接口仍需逐项核对。建议的首批功能和具体边界见[接入评估](reports/2026-10-10-intranet.md#校医院)。

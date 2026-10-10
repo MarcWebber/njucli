@@ -48,6 +48,12 @@ import { BoxClient } from "../dist/skills/njucli-box/scripts/client.js";
 import { exchangeSportsAccessToken } from "../dist/src/auth/sports-token.js";
 import { SportsClient } from "../dist/skills/njucli-sports/scripts/client.js";
 
+import { NjuOpacClient } from "../dist/skills/njucli-library/scripts/client.js";
+import { createLibraryServices } from "../dist/skills/njucli-library/scripts/services.js";
+import { registerLibraryCommands } from "../dist/skills/njucli-library/scripts/commands.js";
+import { opacSessionDriver } from "../dist/src/auth/drivers/opac-browser.js";
+import { redactText } from "../dist/src/core/redaction.js";
+
 async function command(register, service, args) {
   let stdout = "", stderr = "", code;
   const program = new Command().exitOverride();
@@ -1885,4 +1891,104 @@ test("协同表格 CLI：模板文件、分页与写入输入在提交前校验"
   assert.equal((await command(registerTableCommands, service, ["table", "preset", "gradebook", "--output", output])).code, 0);
   assert.equal(JSON.parse(await readFile(output, "utf8")).tables[0].name, "课程成绩");
   assert.equal((await stat(output)).mode & 0o777, 0o600);
+});
+
+
+test("图书馆：校园网检索、实时数量、多页馆藏和本人借阅共用真实契约", async (t) => {
+  const calls = [];
+  const holding = { callNo: "TP301.6/H87", libName: "南京大学", locationName: "仙林图书借阅区", shelfNo: "A-3", processType: "在架", processTypeCode: "411", circAttr: "0" };
+  let expired = false;
+  const request = await localHttp(t, async (req, res) => {
+    const url = new URL(req.url, "https://opac.nju.edu.cn");
+    const chunks = []; for await (const chunk of req) chunks.push(chunk);
+    const body = chunks.length ? JSON.parse(Buffer.concat(chunks).toString()) : undefined;
+    calls.push({ path: url.pathname, body });
+    assert.equal(req.headers.groupcode, "200027");
+    const json = (data, errCode = 200, success = true) => {
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({ success, errCode, message: "接口结果", data }));
+    };
+    if (url.pathname === "/oga/userinfo") {
+      assert.equal(req.headers.jwtOpacAuth ?? req.headers.jwtopacauth, "reader-token");
+      return expired ? json(null, 401, false) : json({ userId: "reader" });
+    }
+    if (url.pathname === "/find/searchResultDetail/getDetail") {
+      assert.equal(req.method, "GET"); assert.equal(url.searchParams.get("recordId"), "283571");
+      return json({ clearTitle: "算法导论", authorOther: "Cormen" }, 9000065);
+    }
+    assert.equal(req.method, "POST");
+    if (url.pathname === "/find/unify/indexSearch") {
+      assert.equal(body.page, 2); assert.equal(body.rows, 2);
+      return json({ numFound: 10, searchResult: [{ recordId: 283571, title: "算法导论", author: "Cormen", callNo: [holding.callNo], isbn: "978-7-111-40701-0", physicalCount: 99, onShelfCountI: 99 }] });
+    }
+    if (url.pathname === "/find/unify/getPItemAndOnShelfCountAndDuxiuImageUrl") {
+      assert.deepEqual(body.items.map((r) => r.recordId), [283571]);
+      return json({ 283571: { pCount: 12, onShelfCount: 10 } }, 9000065);
+    }
+    if (url.pathname === "/find/physical/groupitems") {
+      assert.equal(body.recordId, "283571"); assert.equal(body.rows, 10); assert.equal(body.isUnify, true);
+      return json({ totalCount: 12, list: body.page === 1 ? Array.from({ length: 10 }, () => holding) : [
+        { ...holding, processType: "借出", processTypeCode: "412", circAttr: "--" },
+        { ...holding, processType: "在架", circAttr: "1" },
+      ] });
+    }
+    assert.equal(url.pathname, "/find/loanInfo/loanList");
+    assert.equal(req.headers.jwtopacauth, "reader-token");
+    assert.deepEqual(body, { page: 2, rows: 3, searchType: 1, searchContent: "", sortType: 0, startDate: null, endDate: null });
+    return json({ searchResult: [{ title: "算法", normReturnDate: "2000-01-01 23:59:59" }, { title: "数学", normReturnDate: "2999-01-01" }], numFound: 2 });
+  });
+  const previousFetch = globalThis.fetch; globalThis.fetch = request;
+  t.after(() => { globalThis.fetch = previousFetch; });
+  let authCalls = 0;
+  const service = createLibraryServices({ withBrowser: async (capability, operation) => {
+    authCalls++; assert.equal(capability, "opac");
+    return operation({ request, cookie: async (origin, name) => {
+      assert.equal(origin, "https://opac.nju.edu.cn"); assert.equal(name, "jwt"); return "reader-token";
+    } });
+  } });
+  for (const [field, remote, match] of [["all", "keyWord", "2"], ["title", "title", "2"], ["author", "author", "1"], ["isbn", "isbn", "1"], ["callno", "callNo", "3"]]) {
+    const result = await command(registerLibraryCommands, service, ["library", "search", "算法", "--field", field, "--page", "2", "--page-size", "2"]);
+    assert.equal(result.ok, true); assert.equal(result.data.items[0].totalCopies, 12); assert.equal(result.data.items[0].availableCopies, 10);
+    assert.equal(calls.at(-2).body.searchField, remote); assert.equal(calls.at(-2).body.matchMode, match);
+  }
+  const book = await command(registerLibraryCommands, service, ["library", "book", "283571"]);
+  assert.equal(book.data.title, "算法导论"); assert.equal(book.data.totalCopies, 12); assert.equal(book.data.availableCopies, 10);
+  assert.deepEqual(calls.filter((c) => c.path.endsWith("groupitems")).map((c) => c.body.page), [1, 2]);
+  assert.equal(authCalls, 0);
+  const loans = await command(registerLibraryCommands, service, ["library", "loans", "--page", "2", "--page-size", "3"]);
+  assert.deepEqual(loans.data, [{ title: "算法", dueOn: "2000-01-01", overdue: true }, { title: "数学", dueOn: "2999-01-01", overdue: false }]);
+  assert.equal(authCalls, 1);
+  const client = new NjuOpacClient(request, "reader-token");
+  assert.equal(await client.hasSession(), true); expired = true; assert.equal(await client.hasSession(), false);
+  const before = calls.length;
+  assert.equal(await new NjuOpacClient(request).hasSession(), false);
+  await assert.rejects(new NjuOpacClient(request).loans(), { code: "AUTH_REQUIRED" });
+  assert.equal(calls.length, before);
+  assert.equal((await command(registerLibraryCommands, service, ["library", "search", "算法", "--page", "0"])).ok, false);
+  assert.equal(calls.length, before);
+  assert.equal(redactText("jwtopacauth: reader-token\nHTTP 500"), "jwtopacauth: [REDACTED]\nHTTP 500");
+});
+
+test("图书馆认证：CAS 页面写入 Cookie 后回读，跨调用复用读者令牌", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "njucli-opac-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const account = { name: "reader", configDir: directory, browserDataDir: join(directory, "browser") };
+  const originals = { page: BrowserSession.prototype.page, login: BrowserSession.prototype.login, cookie: BrowserSession.prototype.cookie };
+  t.after(() => Object.assign(BrowserSession.prototype, originals));
+  let ready = false, logins = 0, reads = 0;
+  const request = await localHttp(t, (_req, res) => { reads++; res.end(JSON.stringify({ success: true, data: { userId: "reader" } })); });
+  BrowserSession.prototype.page = async function () {
+    this.request = request;
+    return { waitForFunction: async () => { ready = true; } };
+  };
+  BrowserSession.prototype.login = async function (url, success) {
+    logins++; assert.equal(new URL(url).searchParams.get("service"), "http://opac.nju.edu.cn:8081/CASSSO2/caslogin.jsp");
+    assert.equal(success(new URL("https://opac.nju.edu.cn/")), true);
+  };
+  BrowserSession.prototype.cookie = async function () { this.request = request; return ready ? "reader-token" : undefined; };
+  const run = (operation) => withBrowserSession(account, true, (session) => { session.request = request; return operation(); });
+  assert.equal(await run(() => opacSessionDriver.probe(account)), false);
+  assert.equal(await run(() => opacSessionDriver.login(account)), true);
+  assert.equal(await run(() => opacSessionDriver.probe(account)), true);
+  assert.equal(logins, 1); assert.equal(reads, 2);
 });

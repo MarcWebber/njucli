@@ -1,153 +1,105 @@
 import { AppError } from "../../../src/core/errors.js";
+import { parseCampusDate } from "../../../src/core/dates.js";
 import { requiredText } from "../../../src/core/guards.js";
-import type { FetchLike, FetchResponse } from "../../../src/core/types.js";
-import { OPAC_BASE_URL, type BookRow, type HoldingRow, type LoanRow } from "./contract.js";
-import type {
-  LibraryBookDetail,
-  LibraryBookSummary,
-  LibraryHolding,
-  LibraryLoan,
-  LibrarySearchField,
-  LibrarySearchPage,
-} from "./types.js";
+import type { FetchLike } from "../../../src/core/types.js";
+import { OPAC_BASE_URL, OPAC_GROUP_CODE, type BookRow, type HoldingRow, type LoanRow } from "./contract.js";
+import type { LibraryBookDetail, LibraryHolding, LibraryLoan, LibrarySearchField, LibrarySearchPage } from "./types.js";
 
-/** The single remote client for NJU's Huiwen `meta-local` OPAC deployment. */
+const SEARCH_FIELDS = { all: "keyWord", title: "title", author: "author", isbn: "isbn", callno: "callNo" };
+
 export class NjuOpacClient {
-  constructor(
-    private readonly fetch: FetchLike,
-    private readonly baseUrl = OPAC_BASE_URL,
-  ) {}
+  constructor(private readonly fetch: FetchLike, private readonly token?: string) {}
 
-  async search(
-    query: string,
-    field: LibrarySearchField = "all",
-    page = 1,
-    pageSize = 20,
-  ): Promise<LibrarySearchPage> {
-    const normalizedQuery = requiredText(query, "query");
-    const data = await this.json<{ actualTotal: number; dataList: BookRow[] }>("/meta-local/opac/search/", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        queryFieldList: [{
-          logic: 0,
-          field,
-          operator: "*",
-          values: [normalizedQuery],
-        }],
-        sortType: "desc",
-        sortField: "relevance",
-        indexName: "idx.opac",
-        collapseField: "groupId",
-        filterFieldList: [],
-        page,
-        pageSize,
-      }),
+  async search(query: string, field: LibrarySearchField = "all", page = 1, pageSize = 20): Promise<LibrarySearchPage> {
+    const data = await this.json<{ numFound: number; searchResult: BookRow[] }>("/find/unify/indexSearch", {
+      searchFieldContent: requiredText(query, "query"),
+      searchField: SEARCH_FIELDS[field],
+      matchMode: field === "callno" ? "3" : field === "author" || field === "isbn" ? "1" : "2",
+      sortField: "relevance", sortClause: "asc", page, rows: pageSize, indexSearch: 1,
     });
+    const counts = data.searchResult.length === 0 ? {} : await this.json<Record<string, { pCount: number; onShelfCount: number }>>(
+      "/find/unify/getPItemAndOnShelfCountAndDuxiuImageUrl",
+      { items: data.searchResult.map((row) => ({ recordId: row.recordId, title: row.title, isbn: row.isbn })) },
+    );
     return {
-      total: Number(data.actualTotal),
-      items: data.dataList.map(mapBookSummary),
+      total: data.numFound,
+      items: data.searchResult.map((row) => ({
+        bookId: String(row.recordId), title: row.title, author: row.author,
+        callNumbers: row.callNo ?? [], totalCopies: counts[row.recordId]!.pCount, availableCopies: counts[row.recordId]!.onShelfCount,
+      })),
     };
   }
 
   async holdings(bookId: string): Promise<LibraryHolding[]> {
-    const id = requiredText(bookId, "bookId");
-    const data = await this.json<{ holdings: string }>(
-      `/meta-local/opac/bibs/${encodeURIComponent(id)}/holdings`,
-    );
-    const rows = JSON.parse(data.holdings) as HoldingRow[];
-    return rows.map((row) => ({
-      callNumber: row.callNo,
-      library: clean(row.library),
-      location: row.location,
-      shelfMark: clean(row.shelfMark),
-      status: row.status,
-      available: Number(row.itemsAvailable) > 0,
-    }));
+    const recordId = requiredText(bookId, "bookId");
+    const holdings: LibraryHolding[] = [];
+    let pages = 1;
+    for (let page = 1; page <= pages; page++) {
+      const data = await this.json<{ totalCount: number; list: HoldingRow[] }>("/find/physical/groupitems", {
+        recordId, page, rows: 10, entrance: null, isUnify: true, sortType: 0, callNo: "",
+      });
+      pages = Math.ceil(data.totalCount / 10);
+      holdings.push(...data.list.map((row) => ({
+        callNumber: row.callNo, library: row.libName, location: row.locationName,
+        shelfMark: row.shelfNo || null, status: row.processType,
+        available: row.processTypeCode === "411" && row.circAttr === "0",
+      })));
+    }
+    return holdings;
   }
 
   async book(bookId: string): Promise<LibraryBookDetail> {
     const id = requiredText(bookId, "bookId");
     const [data, holdings] = await Promise.all([
-      this.json<{ map: { baseInfo: { map: { title: string; author?: string | null } } } }>(`/meta-local/opac/bibs/${encodeURIComponent(id)}/infos`),
+      this.json<{ clearTitle: string; authorOther: string | null }>(`/find/searchResultDetail/getDetail?recordId=${encodeURIComponent(id)}`),
       this.holdings(id),
     ]);
-    const base = data.map.baseInfo.map;
     return {
-      bookId: id,
-      title: base.title,
-      author: clean(base.author),
+      bookId: id, title: data.clearTitle, author: data.authorOther,
       callNumbers: [...new Set(holdings.map((entry) => entry.callNumber))],
-      totalCopies: holdings.length,
-      availableCopies: holdings.filter((entry) => entry.available).length,
-      holdings,
+      totalCopies: holdings.length, availableCopies: holdings.filter((entry) => entry.available).length, holdings,
     };
   }
 
-  async loans(page = 1, pageSize = 50): Promise<LibraryLoan[]> {
-    const rows = await this.json<LoanRow[]>(`/meta-local/opac/users/loans?page=${page}&pageSize=${pageSize}`);
-    return rows.map(mapLoan);
+  async hasSession(): Promise<boolean> {
+    if (!this.token) return false;
+    try {
+      const data = await this.json<{ userId: string }>("/oga/userinfo");
+      return Boolean(data.userId);
+    } catch (error) {
+      if (error instanceof AppError && error.code === "AUTH_REQUIRED") return false;
+      throw error;
+    }
   }
 
-  private async json<T>(path: string, init?: RequestInit): Promise<T> {
-    const response = await this.request(path, init);
-    const result = JSON.parse(await response.text()) as { code: string | number; msg?: string; data: T };
-    const code = Number(result.code);
-    if (code === 401 || code === 403) throw opacAuthRequired();
-    if (code !== 0 && code !== 200) throw new Error(result.msg || `图书馆请求失败 (${code}): ${path}`);
+  async loans(page = 1, pageSize = 50): Promise<LibraryLoan[]> {
+    if (!this.token) throw opacAuthRequired();
+    const data = await this.json<{ searchResult: LoanRow[] }>("/find/loanInfo/loanList", {
+      page, rows: pageSize, searchType: 1, searchContent: "", sortType: 0, startDate: null, endDate: null,
+    });
+    const today = parseCampusDate("today");
+    return data.searchResult.map((row) => {
+      const dueOn = row.normReturnDate.slice(0, 10);
+      return { title: row.title, dueOn, overdue: dueOn < today };
+    });
+  }
+
+  private async json<T>(path: string, body?: unknown): Promise<T> {
+    const headers: Record<string, string> = { groupCode: OPAC_GROUP_CODE };
+    if (this.token) headers.jwtOpacAuth = this.token;
+    if (body !== undefined) headers["content-type"] = "application/json";
+    const response = await this.fetch(new URL(path, OPAC_BASE_URL), {
+      headers, ...(body === undefined ? {} : { method: "POST", body: JSON.stringify(body) }),
+    });
+    if (response.status === 401 || response.status === 403 || new URL(response.url).hostname === "authserver.nju.edu.cn") throw opacAuthRequired();
+    if (!response.ok) throw new Error(`图书馆 OPAC 返回 HTTP ${response.status}`);
+    const result = JSON.parse(await response.text()) as { success: boolean; errCode: number; message: string; data: T };
+    if (result.errCode === 401 || result.errCode === 403) throw opacAuthRequired();
+    if (!result.success) throw new Error(result.message);
     return result.data;
   }
-
-  private async request(path: string, init?: RequestInit): Promise<FetchResponse> {
-    const response = await this.fetch(new URL(path, this.baseUrl), init);
-
-    if (response.status === 403) {
-      const body = await response.text();
-      if (/南大VPN|VPN/i.test(body)) {
-        throw new AppError("VPN_REQUIRED", "南京大学 OPAC 当前要求校园网或南大 VPN", {
-          hint: "连接校园网或南大 VPN 后重试",
-        });
-      }
-      throw opacAuthRequired();
-    }
-    if (response.status === 401 || new URL(response.url).hostname === "authserver.nju.edu.cn") {
-      throw opacAuthRequired();
-    }
-    if (!response.ok) {
-      throw new Error(`图书馆 OPAC 返回 HTTP ${response.status}`);
-    }
-    return response;
-  }
-}
-
-function mapBookSummary(row: BookRow): LibraryBookSummary {
-  return {
-    bookId: String(row.bibId),
-    title: row.title,
-    author: clean(row.author),
-    callNumbers: row.callno ?? [],
-    totalCopies: Number(row.itemCount),
-    availableCopies: Number(row.circCount),
-  };
-}
-
-function mapLoan(row: LoanRow): LibraryLoan {
-  return {
-    title: row.title,
-    dueOn: row.dueDate.slice(0, 10),
-    overdue: Number(row.isOverdue) !== 0,
-  };
 }
 
 function opacAuthRequired(): AppError {
-  return new AppError("AUTH_REQUIRED", "图书馆读者会话未登录或已经失效", {
-    hint: "运行 njucli auth login opac",
-    authCommand: "njucli auth login opac",
-  });
-}
-
-function clean(value: string | number | null | undefined): string | null {
-  if (value == null) return null;
-  const normalized = String(value).trim();
-  return normalized || null;
+  return new AppError("AUTH_REQUIRED", "请完成图书馆读者登录", { authCommand: "njucli auth login opac" });
 }

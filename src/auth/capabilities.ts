@@ -12,7 +12,7 @@ export const AUTH_DEPENDENCIES: Readonly<Record<AuthCapability, readonly AuthCap
   sports: ["sso"],
   youth: ["sso"],
   table: ["sso"],
-  opac: ["vpn"],
+  opac: ["sso"],
 };
 
 export function dependsOn(
