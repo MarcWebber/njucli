@@ -20,8 +20,8 @@ export function registerAuthCommands(
       return { data, text: data.action === "restored" ? "已自动恢复统一认证会话" : "已维护统一认证会话" };
     }));
 
-  const daemon = auth.command("daemon").description("管理 macOS 后台会话保活服务");
-  addFormatOption(daemon.command("start").description("启动后台保活，登录 Mac 后自动运行")
+  const daemon = auth.command("daemon").description("管理 CLI 后台会话保活进程");
+  addFormatOption(daemon.command("start").description("启动独立的 CLI 后台保活进程")
     .option("--interval <seconds>", "维护间隔（正整数秒）", "600"))
     .action(async (options: FormatOptions & { interval: string }) => runCommand(runtime, options, async () => {
       const data = await service.daemonStart(parseInterval(options.interval));
@@ -30,12 +30,13 @@ export function registerAuthCommands(
   addFormatOption(daemon.command("status").description("查看后台保活与最近维护结果"))
     .action(async (options: FormatOptions) => runCommand(runtime, options, async () => {
       const data = await service.daemonStatus();
-      return { data, text: `${data.account}\t${data.running ? `运行中（PID ${data.pid}）` : data.enabled ? "已启用，进程已退出或正在启动" : "已停止"}\n日志：${data.logPath}\n最近成功：${data.lastSuccess?.checkedAt ?? "待首次维护"}` };
+      return { data, text: `${data.account}\t${data.running ? `运行中（PID ${data.pid}）` : "已停止"}\n日志：${data.logPath}\n最近成功：${data.lastSuccess?.checkedAt ?? "待首次维护"}` };
     }));
 
   addFormatOption(daemon.command("run", { hidden: true })
     .option("--interval <seconds>", "维护间隔（正整数秒）", "600"))
     .action(async (options: FormatOptions & { interval: string }) => runCommand(runtime, options, async () => {
+      if (!process.send) throw new AppError("INVALID_INPUT", "请使用 auth daemon start 启动后台保活");
       const interval = parseInterval(options.interval);
       const controller = new AbortController();
       const stop = () => controller.abort();
@@ -48,7 +49,7 @@ export function registerAuthCommands(
       }
       return { data: { stopped: true }, text: "后台保活已停止" };
     }));
-  addFormatOption(daemon.command("stop").description("停止后台保活并取消登录自动运行"))
+  addFormatOption(daemon.command("stop").description("完成当前维护后停止后台保活"))
     .action(async (options: FormatOptions) => runCommand(runtime, options, async () => {
       const data = await service.daemonStop();
       return { data, text: `已停止 ${data.account} 后台保活` };

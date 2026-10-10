@@ -114,7 +114,7 @@
 | `SKZC` | 教学周位图，`1` 表示该周有课 |
 | `JASMC / XXXQDM_DISPLAY` | 地点 / 校区 |
 
-接口与响应键沿用初始提交引用的 [nju-cli/nju-cli 固定版本](https://github.com/nju-cli/nju-cli/tree/df8716a4ee202ed8f7967b3732c8b2e53c961063)；该链接目前返回 404。节次钟点参考 [nju-schedule-ics](https://github.com/SuperKenVery/nju-schedule-ics)。这些课表查询与钟点仍待南大实网逐项核对。
+接口与响应键参考 `nju-cli/nju-cli`，当前定义见 [课表请求契约](../scripts/timetable-contract.ts)。节次钟点参考 [nju-schedule-ics](https://github.com/SuperKenVery/nju-schedule-ics)。课表查询与钟点仍待南大实网逐项核对。
 
 ## 研究生选课
 

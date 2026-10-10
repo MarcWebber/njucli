@@ -17,21 +17,17 @@
 | 协同表格 | [表格、记录、公式与视图](../skills/njucli-table/references/interfaces.md) |
 | 南大云盘 | [资料库、文件、分享与协作](../skills/njucli-box/references/interfaces.md) |
 
-本地检查见[构建验证](skill-layout.md#验证)，学校服务的实际验证范围见[验收记录](design-v1.md#验收记录)。
+本地检查见[贡献指南](../CONTRIBUTING.md#实现约定)。各节记录对应的实网验证范围；远端写入使用用户指定的目标和材料。
 
 ## 统一认证
 
-登录入口为[南大统一身份认证](https://authserver.nju.edu.cn/authserver/login)。各站点的登录与会话探测集中在 `src/auth/`，业务复用同一账号的会话；账号文件、Cookie 保存和进程锁见[账号与认证](design-v1.md#账号与认证)。
+登录入口为[南大统一身份认证](https://authserver.nju.edu.cn/authserver/login)。各站点的登录与会话探测集中在 `src/auth/`，业务复用同一账号的会话；账号与会话操作见[认证 Skill](../skills/njucli-auth/SKILL.md)。
 
 SSO 的 CAS `service` 使用 EHall `/login?service=https%3A%2F%2Fehall.nju.edu.cn%2Fywtb-portal%2Fofficial%2Findex.html`。CAS 签发本次服务票据后回跳至该入口，由 EHall 建立本站 Cookie，最终到达 `/ywtb-portal/official/index.html`。登录、状态与维护以 `/jsonp/userInfo.json` 的 `hasLogin: true` 回读结果为成功条件。根会话由 `CASTGC` 标识，EHall 使用 `MOD_AUTH_CAS`；Cookie 由当次 HTTP 或浏览器 context 更新并保存。
 
-2026-10-09 实网核对：以 `/new/index.html` 作为 CAS service 时，统一认证返回带服务票据的回跳，EHall 用户接口仍为 `hasLogin: false`；经 `/login?service=...official/index.html` 完成交换后，该接口返回 `true`。源码据此统一 SSO 和 EHall 入口。隔离临时账号仅保留已有 CAS Cookie，EHall 初始状态为 `false`，修复版登录后为 `true`，新进程 SSO 探测为 `true`；当前账号的修复版维护返回 `kept-alive/valid`，后续独立进程分别确认 SSO、EHall 为 `valid`。本地 33 项集成检查通过，覆盖跨调用保存和真实状态回读。会话闲置期限、最长有效期与跨期限持续维护分别以实际运行记录核对。
+已实网核对 CAS 到 EHall 的会话交换、Cookie 跨进程保存，以及同一后台进程的连续维护和停止清理。自然过期后的恢复、休眠恢复、跨学校会话最长有效期的持续运行仍待实网核对。后台命令与配置见[后台保活](../skills/njucli-auth/SKILL.md#后台保活)。
 
-后台维护由 CLI 常驻进程执行。macOS 用户级 launchd 负责生命周期，契约见 [Apple 后台服务说明](https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingLaunchdJobs.html)。`auth daemon start` 保存当前 CLI/Skill 的绝对入口和固定账号，通过 `launchctl bootstrap gui/<uid> <plist>` 注册；`RunAtLoad` 启动 `auth daemon run`，`KeepAlive.Crashed` 恢复崩溃进程。CLI 在同一进程内串行维护并等待指定间隔，每轮维护保存 Cookie、释放账号锁。`status` 核对进程记录中的 PID、服务注册结果、维护记录和日志；`stop` 通过 `bootout` 发送停止信号，CLI 完成本轮维护并清理进程记录，随后删除 plist。普通网络失败由下个周期处理；学校拒绝凭据、缺少凭据或要求本人操作时结束进程。
-
-后台验收覆盖 CLI 循环的串行维护、PID 保存、普通网络失败后的下轮维护、凭据拒绝后结束、停止信号与进程记录清理，以及启动配置的固定账号、参数校验和失败清理。实网验收以同一 PID 的多轮成功输出和进程停止后的清理结果为依据；重启、休眠恢复及跨学校会话最长有效期的持续运行分别核对。
-
-2026-10-10 验收：本地 lint、构建及 35 项集成检查通过，实际 tarball 已安装并运行。实网以两秒间隔确认同一 CLI PID 连续两轮返回 `kept-alive/valid`；停止后进程记录清理，服务状态为 `enabled: false / running: false`。随后按默认 600 秒间隔重新启动，进程命令为 `auth daemon run --interval 600 --format json`，首轮维护返回 `valid`，进程记录与日志权限均为 0600。
+校内实测 [p.nju 上网认证页面](https://p.nju.edu.cn/portal/index.html)使用 `GET /api/portal/v1/getinfo` 读取当前网络账号，`GET /api/portal/v1/ipoeonline` 读取网络接入状态。无 Cookie 请求可返回本人网络身份；这两个响应未包含 token 或设置 Cookie。以全新会话访问 CAS 仍进入登录表单，目前尚未确认从网络身份兑换 CAS 会话的接口。后台保活沿用已验证的 CAS 与 EHall 流程。
 
 ## 软件学院课程
 
@@ -63,7 +59,7 @@ SSO 的 CAS `service` 使用 EHall `/login?service=https%3A%2F%2Fehall.nju.edu.c
 
 ## 体育场馆
 
-来源为[南大体育场馆系统](https://ggtypt.nju.edu.cn/venue/)及 [nju-cli 场馆实现](https://github.com/nju-cli/nju-cli/blob/df8716a4ee202ed8f7967b3732c8b2e53c961063/crates/cli/src/venue.rs)。以下路径相对 `https://ggtypt.nju.edu.cn/venue-server`，请求均为 GET，响应 `code=200` 时读取 `data`。
+来源为[南大体育场馆系统](https://ggtypt.nju.edu.cn/venue/)，接口参考 `nju-cli/nju-cli` 的场馆实现。当前请求定义见 [场馆 client](../skills/njucli-sports/scripts/client.ts)。以下路径相对 `https://ggtypt.nju.edu.cn/venue-server`，请求均为 GET，响应 `code=200` 时读取 `data`。
 
 | 路径 | 主要参数或字段 |
 | --- | --- |

@@ -6,7 +6,7 @@ description: 管理南京大学 TeXPage 项目，撰写与修改 LaTeX 论文、
 # TeX 写作
 
 以下命令在本 Skill 目录运行。
-首次使用需登录：`node scripts/run.mjs auth login tex`（需要本机安装 Google Chrome）。同一账号请串行执行写操作命令。
+首次使用需登录：`node scripts/run.mjs auth login tex`。同一账号请串行执行写操作命令。
 
 ## 项目与模板
 

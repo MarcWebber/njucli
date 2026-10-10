@@ -4,7 +4,7 @@
 
 ## 提交修改
 
-1. 从最新 `main` 创建分支；外部贡献者先 Fork 仓库。
+1. 从最新 `main` 创建分支，按改动类型使用 `feat/<主题>`、`fix/<主题>`、`docs/<主题>` 或 `refactor/<主题>`；外部贡献者先 Fork 仓库。
 2. 围绕一个具体问题修改，并补充受影响的文档或轻量集成用例。
 3. 在 Node.js 20+、pnpm 10.27.0 下执行：
 
@@ -27,14 +27,12 @@
 
 规则的可复核配置位于 [.github/main-ruleset.json](.github/main-ruleset.json)，实际生效状态见 [GitHub Rules](https://github.com/MarcWebber/njucli/rules)。CI 和自动评审均不代替维护者对接口契约及实网验收范围的判断。
 
-## 自动评审
-
-仓库的评审重点记录在 [AGENTS.md](AGENTS.md#code-review-rules)。维护者的本地每日任务检查新的或有更新的 PR，把有证据的问题发布为评审评论；无明确问题时不发布占位评论。该任务不批准或合入 PR，运行取决于本地 Codex 宿主与 GitHub 登录状态。
-
-Codex 云端也支持自动评审：在 [Code review 设置](https://chatgpt.com/codex/settings/code-review) 连接本仓库并开启 Code review 与 Automatic reviews。配置后可在 PR 评论中使用 `@codex review` 手动触发。配置步骤以 [OpenAI 官方说明](https://learn.chatgpt.com/docs/third-party/github)为准；本地每日任务与云端开关分别管理。
-
 ## 实现约定
 
 完整开发规范见 [AGENTS.md](AGENTS.md)。业务实现与说明放在所属 `skills/njucli-*/`；教务、课表、选课和办事大厅归 `njucli-ehall`，软件学院课程归 `njucli-se`。认证集中在 `src/auth/`。
 
 新增远端能力先验证实际契约，再接入所属 Skill 的 client、命令和只读 MCP。简短说明直接写入 `SKILL.md`，较长流程和接口表放入 `references/`；接口索引见[校园服务接口](docs/interface-evidence.md)。
+
+构建为每个 Skill 生成 `scripts/run.mjs` 和依赖清单 `package.json`，共享源码打入入口。修改认证等共享代码后重新构建全部 Skill；生成的目录可独立安装运行。
+
+`pnpm test` 先构建，再运行本地集成；独立 Skill 用例会将目录复制到临时位置，仅安装声明的依赖，核对入口、账号共享和 MCP 契约。打包前运行 `npm pack --dry-run` 检查清单，并将实际 tarball 安装到临时目录核对命令。评审重点见 [Code Review Rules](AGENTS.md#code-review-rules)。

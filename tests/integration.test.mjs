@@ -4,10 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createServer } from "node:http";
 import { once } from "node:events";
-import { spawn } from "node:child_process";
-import childProcess from "node:child_process";
-import os from "node:os";
-import { syncBuiltinESMExports } from "node:module";
+import { spawn, execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { setTimeout as delay } from "node:timers/promises";
 import { test } from "node:test";
@@ -884,82 +881,113 @@ test("认证：定时维护自动恢复失效会话并保存，后续调用复�
   assert.equal((await stat(join(account.configDir, "auth-maintenance.json"))).mode & 0o777, 0o600);
 });
 
-test("认证：后台服务固定账号与 CLI 常驻入口，校验参数，启动失败清理，停止取消自动运行", async (t) => {
+test("认证：独立后台进程跨调用存活，固定账号，拒绝重复启动与未授权停止，停止后清理", async (t) => {
   const directory = await mkdtemp(join(tmpdir(), "njucli-daemon-"));
-  const platform = Object.getOwnPropertyDescriptor(process, "platform");
-  const entry = process.argv[1];
-  const homeMock = t.mock.method(os, "homedir", () => join(directory, "home"));
-  const loaded = new Set();
-  let failBootstrap = false, commands = 0;
-  const originalExecFile = childProcess.execFile;
-  const commandMock = () => { throw new Error("use the asynchronous command interface"); };
-  commandMock[promisify.custom] = async (file, args) => {
-    commands++;
-    if (file === "/usr/bin/plutil") {
-      return { stdout: args.includes("-o") ? await readFile(args.at(-1), "utf8") : "", stderr: "" };
-    }
-    assert.equal(file, "/bin/launchctl");
-    if (args[0] === "print") {
-      if (!loaded.has(args[1])) throw Object.assign(new Error("service absent"), { code: 113 });
-    } else if (args[0] === "bootstrap") {
-      if (failBootstrap) throw Object.assign(new Error("bootstrap rejected"), { code: 5 });
-      const plist = JSON.parse(await readFile(args[2], "utf8"));
-      loaded.add(`${args[1]}/${plist.Label}`);
-    } else if (args[0] === "bootout") {
-      setTimeout(() => loaded.delete(args[1]), 15);
-    } else throw new Error(`unexpected launchctl action: ${args[0]}`);
-    return { stdout: "", stderr: "" };
+  const configRoot = join(directory, "config"), dataRoot = join(directory, "data");
+  const configDir = join(configRoot, "njucli/accounts/one");
+  const environment = { ...process.env, XDG_CONFIG_HOME: configRoot, XDG_DATA_HOME: dataRoot, NJUCLI_ACCOUNT: "one" };
+  const entry = join(directory, "entry.mjs");
+  const module = (path) => new URL(`../dist/src/${path}.js`, import.meta.url).href;
+  await writeFile(entry, `
+import { AccountStore } from ${JSON.stringify(module("account/store"))};
+import { createAuthServices } from ${JSON.stringify(module("auth/service"))};
+import { registerAuthCommands } from ${JSON.stringify(module("auth/commands"))};
+import { createProgram, createCommandRuntime } from ${JSON.stringify(module("core/command"))};
+import { writeJsonFile } from ${JSON.stringify(module("core/fs"))};
+import { join } from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
+const accountStore = new AccountStore();
+const service = createAuthServices({ accountStore });
+let calls = 0;
+service.maintain = async () => {
+  const account = await accountStore.current();
+  await writeJsonFile(join(account.configDir, 'active.json'), { calls: ++calls });
+  await delay(150);
+  const result = { checkedAt: new Date().toISOString(), action: 'kept-alive', status: 'valid' };
+  await writeJsonFile(join(account.configDir, 'auth-maintenance.json'), result);
+  await writeJsonFile(join(account.configDir, 'completed.json'), { ...account, calls, cwd: process.cwd() });
+  return result;
+};
+const program = createProgram('fixture');
+registerAuthCommands(program, service, createCommandRuntime());
+await program.parseAsync();
+`);
+  await writeJsonFile(join(configRoot, "njucli/accounts.json"), { accounts: ["one", "two"], current: "two" });
+  const cli = async (...args) => {
+    const result = await promisify(execFile)(process.execPath, [entry, "auth", "daemon", ...args, "--format", "json"],
+      { env: environment, timeout: 10_000 }).catch((error) => { if (error.stdout) return error; throw error; });
+    return JSON.parse(result.stdout);
   };
-  childProcess.execFile = commandMock;
-  Object.defineProperty(process, "platform", { value: "darwin" });
-  process.argv[1] = await realpath(join("dist", "cli.js"));
-  syncBuiltinESMExports();
   t.after(async () => {
-    homeMock.mock.restore(); childProcess.execFile = originalExecFile; syncBuiltinESMExports();
-    Object.defineProperty(process, "platform", platform);
-    process.argv[1] = entry;
+    await cli("stop");
     await rm(directory, { recursive: true, force: true });
   });
-  const account = { name: "daemon", configDir: join(directory, "config/njucli/accounts/daemon"), browserDataDir: join(directory, "data/njucli/accounts/daemon/browser") };
-  const service = createAuthServices({ accountStore: { current: async () => account } });
-  assert.equal((await command(registerAuthCommands, service, ["auth", "daemon", "start"])).error.code, "AUTH_REQUIRED");
-  assert.equal((await service.daemonStatus()).enabled, false);
-  const before = commands;
+  assert.equal((await cli("start")).error.code, "AUTH_REQUIRED");
   for (const interval of ["0", "-1", "1.5", "abc", "2147484"]) {
-    assert.equal((await command(registerAuthCommands, service, ["auth", "daemon", "start", "--interval", interval])).error.code, "INVALID_INPUT");
+    assert.equal((await cli("start", "--interval", interval)).error.code, "INVALID_INPUT");
   }
-  assert.equal(commands, before);
-  await writeJsonFile(join(account.configDir, "auth.json"), { username: "synthetic-user", password: "synthetic-secret" });
-  failBootstrap = true;
-  await assert.rejects(service.daemonStart(600), /bootstrap rejected/);
-  const stopped = await service.daemonStatus();
-  assert.equal(stopped.enabled, false);
-  await assert.rejects(stat(stopped.plistPath), { code: "ENOENT" });
-  failBootstrap = false;
-  const started = await command(registerAuthCommands, service, ["auth", "daemon", "start", "--interval", "120"]);
-  assert.equal(started.data.enabled, true);
-  assert.equal(started.data.intervalSeconds, 120);
-  const plist = JSON.parse(await readFile(started.data.plistPath, "utf8"));
-  assert.deepEqual(plist.ProgramArguments, [process.execPath, process.argv[1], "auth", "daemon", "run", "--interval", "120", "--format", "json"]);
-  assert.deepEqual(plist.EnvironmentVariables, { NJUCLI_ACCOUNT: "daemon", XDG_CONFIG_HOME: join(directory, "config"), XDG_DATA_HOME: join(directory, "data") });
-  assert.equal(plist.RunAtLoad, true);
-  assert.deepEqual(plist.KeepAlive, { Crashed: true });
-  assert.equal(JSON.stringify(plist).includes("synthetic-secret"), false);
-  assert.equal((await stat(started.data.plistPath)).mode & 0o777, 0o600);
-  assert.equal((await stat(started.data.logPath)).mode & 0o777, 0o600);
-  assert.equal((await command(registerAuthCommands, service, ["auth", "daemon", "start"])).error.code, "INVALID_INPUT");
-  await writeFile(started.data.logPath, '{"ok":false,"error":{"code":"AUTH_REQUIRED","message":"synthetic failure"}}\n');
-  assert.equal((await service.daemonStatus()).lastResult.error.code, "AUTH_REQUIRED");
-  assert.equal((await command(registerAuthCommands, service, ["auth", "daemon", "stop"])).data.enabled, false);
-  await assert.rejects(stat(started.data.plistPath), { code: "ENOENT" });
-  assert.equal((await service.daemonStop()).enabled, false);
+  assert.equal((await cli("run")).error.code, "INVALID_INPUT");
+  await writeJsonFile(join(configDir, "auth.json"), { username: "synthetic-user", password: "synthetic-secret" });
+  const starts = await Promise.all([cli("start", "--interval", "1"), cli("start", "--interval", "1")]);
+  const started = starts.find((result) => result.ok).data;
+  assert.equal(starts.filter((result) => result.error?.code === "INVALID_INPUT").length, 1);
+  assert.equal(started.running, true);
+  assert.notEqual(started.pid, process.pid);
+  assert.equal(started.intervalSeconds, 1);
+  const worker = JSON.parse(await readFile(started.processPath, "utf8"));
+  assert.equal(JSON.stringify(started).includes(worker.token), false);
+  assert.equal((await stat(started.processPath)).mode & 0o777, 0o600);
+  assert.equal((await stat(started.logPath)).mode & 0o777, 0o600);
+  const rejected = await fetch(`http://127.0.0.1:${worker.port}/stop`, { method: "POST" });
+  assert.equal(rejected.status, 403);
+  await rejected.arrayBuffer();
+  const completedPath = join(configDir, "completed.json");
+  let completed;
+  for (let attempt = 0; attempt < 150; attempt++) {
+    completed = await readFile(completedPath, "utf8").then(JSON.parse).catch(() => undefined);
+    if (completed?.calls >= 2) break;
+    await delay(20);
+  }
+  assert.equal(completed.name, "one");
+  assert.equal(completed.configDir, configDir);
+  assert.equal(completed.browserDataDir, join(dataRoot, "njucli/accounts/one/browser"));
+  assert.equal(completed.cwd, await realpath(configDir));
+  assert.ok(completed.calls >= 2);
+  const status = (await cli("status")).data;
+  assert.equal(status.pid, started.pid);
+  assert.equal(status.lastSuccess.status, "valid");
+  const log = await readFile(started.logPath, "utf8");
+  assert.equal(log.includes(worker.token), false);
+  assert.equal(log.includes("synthetic-secret"), false);
+  await writeJsonFile(started.processPath, { ...worker, pid: process.pid, token: "synthetic-wrong-token" });
+  try { assert.equal((await cli("stop")).error.code, "REMOTE_UNAVAILABLE"); }
+  finally { await writeJsonFile(started.processPath, worker); }
+  assert.equal((await cli("stop")).data.running, false);
+  assert.throws(() => process.kill(started.pid, 0), { code: "ESRCH" });
+  await assert.rejects(stat(started.processPath), { code: "ENOENT" });
+  assert.equal((await cli("stop")).data.running, false);
+  await writeJsonFile(started.processPath, worker);
+  assert.equal((await cli("status")).data.running, false);
+  const restarted = (await cli("start", "--interval", "600")).data;
+  assert.equal(restarted.running, true);
+  assert.notEqual(restarted.pid, started.pid);
+  await cli("stop");
+  await assert.rejects(stat(join(configRoot, "njucli/accounts/two/completed.json")), { code: "ENOENT" });
+  const previousEntry = process.argv[1], entrySource = await readFile(entry, "utf8");
+  await writeFile(entry, "process.exitCode = 1;\n");
+  process.argv[1] = entry;
+  try {
+    const service = createAuthServices({ accountStore: { current: async () => ({ name: "one", configDir, browserDataDir: join(dataRoot, "njucli/accounts/one/browser") }) } });
+    await assert.rejects(service.daemonStart(600), /后台进程启动失败/);
+  } finally { process.argv[1] = previousEntry; await writeFile(entry, entrySource); }
+  await assert.rejects(stat(started.processPath), { code: "ENOENT" });
 });
 
 test("认证：同一 CLI 进程循环维护，保存 PID，完成当前操作后停止并清理进程记录", async (t) => {
   const directory = await mkdtemp(join(tmpdir(), "njucli-daemon-loop-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const account = { name: "loop", configDir: directory, browserDataDir: join(directory, "browser") };
-  const path = join(directory, "auth-daemon.json");
+  const path = join(directory, "auth-daemon/process.json");
   let calls = 0, inFlight = 0, maximum = 0, output = "";
   const controller = new AbortController();
   const maintain = async () => {
