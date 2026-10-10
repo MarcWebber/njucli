@@ -1,0 +1,79 @@
+[
+  {
+    "case": "search-all",
+    "command": "njucli library search 算法导论 --page-size 2 --format json",
+    "exitCode": 0,
+    "ok": true,
+    "observed": "2676 条命中"
+  },
+  {
+    "case": "search-title",
+    "command": "njucli library search 算法导论 --field title --page-size 2 --format json",
+    "exitCode": 0,
+    "ok": true,
+    "observed": "61 条命中"
+  },
+  {
+    "case": "search-author",
+    "command": "njucli library search 科尔曼 --field author --page-size 2 --format json",
+    "exitCode": 0,
+    "ok": true,
+    "observed": "73 条命中"
+  },
+  {
+    "case": "search-isbn",
+    "command": "njucli library search 978-7-111-40701-0 --field isbn --page-size 2 --format json",
+    "exitCode": 0,
+    "ok": true,
+    "observed": "2 条命中"
+  },
+  {
+    "case": "search-callno",
+    "command": "njucli library search TP301.6/H87(1) --field callno --page-size 2 --format json",
+    "exitCode": 0,
+    "ok": true,
+    "observed": "1 条命中"
+  },
+  {
+    "case": "search-page2",
+    "command": "njucli library search 算法导论 --page 2 --page-size 2 --format json",
+    "exitCode": 0,
+    "ok": true,
+    "observed": "2676 条命中"
+  },
+  {
+    "case": "search-empty",
+    "command": "njucli library search njucli-acceptance-no-such-title-20261010 --field title --page-size 2 --format json",
+    "exitCode": 0,
+    "ok": true,
+    "observed": "0 条命中"
+  },
+  {
+    "case": "book",
+    "command": "njucli library book 283571 --format json",
+    "exitCode": 0,
+    "ok": true,
+    "observed": "8 册 / 5 册可借"
+  },
+  {
+    "case": "holdings",
+    "command": "njucli library holdings 283571 --format json",
+    "exitCode": 0,
+    "ok": true,
+    "observed": "8 条"
+  },
+  {
+    "case": "holdings-many",
+    "command": "njucli library holdings 2714143 --format json",
+    "exitCode": 0,
+    "ok": true,
+    "observed": "90 条"
+  },
+  {
+    "case": "loans",
+    "command": "njucli library loans --format json",
+    "exitCode": 0,
+    "ok": true,
+    "observed": "0 条"
+  }
+]

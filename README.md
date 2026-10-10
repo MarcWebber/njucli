@@ -76,7 +76,7 @@ njucli auth daemon stop
 
 ## 文档
 
-[Skills](skills/) · [AI 客户端接入](docs/ai-plugin.md) · [贡献指南](CONTRIBUTING.md) · [问题反馈](https://github.com/MarcWebber/njucli/issues)
+[校园网验证与校医院接入评估](docs/reports/2026-10-10-intranet.md) · [Skills](skills/) · [AI 客户端接入](docs/ai-plugin.md) · [贡献指南](CONTRIBUTING.md) · [问题反馈](https://github.com/MarcWebber/njucli/issues)
 
 ## 许可证
 

@@ -5,7 +5,9 @@ description: 查询南京大学图书馆馆藏、馆藏位置、可借状态与�
 
 # 图书馆
 
-以下命令在本 Skill 目录运行。书目和馆藏查询通过 WebVPN，借阅还需要图书馆读者登录。按提示运行 `node scripts/run.mjs auth login vpn` 或 `auth login opac`。
+以下命令在本 Skill 目录运行。连接校园网或官方 VPN 后，书目和馆藏直接访问 `https://opac.nju.edu.cn`；本人借阅复用统一认证派生的图书馆会话，需要时自动恢复。手动登录使用 `node scripts/run.mjs auth login opac`。
+
+出现 `UNABLE_TO_VERIFY_LEAF_SIGNATURE` 或 `unable to verify the first certificate` 时，按[HTTPS 证书配置](references/network.md)补齐官网缺少的中间证书。
 
 ## 书目检索与馆藏分布
 
@@ -26,4 +28,6 @@ node scripts/run.mjs library holdings BOOK_ID --format json
 node scripts/run.mjs library loans --format json
 ```
 
-返回当前在借图书列表、应还日期及逾期状态。
+返回当前在借图书列表、应还日期及逾期状态；支持 `--page` 和 `--page-size`，页码从 1 开始。逾期按南京当地日期与应还日期比较。
+
+2026-10-10 已核对五种检索字段、翻页、空结果、详情、跨页馆藏、读者登录和当前借阅空列表。统一 CLI、独立 Skill 与只读 MCP 的实网结果见[验证报告](https://github.com/MarcWebber/njucli/blob/main/docs/reports/2026-10-10-intranet.md)。
