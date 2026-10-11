@@ -33,9 +33,9 @@ NjuCLI 服务南京大学学生及其 AI 助手，围绕写作、邮件、上课
 - Adapter、Provider 及等价中间层的引入以维护者明确要求为前提。
 - 命令保持 `njucli <domain> <command> [target] [options]`。JSON 使用具体动作的 `--format json` 或 `NJUCLI_FORMAT=json`；账号通过 `account use` 或 `NJUCLI_ACCOUNT` 选择。
 - 分页和枚举在 CLI/MCP 入口校验一次；日期在输入或进入日历计算时校验；接口限制以远端契约为准。
-- 响应按已确认字段解析；字段别名、请求方式和路径变更同步到所属 Skill 的接口说明，索引见 `docs/interface-evidence.md`。
-- 普通网络、HTTP 和解析异常直接传到统一输出边界，后续动作由调用 Agent 决定。成功表示实际操作及必要回读已完成。
-- 本地下载与导出复用 `core/fs.ts` 的 `saveFile`，支持文本、字节与异步字节流，直接覆盖指定输出文件。新文件权限为 0600，已有文件保留原权限；会话配置使用原子写入。
+- 按已验证的接口字段解析响应。字段、请求方法或路径有变更时，同步更新所属 Skill 的接口说明；索引见 `docs/interface-evidence.md`。
+- 网络、HTTP 和解析错误交由统一输出层报告，后续处理由调用 Agent 决定。操作完成并通过必要回读后，再返回成功。
+- 下载和导出统一使用 `core/fs.ts` 的 `saveFile`，将文本、字节或字节流覆盖写入指定文件。新文件权限设为 0600，已有文件沿用原权限；会话配置采用原子写入。
 - 面向用户的文档使用中文、正向描述，聚焦已有能力、使用前提、实际步骤和结果。接口证据与实网验证状态各自明确记录。
 
 ## 通用工具
@@ -51,28 +51,6 @@ NjuCLI 服务南京大学学生及其 AI 助手，围绕写作、邮件、上课
 | `core/redaction.ts` | 输出边界的凭据脱敏 |
 
 站点认证成功条件和登录恢复集中在 `src/auth/`；业务签名、字段与响应解析归所属 Skill。业务前通过共享运行环境调用同一 `AuthCoordinator`。
-
-## 认证与个人数据
-
-- capability 在认证依赖图与类型中配齐。个人课表使用 `timetable`，研究生选课使用 `selection`；SE 和 TeX 使用 SSO 派生的 `se`、`tex`。
-- 每次业务前调用 `ensureSession`，探测失效时自动登录，认证与业务共享当前 context；每个业务请求执行一次。`logged-out` 只记录状态。
-- `auth maintain` 检查 SSO 并使用已存凭据恢复失效会话；统一认证登录自动处理官方滑块，扫码由本人完成。
-- `auth daemon start/status/stop` 管理 CLI 常驻后台保活进程。CLI 默认每轮结束后等待 600 秒，固定启动账号与配置根目录，每轮复用账号锁、当次 Cookie 与统一脱敏输出；启动方式与运行前提集中在认证 Skill。
-- `auth login` 通过 `--username/--password` 或 `--credentials` 接收凭据，保存为 `auth.json` 的 `username/password`。`BrowserSession` 自动填写 authserver 官方账号登录表单；滑块支持 `skills/njucli-auth/scripts/login.mjs` 截图与坐标拖动，复用现有认证与会话保存；扫码由本人完成。
-- `mail bind` 通过 `--address/--password` 或 `--credentials` 接收邮箱凭据。省略地址时从统一认证 username 派生邮箱；显式地址独立保存。同一本地账号允许多个邮箱，`mail.json` 保存 `{ current, mailboxes: [{ address, password }] }`，通过 `mail accounts/use/unbind` 管理。
-- 两份凭据文件位于 `~/.config/njucli/accounts/<account>/`，由 `XDG_CONFIG_HOME` 覆盖根目录，权限 0600。日志、仓库和交付记录使用脱敏结果，个人业务数据保存在指定位置。
-- 浏览器使用 CLI 专用目录；全部 Cookie 原子保存至账号目录的 `session-cookies.json`，权限 0600。同一账号的 CLI/MCP 调用在读取 Cookie 前取得进程锁，保存后释放。查询使用 HTTP 会话，页面操作按需打开浏览器。
-- 无参数 `mail bind` 复用已存凭据校验；仅无凭据时打开官方浏览器向导，必要时开启 IMAP/SMTP，单次生成专用密码并交给 `MailClient.bind` 校验保存。
-- 日常邮箱查询使用官方 IMAP/TLS 与本地凭据，EXAMINE/BODY.PEEK 保持已读状态。列表、搜索与邮件夹使用当前邮箱；正文与附件按邮件 ID 使用对应邮箱。解绑删除指定或当前邮箱的本地凭据。
-
-## 写操作与 TeX
-
-- 业务写入按命令指定的目标和材料提交一次，再通过稳定标识回读结果。接口与人工挑战条件依据真实契约。
-- 个人账号验证默认采用查询。远端写核对使用维护者明确授权的可撤销目标；授权按项目、动作和文件范围执行。
-- TeX 查询通过 HTTP 恢复会话并以 `user/info` 核对；正文编辑、上传和编译复用 CLI 专用可见浏览器。文本写入交给原生编辑器处理协作协议，正文填写一次后读取核对；编辑前确认网站采用自动同步模式。
-- 编译点击一次，按 Socket.IO requestId 关联本次结果并检查原始日志；仅在本次编译成功后保存 PDF。
-- 上传通过同一 context 的原生控件完成根目录单文件操作。同名时点击官方覆盖按钮，核对项目、版本、文件名与覆盖状态，再下载字节核对。
-- CLI、Skill、插件共用 client；MCP 提供只读工具，已授权写作由具备终端能力的 AI 调用 CLI。
 
 ## 开发流程
 
