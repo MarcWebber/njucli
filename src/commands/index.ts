@@ -1,4 +1,5 @@
 import { registerYouthCommands } from '../../skills/njucli-youth/scripts/commands.js';
+import { registerItxiaCommands } from '../../skills/njucli-itxia/scripts/commands.js';
 import { registerTableCommands } from '../../skills/njucli-table/scripts/commands.js';
 import type { Command } from "commander";
 
@@ -25,6 +26,7 @@ export function createCli(services: NjuServices, runtime: CommandRuntime): Comma
   registerAuthCommands(program, services.auth, runtime);
   registerBoxCommands(program, services.box, runtime);
   registerYouthCommands(program, services.youth, runtime);
+  registerItxiaCommands(program, services.itxia, runtime);
   registerTableCommands(program, services.table, runtime);
   registerCampusCommands(program, services.campus, runtime);
   registerEHallCommands(program, services.ehall, runtime);

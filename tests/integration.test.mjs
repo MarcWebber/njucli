@@ -47,6 +47,8 @@ import { registerBoxCommands } from "../dist/skills/njucli-box/scripts/commands.
 import { BoxClient } from "../dist/skills/njucli-box/scripts/client.js";
 import { exchangeSportsAccessToken } from "../dist/src/auth/sports-token.js";
 import { SportsClient } from "../dist/skills/njucli-sports/scripts/client.js";
+import { ItxiaClient } from "../dist/skills/njucli-itxia/scripts/client.js";
+import { registerItxiaCommands } from "../dist/skills/njucli-itxia/scripts/commands.js";
 
 import { NjuOpacClient } from "../dist/skills/njucli-library/scripts/client.js";
 import { createLibraryServices } from "../dist/skills/njucli-library/scripts/services.js";
@@ -80,6 +82,137 @@ async function localHttp(t, handler) {
     return response;
   };
 }
+
+test("IT 侠：提交回读、状态与回复、找回预约和失败时单次请求", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "njucli-itxia-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const path = join(directory, "order.json");
+  const input = { name: "测试同学", phone: "13800000000", email: "student@example.com", campus: "XIANLIN",
+    brandModel: "测试电脑", os: "测试系统", freeTime: "周三-14:00到16:00", description: "风扇异响两天，开机后出现，偏好邮件联系。" };
+  await writeFile(path, JSON.stringify(input));
+  const id = "000000000000000000000001";
+  const file = { _id: "attachment-1", fileName: "维修说明.png", mimeType: "image/png", size: 32 };
+  const detail = { ...input, _id: id, status: "PENDING", createTime: "2026-10-11T02:00:00.000Z", handler: null,
+    reply: [], attachments: [] };
+  let mode = "success";
+  const requests = [];
+  const request = await localHttp(t, async (req, res) => {
+    const chunks = []; for await (const chunk of req) chunks.push(chunk);
+    const content = Buffer.concat(chunks).toString();
+    const body = content ? JSON.parse(content) : undefined;
+    requests.push({ method: req.method, path: req.url, body });
+    assert.equal(req.headers["itxia-from"], "https://itxia.nju.edu.cn");
+    assert.equal(req.headers["content-type"], "application/json");
+    assert.equal(req.headers.cookie, undefined);
+    const send = (payload, code = 0, message = "成功") => {
+      res.setHeader("content-type", "application/json");
+      res.end(JSON.stringify({ code, message, payload }));
+    };
+    if (req.method === "POST" && req.url === "/api/custom/order") {
+      assert.deepEqual(body, { ...input, qq: null, warranty: null, acceptEmailNotification: true, agreement: true, attachments: [] });
+      if (mode === "post-http-error") { res.writeHead(503); return res.end("unavailable"); }
+      if (mode === "post-bad-payload") return send({});
+      if (mode === "post-bad-json") return res.end("invalid json");
+      if (mode === "post-rejected") return send(null, 1, "预约信息有误");
+      return send({ _id: id });
+    }
+    if (req.method === "POST" && req.url === "/api/custom/order/retrieve") {
+      assert.deepEqual(body, { name: input.name, phone: input.phone });
+      return mode === "missing" ? send(null, 8, "无此预约单") : send(id);
+    }
+    if (req.method === "GET" && req.url === `/api/custom/order/${id}`) {
+      if (mode === "missing") return send(null, 8, "无此预约单");
+      if (mode === "read-http-error") { res.writeHead(503); return res.end("unavailable"); }
+      if (mode === "wrong-id") return send({ ...detail, _id: "different-order" });
+      if (mode === "wrong-content") return send({ ...detail, description: "另一份问题描述" });
+      if (mode === "wrong-identity") return send({ ...detail, name: "其他人" });
+      if (mode === "unknown-state") return send({ ...detail, status: "UNKNOWN" });
+      return send(detail);
+    }
+    res.writeHead(404); res.end("unexpected route");
+  });
+  t.mock.method(globalThis, "fetch", request);
+  const service = new ItxiaClient();
+  const run = (...args) => command(registerItxiaCommands, service, ["itxia", ...args]);
+  const create = () => run("create", "--input", path, "--agree-terms");
+  const created = await create();
+  assert.equal(created.ok, true);
+  assert.equal(created.data.id, id);
+  assert.equal(created.data.statusText, "待接单");
+  assert.deepEqual(requests.map(({ method, path }) => [method, path]), [["POST", "/api/custom/order"], ["GET", `/api/custom/order/${id}`]]);
+
+  detail.handler = { realName: "维修同学", studentNumber: "private-field" };
+  detail.reply = [
+    { content: "已检查风扇，等待配件。", createTime: "2026-10-11T03:00:00.000Z", postBy: detail.handler, attachments: [file] },
+    { content: "周三可以到场。", createTime: "2026-10-11T04:00:00.000Z", postBy: null, attachments: [] },
+  ];
+  for (const [state, label] of [["PENDING", "待接单"], ["HANDLING", "处理中"], ["DONE", "已完成"], ["CANCELED", "已取消"]]) {
+    detail.status = state;
+    requests.length = 0;
+    const result = await run("status", id);
+    assert.equal(result.ok, true);
+    assert.equal(result.data.statusText, label);
+    assert.equal(result.data.handler, "维修同学");
+    assert.equal(result.data.replies[0].content, detail.reply[0].content);
+    assert.deepEqual(result.data.replies[0].attachments, [file]);
+    assert.equal(result.data.replies[1].author, input.name);
+    assert.equal(JSON.stringify(result).includes("private-field"), false);
+    assert.equal(requests.length, 1);
+  }
+  requests.length = 0;
+  assert.equal((await run("status", "--name", input.name, "--phone", input.phone)).data.id, id);
+  assert.deepEqual(requests.map(({ method, path }) => [method, path]), [["POST", "/api/custom/order/retrieve"], ["GET", `/api/custom/order/${id}`]]);
+
+  detail.status = "HANDLING";
+  let text = "";
+  const program = new Command().exitOverride();
+  registerItxiaCommands(program, service, { environment: {},
+    output: { stdout: (value) => { text += value; }, stderr: (value) => { assert.fail(value); } },
+    setExitCode: (code) => { assert.equal(code, 0); } });
+  await program.parseAsync(["itxia", "status", id], { from: "user" });
+  for (const value of ["处理中", "维修同学", "已检查风扇，等待配件。", file.fileName]) assert.ok(text.includes(value));
+  delete detail.freeTime;
+  assert.equal((await run("status", id)).data.freeTime, null);
+  detail.freeTime = input.freeTime;
+  detail.email = null;
+  assert.equal((await run("status", id)).data.email, null);
+  delete detail.email;
+  assert.equal((await run("status", id)).data.email, null);
+  detail.email = input.email;
+
+  requests.length = 0;
+  for (const args of [["create", "--input", path], ["status"], ["status", " "], ["status", "--name", input.name], ["status", id, "--phone", input.phone]]) {
+    assert.equal((await run(...args)).code, 2);
+  }
+  for (const invalid of ["{", JSON.stringify({ ...input, phone: "invalid" }), JSON.stringify({ ...input, campus: "OTHER" }), JSON.stringify({ ...input, freeTime: "" }), JSON.stringify({ ...input, agreement: true })]) {
+    await writeFile(path, invalid);
+    assert.equal((await create()).code, 2);
+  }
+  assert.equal(requests.length, 0);
+  await writeFile(path, JSON.stringify(input));
+
+  for (mode of ["post-http-error", "post-rejected", "post-bad-payload", "post-bad-json"]) {
+    requests.length = 0;
+    assert.equal((await create()).ok, false);
+    assert.equal(requests.length, 1, mode);
+  }
+  for (mode of ["read-http-error", "wrong-id", "wrong-content", "unknown-state"]) {
+    requests.length = 0;
+    const result = await create();
+    assert.equal(result.ok, false);
+    assert.equal(result.error.details.orderId, id);
+    assert.match(result.error.hint, new RegExp(`itxia status ${id}`));
+    assert.equal(requests.filter(({ method }) => method === "POST").length, 1);
+    assert.equal(requests.length, 2, mode);
+  }
+  mode = "wrong-identity";
+  assert.equal((await run("status", "--name", input.name, "--phone", input.phone)).error.code, "REMOTE_SCHEMA_CHANGED");
+  mode = "missing";
+  assert.equal((await run("status", id)).error.code, "NOT_FOUND");
+  requests.length = 0;
+  assert.equal((await run("status", "--name", input.name, "--phone", input.phone)).error.code, "NOT_FOUND");
+  assert.equal(requests.length, 1);
+});
 
 test("课表：认证与业务共用查询、学期日期展开和 ICS 导出", async (t) => {
   const directory = await mkdtemp(join(tmpdir(), "njucli-course-"));
