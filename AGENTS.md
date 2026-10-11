@@ -21,7 +21,7 @@ NjuCLI 服务南京大学学生及其 AI 助手，围绕写作、邮件、上课
 | `.codex-plugin/`、`.mcp.json` | 插件清单与本地 MCP 配置 |
 | `docs/` | AI 接入与接口契约、验证范围 |
 
-现有 12 个 Skill：auth、campus、ehall、library、sports、se、tex、mail、software、box、youth、table。教务、课表、选课和办事大厅统一归 `njucli-ehall`；`campus today` 组合课表、借阅和预约。
+现有 13 个 Skill：auth、campus、ehall、library、sports、se、tex、mail、software、box、youth、table、itxia。教务、课表、选课和办事大厅统一归 `njucli-ehall`；`campus today` 组合课表、借阅和预约。IT 侠使用访客预约接口，按预约单编号或姓名、手机号查询。
 
 调用关系为：统一 CLI 或独立 Skill 入口 → Skill 的业务方法 → 同目录 client；受保护操作复用同一次调用的认证会话。参数处理归入口，远端请求归 client，展示归 CLI/MCP 输出边界。
 

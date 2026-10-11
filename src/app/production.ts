@@ -1,4 +1,5 @@
 import { createYouthServices } from '../../skills/njucli-youth/scripts/services.js';
+import { ItxiaClient } from '../../skills/njucli-itxia/scripts/client.js';
 import { createTableServices } from '../../skills/njucli-table/scripts/services.js';
 import { createRuntime } from './runtime.js';
 import { createAuthServices } from '../auth/service.js';
@@ -20,6 +21,7 @@ export function createProductionServices() {
     account: createAccountServices(runtime),
     box: createBoxServices(runtime),
     youth: createYouthServices(runtime),
+    itxia: new ItxiaClient(),
     table: createTableServices(runtime),
     software: new SoftwareClient(),
     mail: createMailServices(runtime),
