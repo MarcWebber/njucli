@@ -1,6 +1,6 @@
 ---
 name: njucli-itxia
-description: 通过南京大学 IT 侠官网提交电脑维修预约，按预约单编号或姓名、手机号查询当前预约状态、处理人和回复。用户需要 IT 侠预约或进度查询时使用。
+description: 通过南京大学 IT 侠官网提交电脑维修预约，输出打开预约单的方法，按预约单编号或姓名、手机号查询当前预约状态、处理人和回复。取消预约仅 CLI 支持，须带 --yes；只读 MCP 不暴露取消。用户需要 IT 侠预约、打开预约单、进度查询或取消时使用。
 ---
 
 # IT 侠维修预约
@@ -30,11 +30,10 @@ description: 通过南京大学 IT 侠官网提交电脑维修预约，按预约
 node scripts/run.mjs itxia create --input /path/to/order.json --agree-terms --format json
 ```
 
-成功结果包含回读后的预约单 `id`、状态，以及打开预约单页面所需的 `url`、`openScript` 和 `retrieveUrl`。创建成功后，回复用户时必须同时给出预约单编号和打开方法：
+成功结果包含回读后的预约单 `id`、状态，以及 `url`、`openScript` 和 `retrieveUrl`。`url`（https://itxia.nju.edu.cn/custom/order）不能定位本单：官网按浏览器 `localStorage.requestedOrderId` 展示预约单，CLI 提交不会写入该值。创建成功后，回复用户时必须同时给出预约单编号和打开方法：
 
-- 预约单页面 `url`（https://itxia.nju.edu.cn/custom/order）。官网按浏览器 `localStorage.requestedOrderId` 展示预约单，提交预约的同一浏览器可直接打开该链接。
-- 其他浏览器：在任一 itxia.nju.edu.cn 页面打开开发者工具控制台，运行 `openScript` 后即进入本单页面。
-- 或在 `retrieveUrl`（https://itxia.nju.edu.cn/custom/retrieve）填写预约时的姓名和手机号找回本单。
+- 打开本单应运行 `openScript`：在任一 itxia.nju.edu.cn 页面打开开发者工具控制台，运行后进入本单页面。
+- 或用 `retrieveUrl`（https://itxia.nju.edu.cn/custom/retrieve）按预约时的姓名和手机号找回本单。
 
 `node scripts/run.mjs itxia open ORDER_ID` 离线输出上述链接与方法。保存该编号供后续查询。提交结果不明时，先用姓名和手机号找回；返回编号后回读失败时，按错误中的 `orderId` 查询，核对本单再决定下一步。个人预约信息文件应存放在用户指定的私有目录中，预约单编号须作为个人隐私信息妥善保管。
 
@@ -46,7 +45,7 @@ node scripts/run.mjs itxia create --input /path/to/order.json --agree-terms --fo
 node scripts/run.mjs itxia cancel ORDER_ID --yes --format json
 ```
 
-成功后返回回读的预约详情，`status` 为 `CANCELED`。已被接单的预约可能取消失败，此时先查询状态，再告知用户联系 IT 侠。
+成功后返回回读的预约详情，`status` 为 `CANCELED`。回读状态不是 `CANCELED` 时命令失败，错误信息与 `details` 包含预约单编号和当前状态，此时不输出「预约已取消」。已被接单的预约可能取消失败，此时先查询状态，再告知用户联系 IT 侠。
 
 ## 查询进度
 

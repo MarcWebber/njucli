@@ -69,7 +69,7 @@ njucli campus today
 
 完整命令通过 `njucli --help` 和 `njucli <domain> --help` 查看。
 
-IT 侠支持 `njucli itxia create --input order.json --agree-terms` 提交维修预约，、`njucli itxia status ORDER_ID` 查询状态与回复、`njucli itxia open ORDER_ID` 获取预约单页面打开方法，以及 `njucli itxia cancel ORDER_ID --yes` 取消预约。也可通过 `status --name "预约姓名" --phone "预约手机号"` 找回当前预约；字段和服务条款见 [IT 侠 Skill](skills/njucli-itxia/SKILL.md)。
+IT 侠支持 `njucli itxia create --input order.json --agree-terms` 提交维修预约，`njucli itxia status ORDER_ID` 查询状态与回复、`njucli itxia open ORDER_ID` 获取预约单页面打开方法，以及 `njucli itxia cancel ORDER_ID --yes` 取消预约。也可通过 `status --name "预约姓名" --phone "预约手机号"` 找回当前预约；字段和服务条款见 [IT 侠 Skill](skills/njucli-itxia/SKILL.md)。
 
 业务命令按需恢复校园登录。`njucli auth maintain` 执行一次统一认证与 EHall 会话维护；周期维护和登录状态核对见[认证 Skill](skills/njucli-auth/SKILL.md#会话维护)。
 
