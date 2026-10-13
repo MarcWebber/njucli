@@ -3,6 +3,8 @@ import { AppError, asAppError } from "../../../src/core/errors.js";
 import type { OrderInput } from "./schema.js";
 
 const ORIGIN = "https://itxia.nju.edu.cn";
+// 官网前端路由无按编号直达的预约单页面（编号存于浏览器 localStorage），查看入口为找回页，填写预约时的姓名和手机号。
+export const ITXIA_VIEW_URL = `${ORIGIN}/custom/retrieve`;
 const STATUS = { PENDING: "待接单", HANDLING: "处理中", DONE: "已完成", CANCELED: "已取消" } as const;
 const CAMPUS = { XIANLIN: "仙林", GULOU: "鼓楼", SUZHOU: "苏州" } as const;
 const person = z.object({ realName: z.string() });
@@ -50,7 +52,7 @@ export class ItxiaClient {
     const data = parse(order, await this.request(`/custom/order/${encodeURIComponent(id)}`));
     if (data._id !== id) throw new AppError("REMOTE_SCHEMA_CHANGED", "预约详情编号与查询目标存在差异");
     return {
-      id: data._id, status: data.status, statusText: STATUS[data.status],
+      id: data._id, url: ITXIA_VIEW_URL, status: data.status, statusText: STATUS[data.status],
       name: data.name, phone: data.phone, email: data.email ?? null,
       campus: data.campus, campusName: CAMPUS[data.campus],
       brandModel: data.brandModel, os: data.os, description: data.description, freeTime: data.freeTime ?? null,

@@ -139,6 +139,7 @@ test("IT 侠：提交回读、状态与回复、找回预约和失败时单次�
   assert.equal(created.ok, true);
   assert.equal(created.data.id, id);
   assert.equal(created.data.statusText, "待接单");
+  assert.equal(created.data.url, "https://itxia.nju.edu.cn/custom/retrieve");
   assert.deepEqual(requests.map(({ method, path }) => [method, path]), [["POST", "/api/custom/order"], ["GET", `/api/custom/order/${id}`]]);
 
   detail.handler = { realName: "维修同学", studentNumber: "private-field" };
@@ -170,7 +171,7 @@ test("IT 侠：提交回读、状态与回复、找回预约和失败时单次�
     output: { stdout: (value) => { text += value; }, stderr: (value) => { assert.fail(value); } },
     setExitCode: (code) => { assert.equal(code, 0); } });
   await program.parseAsync(["itxia", "status", id], { from: "user" });
-  for (const value of ["处理中", "维修同学", "已检查风扇，等待配件。", file.fileName]) assert.ok(text.includes(value));
+  for (const value of ["处理中", "https://itxia.nju.edu.cn/custom/retrieve", "维修同学", "已检查风扇，等待配件。", file.fileName]) assert.ok(text.includes(value));
   delete detail.freeTime;
   assert.equal((await run("status", id)).data.freeTime, null);
   detail.freeTime = input.freeTime;

@@ -35,6 +35,8 @@ API 根地址为 `https://itxia.nju.edu.cn/api`。官方前端使用 JSON 请求
 
 预约详情使用 `_id/status/name/phone/email/campus/brandModel/os/description/freeTime/createTime`；处理人使用 `handler.realName`，回复使用 `reply[].postBy.realName/createTime/content/attachments`。官网对空闲时间设有空值展示，历史预约的 `freeTime` 允许缺省或为空。回复作者为空时，官网将其视为预约者。附件保留 `_id/fileName/mimeType/size`。
 
+官网前端路由仅有 `/custom/home`、`/custom/order`、`/custom/retrieve`，预约单页面按 `localStorage.requestedOrderId` 展示当前单，无按编号的直达路由。CLI 在创建与查询结果中输出 `url = https://itxia.nju.edu.cn/custom/retrieve`，用户在该页填写姓名和手机号查看本单。
+
 `PENDING/HANDLING/DONE/CANCELED` 分别对应待接单、处理中、已完成、已取消。CLI 将 `_id` 输出为 `id`，`reply` 输出为 `replies`，并增加 `statusText` 和 `campusName`。文本输出展示状态、处理人、问题描述与回复记录。
 
 ## 验证范围

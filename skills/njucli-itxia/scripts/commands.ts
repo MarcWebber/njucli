@@ -44,6 +44,7 @@ export function registerItxiaCommands(program: Command, service: ItxiaClient, ru
 function orderText(data: ItxiaOrder): string {
   return [
     `预约单 ${data.id} · ${data.statusText}`,
+    `查看链接：${data.url}（填写预约时的姓名和手机号查看本单）`,
     `${data.campusName} · ${data.brandModel} · ${data.os}`,
     `提交时间：${data.createTime}`,
     ...(data.handler ? [`处理人：${data.handler}`] : []),
