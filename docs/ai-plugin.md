@@ -45,7 +45,7 @@ curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/inst
 
 | 任务 | 工作流程 |
 | --- | --- |
-| [IT 侠维修](../skills/njucli-itxia/SKILL.md) | 根据用户维修需求提交预约，按编号或姓名、手机号查询状态和回复 |
+| [IT 侠维修](../skills/njucli-itxia/SKILL.md) | 根据用户维修需求提交预约，按编号或姓名、手机号查询状态和回复，并给出打开预约单的方法。取消仅 CLI、须 `--yes`；只读 MCP 不暴露取消 |
 | [青年平台](../skills/njucli-youth/SKILL.md) | 查询活动、志愿时长与第二课堂，按用户要求报名或取消 |
 | [协同表格](../skills/njucli-table/SKILL.md) | 查找与复制模板，创建表格、公式和视图，按行 ID 填写记录 |
 | [云盘](../skills/njucli-box/SKILL.md) | 查询资料库和路径，上传下载或管理文件；分享后将返回的 `url` 交给用户，保留 `id` 供撤销 |

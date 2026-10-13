@@ -3,6 +3,18 @@ import { AppError, asAppError } from "../../../src/core/errors.js";
 import type { OrderInput } from "./schema.js";
 
 const ORIGIN = "https://itxia.nju.edu.cn";
+// 官网预约单页 /custom/order 仅从 localStorage.requestedOrderId（JSON 字符串）读取编号，路由与查询参数均不携带编号。
+export const ITXIA_ORDER_URL = `${ORIGIN}/custom/order`;
+export const ITXIA_RETRIEVE_URL = `${ORIGIN}/custom/retrieve`;
+
+/** 在 itxia.nju.edu.cn 任一页面的浏览器控制台运行，即可打开该预约单页。 */
+export function openScript(id: string): string {
+  return `localStorage.setItem("requestedOrderId", ${JSON.stringify(JSON.stringify(id))}); location.href = "/custom/order";`;
+}
+
+export function orderLinks(id: string) {
+  return { url: ITXIA_ORDER_URL, openScript: openScript(id), retrieveUrl: ITXIA_RETRIEVE_URL };
+}
 const STATUS = { PENDING: "待接单", HANDLING: "处理中", DONE: "已完成", CANCELED: "已取消" } as const;
 const CAMPUS = { XIANLIN: "仙林", GULOU: "鼓楼", SUZHOU: "苏州" } as const;
 const person = z.object({ realName: z.string() });
@@ -50,7 +62,7 @@ export class ItxiaClient {
     const data = parse(order, await this.request(`/custom/order/${encodeURIComponent(id)}`));
     if (data._id !== id) throw new AppError("REMOTE_SCHEMA_CHANGED", "预约详情编号与查询目标存在差异");
     return {
-      id: data._id, status: data.status, statusText: STATUS[data.status],
+      id: data._id, ...orderLinks(data._id), status: data.status, statusText: STATUS[data.status],
       name: data.name, phone: data.phone, email: data.email ?? null,
       campus: data.campus, campusName: CAMPUS[data.campus],
       brandModel: data.brandModel, os: data.os, description: data.description, freeTime: data.freeTime ?? null,
@@ -63,6 +75,17 @@ export class ItxiaClient {
     };
   }
 
+  async cancel(id: string) {
+    await this.request(`/custom/order/${encodeURIComponent(id)}/cancel`, undefined, "PUT");
+    const data = await this.status(id);
+    if (data.status !== "CANCELED") {
+      throw new AppError("REMOTE_UNAVAILABLE", `预约单 ${id} 未能取消，当前状态为 ${data.status}`, {
+        details: { orderId: id, status: data.status },
+      });
+    }
+    return data;
+  }
+
   async retrieve(identity: { name: string; phone: string }) {
     const id = parse(z.string().min(1), await this.request("/custom/order/retrieve", identity));
     const data = await this.status(id);
@@ -72,9 +95,9 @@ export class ItxiaClient {
     return data;
   }
 
-  private async request(path: string, body?: unknown): Promise<unknown> {
+  private async request(path: string, body?: unknown, method?: "PUT"): Promise<unknown> {
     const response = await fetch(`${ORIGIN}/api${path}`, {
-      method: body === undefined ? "GET" : "POST",
+      method: method ?? (body === undefined ? "GET" : "POST"),
       headers: { "content-type": "application/json", "itxia-from": ORIGIN },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });

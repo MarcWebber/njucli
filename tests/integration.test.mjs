@@ -120,6 +120,13 @@ test("IT 侠：提交回读、状态与回复、找回预约和失败时单次�
       assert.deepEqual(body, { name: input.name, phone: input.phone });
       return mode === "missing" ? send(null, 8, "无此预约单") : send(id);
     }
+    if (req.method === "PUT" && req.url === `/api/custom/order/${id}/cancel`) {
+      assert.equal(body, undefined);
+      if (mode === "cancel-rejected") return send(null, 1, "预约单已被接单");
+      if (mode === "cancel-unchanged") return send(null);
+      detail.status = "CANCELED";
+      return send(null);
+    }
     if (req.method === "GET" && req.url === `/api/custom/order/${id}`) {
       if (mode === "missing") return send(null, 8, "无此预约单");
       if (mode === "read-http-error") { res.writeHead(503); return res.end("unavailable"); }
@@ -139,6 +146,9 @@ test("IT 侠：提交回读、状态与回复、找回预约和失败时单次�
   assert.equal(created.ok, true);
   assert.equal(created.data.id, id);
   assert.equal(created.data.statusText, "待接单");
+  assert.equal(created.data.url, "https://itxia.nju.edu.cn/custom/order");
+  assert.equal(created.data.retrieveUrl, "https://itxia.nju.edu.cn/custom/retrieve");
+  assert.equal(created.data.openScript, `localStorage.setItem("requestedOrderId", "\\"${id}\\""); location.href = "/custom/order";`);
   assert.deepEqual(requests.map(({ method, path }) => [method, path]), [["POST", "/api/custom/order"], ["GET", `/api/custom/order/${id}`]]);
 
   detail.handler = { realName: "维修同学", studentNumber: "private-field" };
@@ -170,7 +180,7 @@ test("IT 侠：提交回读、状态与回复、找回预约和失败时单次�
     output: { stdout: (value) => { text += value; }, stderr: (value) => { assert.fail(value); } },
     setExitCode: (code) => { assert.equal(code, 0); } });
   await program.parseAsync(["itxia", "status", id], { from: "user" });
-  for (const value of ["处理中", "维修同学", "已检查风扇，等待配件。", file.fileName]) assert.ok(text.includes(value));
+  for (const value of ["处理中", "https://itxia.nju.edu.cn/custom/order", "requestedOrderId", "维修同学", "已检查风扇，等待配件。", file.fileName]) assert.ok(text.includes(value));
   delete detail.freeTime;
   assert.equal((await run("status", id)).data.freeTime, null);
   detail.freeTime = input.freeTime;
@@ -205,6 +215,40 @@ test("IT 侠：提交回读、状态与回复、找回预约和失败时单次�
     assert.equal(requests.filter(({ method }) => method === "POST").length, 1);
     assert.equal(requests.length, 2, mode);
   }
+  mode = "success";
+  requests.length = 0;
+  for (const args of [["cancel", id], ["cancel", " ", "--yes"], ["open", " "]]) assert.equal((await run(...args)).code, 2);
+  assert.equal(requests.length, 0);
+  const opened = await run("open", id);
+  assert.equal(opened.data.url, "https://itxia.nju.edu.cn/custom/order");
+  assert.match(opened.data.openScript, new RegExp(id));
+  assert.equal(requests.length, 0);
+  const savedStatus = detail.status;
+  mode = "cancel-rejected";
+  assert.equal((await run("cancel", id, "--yes")).ok, false);
+  assert.equal(requests.length, 1);
+  mode = "cancel-unchanged";
+  detail.status = "PENDING";
+  requests.length = 0;
+  const unchanged = await run("cancel", id, "--yes");
+  assert.equal(unchanged.ok, false);
+  assert.equal(unchanged.code, 1);
+  assert.match(unchanged.error.message, new RegExp(id));
+  assert.match(unchanged.error.message, /PENDING/);
+  assert.equal(unchanged.error.message.includes("预约已取消"), false);
+  assert.equal(unchanged.error.details.orderId, id);
+  assert.equal(unchanged.error.details.status, "PENDING");
+  assert.equal(requests.filter((item) => item.method === "PUT").length, 1);
+  assert.deepEqual(requests.map(({ method, path }) => [method, path]), [["PUT", `/api/custom/order/${id}/cancel`], ["GET", `/api/custom/order/${id}`]]);
+  mode = "success";
+  requests.length = 0;
+  const cancelled = await run("cancel", id, "--yes");
+  assert.equal(cancelled.ok, true);
+  assert.equal(cancelled.data.status, "CANCELED");
+  assert.equal(cancelled.data.statusText, "已取消");
+  assert.deepEqual(requests.map(({ method, path }) => [method, path]), [["PUT", `/api/custom/order/${id}/cancel`], ["GET", `/api/custom/order/${id}`]]);
+  detail.status = savedStatus;
+
   mode = "wrong-identity";
   assert.equal((await run("status", "--name", input.name, "--phone", input.phone)).error.code, "REMOTE_SCHEMA_CHANGED");
   mode = "missing";
