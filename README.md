@@ -8,6 +8,14 @@
 
 南京大学校园服务工具，让 AI 帮你查课表、收邮件、管理云盘和处理校园事务。
 
+## 用户群
+
+扫码加入飞书用户群，交流使用方法、反馈问题与获取项目更新。
+
+<img src="docs/assets/njucli-user-group.png" alt="NjuCLI 飞书用户群二维码" width="320" />
+
+群二维码目前标注“仅限企业内部成员加入”。如扫码受限，可通过 [GitHub Issues](https://github.com/MarcWebber/njucli/issues) 反馈。
+
 ## 安装
 
 需要 Node.js 20+、Git、curl 和 Bash。网页登录及页面操作使用本机浏览器，运行前提见[认证 Skill](skills/njucli-auth/SKILL.md#运行前提)。
