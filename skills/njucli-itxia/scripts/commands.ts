@@ -15,7 +15,7 @@ export function registerItxiaCommands(program: Command, service: ItxiaClient, ru
       const content = await readFile(options.input, "utf8");
       let value: unknown;
       try { value = JSON.parse(content); }
-      catch { throw new AppError("INVALID_INPUT", "预约信息文件需要合法 JSON"); }
+      catch { throw new AppError("INVALID_INPUT", "预约信息文件必须为合法的 JSON 格式"); }
       const parsed = orderInput.safeParse(value);
       if (!parsed.success) throw new AppError("INVALID_INPUT", "请核对预约信息字段", { details: parsed.error.issues });
       const data = await service.create(parsed.data);
@@ -27,7 +27,7 @@ export function registerItxiaCommands(program: Command, service: ItxiaClient, ru
     .action((id: string | undefined, options: FormatOptions & { name?: string; phone?: string }) => runCommand(runtime, options, async () => {
       let data: ItxiaOrder;
       if (id !== undefined) {
-        if (options.name !== undefined || options.phone !== undefined) throw new AppError("INVALID_INPUT", "请选择预约单编号，或姓名和手机号这一组查询条件");
+        if (options.name !== undefined || options.phone !== undefined) throw new AppError("INVALID_INPUT", "请在预约单编号与“姓名和手机号”之间二选一，不可同时提供");
         const parsed = orderId.safeParse(id);
         if (!parsed.success) throw new AppError("INVALID_INPUT", "请填写预约单编号");
         data = await service.status(parsed.data);
@@ -61,7 +61,7 @@ export function registerItxiaCommands(program: Command, service: ItxiaClient, ru
 function linkText(data: { id: string; url: string; openScript: string; retrieveUrl: string }): string {
   return [
     `预约单页面：${data.url}`,
-    `打开方法：在已打开的 itxia.nju.edu.cn 页面按 F12 打开控制台，运行以下代码：`,
+    `打开方法：在已访问的 itxia.nju.edu.cn 页面按 F12 打开控制台，运行以下代码：`,
     `  ${data.openScript}`,
     `或在 ${data.retrieveUrl} 填写预约时的姓名和手机号找回本单。`,
   ].join("\n");

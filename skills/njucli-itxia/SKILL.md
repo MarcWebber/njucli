@@ -9,7 +9,7 @@ description: 通过南京大学 IT 侠官网提交电脑维修预约，按预约
 
 ## 创建预约
 
-先阅读[预约须知](references/reservation-notice.md)和[服务条款](references/service-terms.md)，向用户说明适用要求，并依据用户提供的信息准备 JSON 文件。提交需要用户授权这次预约并同意条款；已有明确授权时直接执行。
+先阅读[预约须知](references/reservation-notice.md)和[服务条款](references/service-terms.md)，向用户说明适用要求，并依据用户提供的信息准备 JSON 文件。提交前需获得用户对本次预约的授权并同意条款；已有明确授权时可直接执行。
 
 ```json
 {
@@ -24,7 +24,7 @@ description: 通过南京大学 IT 侠官网提交电脑维修预约，按预约
 }
 ```
 
-以上字段全部必填。`campus` 使用 `XIANLIN`（仙林）、`GULOU`（鼓楼）或 `SUZHOU`（苏州）。可选字段为 `qq`、`warranty`（保修情况文本），以及 `acceptEmailNotification`（邮件提醒，默认 `true`）；QQ 和保修情况省略或填 `null`。鼓楼用户在问题描述中补充宿舍楼或办公室位置，尤其是台式机。
+以上字段全部必填。`campus` 使用 `XIANLIN`（仙林）、`GULOU`（鼓楼）或 `SUZHOU`（苏州）。可选字段为 `qq`、`warranty`（保修情况文本），以及 `acceptEmailNotification`（邮件提醒，默认 `true`）；QQ 和保修情况可省略或填 `null`。鼓楼用户需在问题描述中补充宿舍楼或办公室位置，尤其是报修台式机的情况。
 
 ```bash
 node scripts/run.mjs itxia create --input /path/to/order.json --agree-terms --format json
@@ -36,7 +36,7 @@ node scripts/run.mjs itxia create --input /path/to/order.json --agree-terms --fo
 - 其他浏览器：在任一 itxia.nju.edu.cn 页面打开开发者工具控制台，运行 `openScript` 后即进入本单页面。
 - 或在 `retrieveUrl`（https://itxia.nju.edu.cn/custom/retrieve）填写预约时的姓名和手机号找回本单。
 
-`node scripts/run.mjs itxia open ORDER_ID` 离线输出上述链接与方法。保存该编号供后续查询。提交结果不明时，先用姓名和手机号找回；返回编号后回读失败时，按错误中的 `orderId` 查询，核对本单再决定下一步。个人预约信息文件放在用户指定的私人目录，预约单编号按个人信息保管。
+`node scripts/run.mjs itxia open ORDER_ID` 离线输出上述链接与方法。保存该编号供后续查询。提交结果不明时，先用姓名和手机号找回；返回编号后回读失败时，按错误中的 `orderId` 查询，核对本单再决定下一步。个人预约信息文件应存放在用户指定的私有目录中，预约单编号须作为个人隐私信息妥善保管。
 
 ## 取消预约
 
