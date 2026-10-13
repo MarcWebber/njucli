@@ -10,11 +10,9 @@
 
 ## 用户群
 
-扫码加入飞书用户群，交流使用方法、反馈问题与获取项目更新。
+扫码或[点击链接加入飞书用户群](https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=dc4hab18-9c9e-4ca7-bdf0-dde104e2552c)，交流使用方法、反馈问题与获取项目更新。
 
 <img src="docs/assets/njucli-user-group.png" alt="NjuCLI 飞书用户群二维码" width="320" />
-
-群二维码目前标注“仅限企业内部成员加入”。如扫码受限，可通过 [GitHub Issues](https://github.com/MarcWebber/njucli/issues) 反馈。
 
 ## 安装
 
