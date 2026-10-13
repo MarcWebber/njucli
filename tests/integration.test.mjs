@@ -123,6 +123,7 @@ test("IT 侠：提交回读、状态与回复、找回预约和失败时单次�
     if (req.method === "PUT" && req.url === `/api/custom/order/${id}/cancel`) {
       assert.equal(body, undefined);
       if (mode === "cancel-rejected") return send(null, 1, "预约单已被接单");
+      if (mode === "cancel-unchanged") return send(null);
       detail.status = "CANCELED";
       return send(null);
     }
@@ -226,6 +227,19 @@ test("IT 侠：提交回读、状态与回复、找回预约和失败时单次�
   mode = "cancel-rejected";
   assert.equal((await run("cancel", id, "--yes")).ok, false);
   assert.equal(requests.length, 1);
+  mode = "cancel-unchanged";
+  detail.status = "PENDING";
+  requests.length = 0;
+  const unchanged = await run("cancel", id, "--yes");
+  assert.equal(unchanged.ok, false);
+  assert.equal(unchanged.code, 1);
+  assert.match(unchanged.error.message, new RegExp(id));
+  assert.match(unchanged.error.message, /PENDING/);
+  assert.equal(unchanged.error.message.includes("预约已取消"), false);
+  assert.equal(unchanged.error.details.orderId, id);
+  assert.equal(unchanged.error.details.status, "PENDING");
+  assert.equal(requests.filter((item) => item.method === "PUT").length, 1);
+  assert.deepEqual(requests.map(({ method, path }) => [method, path]), [["PUT", `/api/custom/order/${id}/cancel`], ["GET", `/api/custom/order/${id}`]]);
   mode = "success";
   requests.length = 0;
   const cancelled = await run("cancel", id, "--yes");

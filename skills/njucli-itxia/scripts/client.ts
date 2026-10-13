@@ -77,7 +77,13 @@ export class ItxiaClient {
 
   async cancel(id: string) {
     await this.request(`/custom/order/${encodeURIComponent(id)}/cancel`, undefined, "PUT");
-    return this.status(id);
+    const data = await this.status(id);
+    if (data.status !== "CANCELED") {
+      throw new AppError("REMOTE_UNAVAILABLE", `预约单 ${id} 未能取消，当前状态为 ${data.status}`, {
+        details: { orderId: id, status: data.status },
+      });
+    }
+    return data;
   }
 
   async retrieve(identity: { name: string; phone: string }) {
