@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import type { Command } from "commander";
 import { addFormatOption, runCommand, type CommandRuntime, type FormatOptions } from "../../../src/core/command.js";
 import { AppError } from "../../../src/core/errors.js";
-import type { ItxiaClient, ItxiaOrder } from "./client.js";
+import { orderLinks, type ItxiaClient, type ItxiaOrder } from "./client.js";
 import { identityInput, orderId, orderInput } from "./schema.js";
 
 export function registerItxiaCommands(program: Command, service: ItxiaClient, runtime: CommandRuntime): Command {
@@ -38,13 +38,39 @@ export function registerItxiaCommands(program: Command, service: ItxiaClient, ru
       }
       return { data, text: orderText(data) };
     }));
+  addFormatOption(itxia.command("open <id>").description("输出打开预约单页面的链接与方法（不发起请求）"))
+    .action((id: string, options: FormatOptions) => runCommand(runtime, options, async () => {
+      const parsed = orderId.safeParse(id);
+      if (!parsed.success) throw new AppError("INVALID_INPUT", "请填写预约单编号");
+      const data = { id: parsed.data, ...orderLinks(parsed.data) };
+      return { data, text: linkText(data) };
+    }));
+
+  addFormatOption(itxia.command("cancel <id>").description("取消预约（不可撤销，需 --yes 确认）")
+    .option("--yes", "确认取消该预约单"))
+    .action((id: string, options: FormatOptions & { yes?: boolean }) => runCommand(runtime, options, async () => {
+      if (!options.yes) throw new AppError("INVALID_INPUT", "取消预约后无法恢复，请确认后使用 --yes 执行");
+      const parsed = orderId.safeParse(id);
+      if (!parsed.success) throw new AppError("INVALID_INPUT", "请填写预约单编号");
+      const data = await service.cancel(parsed.data);
+      return { data, text: `预约已取消\n${orderText(data)}` };
+    }));
   return itxia;
+}
+
+function linkText(data: { id: string; url: string; openScript: string; retrieveUrl: string }): string {
+  return [
+    `预约单页面：${data.url}`,
+    `打开方法：在已打开的 itxia.nju.edu.cn 页面按 F12 打开控制台，运行以下代码：`,
+    `  ${data.openScript}`,
+    `或在 ${data.retrieveUrl} 填写预约时的姓名和手机号找回本单。`,
+  ].join("\n");
 }
 
 function orderText(data: ItxiaOrder): string {
   return [
     `预约单 ${data.id} · ${data.statusText}`,
-    `查看链接：${data.url}（填写预约时的姓名和手机号查看本单）`,
+    linkText(data),
     `${data.campusName} · ${data.brandModel} · ${data.os}`,
     `提交时间：${data.createTime}`,
     ...(data.handler ? [`处理人：${data.handler}`] : []),

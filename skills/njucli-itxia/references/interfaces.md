@@ -12,6 +12,7 @@ API 根地址为 `https://itxia.nju.edu.cn/api`。官方前端使用 JSON 请求
 | --- | --- | --- |
 | 创建预约 | `POST /custom/order` | `payload._id` 为预约单编号，随后 `GET /custom/order/{id}` 回读 |
 | 查询进度 | `GET /custom/order/{id}` | `payload` 为预约详情，含状态、处理人和回复 |
+| 取消预约 | `PUT /custom/order/{id}/cancel`，无请求体，请求头同上 | `code = 0` 后回读详情，`status` 为 `CANCELED`；已被接单时官网提示可能取消失败 |
 | 找回当前预约 | `POST /custom/order/retrieve`，JSON `{ name, phone }` | `payload` 为编号字符串，随后按编号查询详情 |
 
 找回接口是查询动作，返回官网选定的当前预约单。用户提供本人预约单编号，或预约时的姓名和手机号。官网前端将当前编号保存在 `localStorage.requestedOrderId`；CLI 通过命令参数传入，使用返回的 `id` 继续查询。
@@ -35,7 +36,7 @@ API 根地址为 `https://itxia.nju.edu.cn/api`。官方前端使用 JSON 请求
 
 预约详情使用 `_id/status/name/phone/email/campus/brandModel/os/description/freeTime/createTime`；处理人使用 `handler.realName`，回复使用 `reply[].postBy.realName/createTime/content/attachments`。官网对空闲时间设有空值展示，历史预约的 `freeTime` 允许缺省或为空。回复作者为空时，官网将其视为预约者。附件保留 `_id/fileName/mimeType/size`。
 
-官网前端路由仅有 `/custom/home`、`/custom/order`、`/custom/retrieve`，预约单页面按 `localStorage.requestedOrderId` 展示当前单，无按编号的直达路由。CLI 在创建与查询结果中输出 `url = https://itxia.nju.edu.cn/custom/retrieve`，用户在该页填写姓名和手机号查看本单。
+官网前端路由仅有 `/custom/home`、`/custom/order`、`/custom/retrieve`，均不携带编号；预约单页由 `localStorage.requestedOrderId`（JSON 编码的字符串）决定展示哪一单，该值在提交成功或找回成功后写入，页面加载时据此请求 `GET /custom/order/{id}`。CLI 在创建、查询结果中输出 `url`（`/custom/order`）、`openScript`（写入该键并跳转的控制台代码）和 `retrieveUrl`（`/custom/retrieve`）；`itxia open` 离线输出同样内容。2026-10-13 已用无头浏览器验证：写入编号后打开 `/custom/order` 显示对应预约单。
 
 `PENDING/HANDLING/DONE/CANCELED` 分别对应待接单、处理中、已完成、已取消。CLI 将 `_id` 输出为 `id`，`reply` 输出为 `replies`，并增加 `statusText` 和 `campusName`。文本输出展示状态、处理人、问题描述与回复记录。
 
