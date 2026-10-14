@@ -1,3 +1,4 @@
+import { registerInstitutionCommands } from "../../skills/njucli-institution/scripts/commands.js";
 import { registerYouthCommands } from '../../skills/njucli-youth/scripts/commands.js';
 import { registerItxiaCommands } from '../../skills/njucli-itxia/scripts/commands.js';
 import { registerTableCommands } from '../../skills/njucli-table/scripts/commands.js';
@@ -22,6 +23,7 @@ import { registerUpgradeCommand } from "./upgrade.js";
 export function createCli(services: NjuServices, runtime: CommandRuntime): Command {
   const program = createProgram("njucli").description("南京大学校园服务命令行工具");
 
+  registerInstitutionCommands(program, services.institution, runtime);
   registerAccountCommands(program, services.account, runtime);
   registerAuthCommands(program, services.auth, runtime);
   registerBoxCommands(program, services.box, runtime);

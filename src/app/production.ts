@@ -1,3 +1,4 @@
+import { InstitutionClient } from "../../skills/njucli-institution/scripts/client.js";
 import { createYouthServices } from '../../skills/njucli-youth/scripts/services.js';
 import { ItxiaClient } from '../../skills/njucli-itxia/scripts/client.js';
 import { createTableServices } from '../../skills/njucli-table/scripts/services.js';
@@ -17,6 +18,7 @@ import { createSportsServices } from '../../skills/njucli-sports/scripts/service
 export function createProductionServices() {
   const runtime = createRuntime();
   const services = {
+    institution: new InstitutionClient(),
     auth: createAuthServices(runtime),
     account: createAccountServices(runtime),
     box: createBoxServices(runtime),

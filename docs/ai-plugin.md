@@ -45,6 +45,7 @@ curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/inst
 
 | 任务 | 工作流程 |
 | --- | --- |
+| [学院与教师](../skills/njucli-institution/SKILL.md) | 通过检索工具获取机构与教师基础资料后，若需补充最新信息或获取研究方向，可触发官网实时核对；本地学院简介为依据官网原文概括，实时读取为官网原网页摘录。回答时应明确引用对应的学院来源页面及采集时间。使用六个独立的 MCP 工具进行细粒度查询。 |
 | [IT 侠维修](../skills/njucli-itxia/SKILL.md) | 根据用户维修需求提交预约，按编号或姓名、手机号查询状态和回复，并给出打开预约单的方法。取消仅 CLI、须 `--yes`；只读 MCP 不暴露取消 |
 | [青年平台](../skills/njucli-youth/SKILL.md) | 查询活动、志愿时长与第二课堂，按用户要求报名或取消 |
 | [协同表格](../skills/njucli-table/SKILL.md) | 查找与复制模板，创建表格、公式和视图，按行 ID 填写记录 |
