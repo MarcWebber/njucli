@@ -4,7 +4,7 @@ import { AppError } from "../../../src/core/errors.js";
 import { saveFile } from "../../../src/core/fs.js";
 import type { FetchLike } from "../../../src/core/types.js";
 import type { Institution, InstitutionSnapshot, KnowledgeKind, KnowledgeRecord } from "./types.js";
-import { basicCategory, basicOverview, basicTeacher, decodeHtml, directoryMarkdown, extractText, institutionFilename, institutionMarkdown, researchDirection, servicesMarkdown, snapshotJson } from "./text.js";
+import { basicCategory, basicOverview, basicTeacher, contactEmail, decodeHtml, directoryMarkdown, extractText, institutionFilename, institutionMarkdown, researchDirection, servicesMarkdown, snapshotJson } from "./text.js";
 import { parseInstitutionDirectory, parseLogisticsServices } from "./directory.js";
 
 const DIRECTORY_URL = "https://www.nju.edu.cn/xybm.htm";
@@ -56,6 +56,7 @@ export class InstitutionClient {
     const snapshot = await this.snapshot();
     const institution = options.institution === undefined ? undefined : findInstitution(snapshot, options.institution);
     const items = snapshot.records.filter(record => (!institution || record.institutionId === institution.id) && (!options.kind || record.kind === options.kind) && matches(query, record.title, record.text, record.department ?? "", record.role ?? "", record.category ?? "", record.phone ?? "", record.email ?? "", record.office ?? ""));
+    if (options.kind === "teacher") items.sort((a, b) => Number(Boolean(b.phone || b.email)) - Number(Boolean(a.phone || a.email)));
     const offset = options.offset ?? 0;
     const limit = options.limit ?? 20;
     return { mode: "snapshot", generatedAt: snapshot.generatedAt, total: items.length, offset, limit, items: items.slice(offset, offset + limit).map(({ text, ...record }) => ({ ...record, excerpt: searchExcerpt(text, query), institutionName: snapshot.institutions.find(item => item.id === record.institutionId)?.name ?? record.institutionId })) };
@@ -85,6 +86,11 @@ export class InstitutionClient {
     const html = await this.html(record.source.url);
     const body = extractText(html, record.source.selector);
     const basic = record.kind === "teacher" ? basicTeacher(body, record.title) : { text: basicOverview(body) };
+    if (record.kind === "teacher" && record.source.contactSelector && "email" in basic) {
+      const contactText = extractText(html, record.source.contactSelector);
+      const contacts = basicTeacher(contactText, record.title);
+      Object.assign(basic, { phone: contacts.phone || basic.phone, email: contacts.email || contactEmail(contactText) || basic.email, office: contacts.office || basic.office });
+    }
     const result = { ...record, ...basic, source: { ...record.source, fetchedAt: new Date().toISOString() } };
     if ("role" in basic && !basic.role && record.role) result.role = record.role;
     return result;

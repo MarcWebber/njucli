@@ -45,7 +45,7 @@ curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/inst
 
 | 任务 | 工作流程 |
 | --- | --- |
-| [学院与教师](../skills/njucli-institution/SKILL.md) | 通过检索工具获取机构与教师基础资料后，若需补充最新信息或获取研究方向，可触发官网实时核对；本地学院简介为依据官网原文概括，实时读取为官网原网页摘录。回答时应明确引用对应的学院来源页面及采集时间。使用六个独立的 MCP 工具进行细粒度查询。 |
+| [学院与教师](../skills/njucli-institution/SKILL.md) | 1. 使用 `teachers` 或 `search --kind teacher` 按姓名、学院查询教师，匹配结果默认将已有电话/邮箱者排前，并在详情中将联系方式置于履历前。2. 若快照缺少联系方式，使用 `teacher <id> --live` 实时核对个人主页；必要时可进一步检查页面明确链接的官方个人主页。3. 若个人联系方式仍缺失，使用 `show <id>` 查询该教师所属机构的办公联系方式，并向用户明确说明这是单位联系方式，禁止将其混淆为个人联系方式。4. 缺项仅代表当前资料未收录或解析被过滤（如模板占位符），不要向用户宣称“官网未公布”或“全网无公开电话”。 |
 | [IT 侠维修](../skills/njucli-itxia/SKILL.md) | 根据用户维修需求提交预约，按编号或姓名、手机号查询状态和回复，并给出打开预约单的方法。取消仅 CLI、须 `--yes`；只读 MCP 不暴露取消 |
 | [青年平台](../skills/njucli-youth/SKILL.md) | 查询活动、志愿时长与第二课堂，按用户要求报名或取消 |
 | [协同表格](../skills/njucli-table/SKILL.md) | 查找与复制模板，创建表格、公式和视图，按行 ID 填写记录 |
