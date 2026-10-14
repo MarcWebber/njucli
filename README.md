@@ -59,7 +59,7 @@ curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/inst
 | [njucli-youth](skills/njucli-youth/SKILL.md) | 青年平台 |
 | [njucli-table](skills/njucli-table/SKILL.md) | 协同表格 |
 | [njucli-itxia](skills/njucli-itxia/SKILL.md) | IT 侠维修预约、进度查询与取消 |
-| [njucli-institution](skills/njucli-institution/SKILL.md) | 学院简介、教师基础信息与后勤电话；本地检索、官网读取与导出 |
+| [njucli-institution](skills/njucli-institution/SKILL.md) | 教师与院系联系方式、学院简介与后勤电话；本地检索、官网读取与导出 |
 
 ```bash
 njucli ehall schedule
@@ -82,7 +82,7 @@ njucli institution dump --output ./nju-knowledge
 rg -n '公共政策' ./nju-knowledge/institutions
 ```
 
-支持按姓名、职称/身份、分类、单位及联系方式（电话、邮箱、办公地点）等检索已收录的机构与教师基础资料。提供指定来源的官网实时核对功能，并支持将整个本地资料库导出为按学院分类的中文 Markdown 文件。收录范围详见 [资料范围](skills/njucli-institution/references/coverage.md)，跨院兼任按官网标注保留。
+NjuCLI 提供南京大学机构与教师公开资料的快速检索，重点支持教师及机构办公联系方式（电话、邮箱）的查询。支持按姓名、学院检索，优先展示已有联系方式的结果；并提供 `--live` 选项实时核对官网个人主页。当个人联系方式缺失时，将展示所在单位已收录的公开办公联系方式。支持整个本地资料库的结构化及 Markdown 导出。
 
 IT 侠支持 `njucli itxia create --input order.json --agree-terms` 提交维修预约，`njucli itxia status ORDER_ID` 查询状态与回复、`njucli itxia open ORDER_ID` 获取预约单页面打开方法，以及 `njucli itxia cancel ORDER_ID --yes` 取消预约。也可通过 `status --name "预约姓名" --phone "预约手机号"` 找回当前预约；字段和服务条款见 [IT 侠 Skill](skills/njucli-itxia/SKILL.md)。
 

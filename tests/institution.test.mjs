@@ -27,10 +27,10 @@ test("机构知识：离线检索、同名教师、分页与 JSON/Markdown 导�
   t.after(() => rm(directory, { recursive: true, force: true }));
   const source = { url: "https://public.nju.edu.cn/teachers/1.htm", fetchedAt: "2026-10-14T00:00:00.000Z", selector: ".teacher-content" };
   const snapshot = { schemaVersion: 1, generatedAt: source.fetchedAt,
-    institutions: [ { id: "public", name: "政府管理学院", category: "学院", source }, { id: "math", name: "数学学院", category: "学院", source } ],
+    institutions: [ { id: "public", name: "政府管理学院", category: "学院", source }, { id: "math", name: "数学学院", category: "学院", source, contact: { phone: "025-89680002", email: "office@nju.edu.cn", source } } ],
     records: [
-      { id: "public-li", institutionId: "public", kind: "teacher", title: "李老师", text: "公共治理、数字治理", phone: "025-89680001", email: "teacher@nju.edu.cn", office: "圣达楼101", source },
       { id: "math-li", institutionId: "math", kind: "teacher", title: "李老师", text: "偏微分方程", source },
+      { id: "public-li", institutionId: "public", kind: "teacher", title: "李老师", text: "公共治理、数字治理", phone: "025-89680001", email: "teacher@nju.edu.cn", office: "圣达楼101", source },
       { id: "public-intro", institutionId: "public", kind: "overview", title: "学院概况", text: "公共管理、政治学与数字治理。", source },
     ], services: [{ unit: "膳食中心", department: "第五食堂", phone: "89680000", source }],
     coverage: [{ institutionId: "public", notes: [] }],
@@ -51,6 +51,10 @@ test("机构知识：离线检索、同名教师、分页与 JSON/Markdown 导�
   assert.equal((await command(service, ["teachers", "teacher@nju.edu.cn"])).data.total, 1);
   assert.equal((await command(service, ["teachers", "89680001"])).data.total, 1);
   assert.equal((await command(service, ["teacher", "math-li"])).data.record.text, "偏微分方程");
+  const missingContact = await command(service, ["teacher", "math-li"]);
+  assert.equal(missingContact.data.record.phone, undefined);
+  assert.equal(missingContact.data.institution.contact.phone, "025-89680002");
+  assert.equal((await command(service, ["show", "math"])).data.institution.contact.email, "office@nju.edu.cn");
   assert.equal((await command(service, ["teacher", "unknown"])).error.code, "NOT_FOUND");
   assert.equal((await command(service, ["teachers", "--institution", "unknown"])).error.code, "NOT_FOUND");
   for (const args of [["--limit", "101"], ["--offset", "-1"], ["--limit", "0"]]) assert.equal((await command(service, ["teachers", ...args])).code, 2);
@@ -118,6 +122,41 @@ test("机构知识：本机 HTTP 实时目录、教师正文、后勤合并单�
   const roster = await command(service, ["teacher", "roster-only", "--live"]);
   assert.equal(roster.error.code, "NOT_FOUND");
   assert.equal(requests, beforeRoster);
+});
+
+test("机构知识：教师联系卡片、邮件别名与公开邮箱写法", async t => {
+  let requests = 0;
+  const server = createServer((req, res) => {
+    requests++;
+    res.setHeader("content-type", "text/html; charset=utf-8");
+    const card = req.url === "/placeholder" ? '<p>2026-10-10</p><p>邮件：username@nju.edu.cn</p>' : '<p>邮件：teacher [at] nju dot edu dot cn</p><p>电话：025-89680001 ext.123 传真：025-89680003</p><p>办公地点：教学楼101</p>';
+    const body = req.url === "/body-contact" ? '<p>邮件：bodyteacher@nju.edu.cn</p><p>电话：025-89680004</p>' : '';
+    res.end(`<section class="contact-card">${req.url === "/body-contact" ? '<p>邮件：</p>' : card}</section><article class="profile"><p>研究方向：机器学习</p>${body}</article><footer><p>邮箱：service@nju.edu.cn</p><p>电话：025-89680002</p></footer>`);
+  }).listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => new Promise(resolve => server.close(resolve)));
+  const directory = await mkdtemp(join(tmpdir(), "njucli-institution-contact-card-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const source = { url: `http://127.0.0.1:${server.address().port}`, fetchedAt: "2000-01-01T00:00:00.000Z", selector: ".profile", contactSelector: ".contact-card" };
+  const path = join(directory, "机构资料.json");
+  const snapshot = { schemaVersion: 1, generatedAt: source.fetchedAt, institutions: [{ id: "ai", name: "人工智能学院", category: "学院", source }], records: [{ id: "teacher", institutionId: "ai", kind: "teacher", title: "教师", text: "", source }], services: [], coverage: [] };
+  await writeFile(path, JSON.stringify(snapshot));
+  const result = await command(new InstitutionClient(fetch, path), ["teacher", "teacher", "--live"]);
+  assert.equal(result.data.record.email, "teacher@nju.edu.cn");
+  assert.equal(result.data.record.phone, "025-89680001 ext.123");
+  assert.equal(result.data.record.office, "教学楼101");
+  assert.equal(result.data.record.text, "机器学习");
+  assert.equal(requests, 1);
+  snapshot.records[0].source = { ...source, url: `${source.url}/placeholder` };
+  await writeFile(path, JSON.stringify(snapshot));
+  const placeholder = await command(new InstitutionClient(fetch, path), ["teacher", "teacher", "--live"]);
+  assert.equal(placeholder.data.record.email, "");
+  assert.equal(placeholder.data.record.phone, "");
+  snapshot.records[0].source = { ...source, url: `${source.url}/body-contact` };
+  await writeFile(path, JSON.stringify(snapshot));
+  const bodyContact = await command(new InstitutionClient(fetch, path), ["teacher", "teacher", "--live"]);
+  assert.equal(bodyContact.data.record.email, "bodyteacher@nju.edu.cn");
+  assert.equal(bodyContact.data.record.phone, "025-89680004");
 });
 
 test("机构知识：导航分类与研究方向中的课程、联系信息统一清理", async t => {

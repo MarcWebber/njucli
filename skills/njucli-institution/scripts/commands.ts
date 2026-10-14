@@ -3,7 +3,7 @@ import { addFormatOption, runCommand, type CommandRuntime, type FormatOptions } 
 import { AppError } from "../../../src/core/errors.js";
 import { optionalNonNegativeInteger, optionalPositiveInteger } from "../../../src/core/options.js";
 import { type InstitutionClient, type SearchOptions } from "./client.js";
-import { recordText } from "./text.js";
+import { institutionContactText, recordText } from "./text.js";
 import type { KnowledgeKind } from "./types.js";
 
 interface QueryOptions extends FormatOptions { institution?: string; kind?: string; limit?: string; offset?: string }
@@ -26,7 +26,7 @@ export function registerInstitutionCommands(program: Command, service: Instituti
   addFormatOption(institution.command("show <id>").description("查看学院简介").option("--live", "读取当前官网简介摘录"))
     .action((id: string, options: LiveOptions) => runCommand(runtime, options, async () => {
       const data = await service.show(id, options.live);
-      return { data, text: [data.institution.name, `官网：${data.institution.url ?? "目录未提供"}`, `快照名录条数：${data.teacherCount}`, ...data.records.map(recordText), ...(data.coverage?.notes ?? [])].join("\n\n") };
+      return { data, text: [data.institution.name, institutionContactText(data.institution), `官网：${data.institution.url ?? "目录未提供"}`, `快照名录条数：${data.teacherCount}`, ...data.records.map(recordText), ...(data.coverage?.notes ?? [])].filter(Boolean).join("\n\n") };
     }));
   for (const name of ["teachers", "search"] as const) {
     const command = institution.command(name === "teachers" ? "teachers [query]" : "search <query>")
@@ -43,7 +43,7 @@ export function registerInstitutionCommands(program: Command, service: Instituti
   addFormatOption(institution.command("teacher <id>").description("读取一个教师的基础信息").option("--live", "读取当前官网职称、联系方式和研究方向"))
     .action((id: string, options: LiveOptions) => runCommand(runtime, options, async () => {
       const data = await service.teacher(id, options.live);
-      return { data, text: [data.institution.name, recordText(data.record)].join("\n\n") };
+      return { data, text: [data.institution.name, recordText(data.record), !data.record.phone && !data.record.email && institutionContactText(data.institution)].filter(Boolean).join("\n\n") };
     }));
   addFormatOption(institution.command("services [query]").description("查询后勤单位、部门与办公电话").option("--live", "读取当前官方后勤服务表"))
     .action((query: string | undefined, options: LiveOptions) => runCommand(runtime, options, async () => {

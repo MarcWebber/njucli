@@ -2,6 +2,7 @@ export interface KnowledgeSource {
   url: string;
   fetchedAt: string;
   selector?: string;
+  contactSelector?: string;
 }
 
 export interface Institution {
@@ -11,6 +12,7 @@ export interface Institution {
   parentId?: string;
   url?: string;
   source: KnowledgeSource;
+  contact?: { phone?: string; email?: string; source: KnowledgeSource };
 }
 
 export type KnowledgeKind = "overview" | "teacher";

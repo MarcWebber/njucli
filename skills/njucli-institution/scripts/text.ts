@@ -3,12 +3,17 @@ import { AppError } from "../../../src/core/errors.js";
 import type { Institution, InstitutionSnapshot, KnowledgeRecord, LogisticsService } from "./types.js";
 
 export function recordText(record: KnowledgeRecord): string {
-  return [record.title, [positionText(record), record.department].filter(Boolean).join(" · "), record.phone && `电话：${record.phone}`, record.email && `邮箱：${record.email}`, record.office && `办公地点：${record.office}`, record.text && (record.kind === "teacher" ? `研究方向：${record.text}` : record.text), `来源：${record.source.url}`, `采集时间：${record.source.fetchedAt}`].filter(Boolean).join("\n");
+  return [record.title, record.phone && `电话：${record.phone}`, record.email && `邮箱：${record.email}`, record.kind === "teacher" && !record.phone && !record.email && "联系方式：当前资料未收录，请核对官方来源", record.office && `办公地点：${record.office}`, [positionText(record), record.department].filter(Boolean).join(" · "), record.text && (record.kind === "teacher" ? `研究方向：${record.text}` : record.text), `来源：${record.source.url}`, `采集时间：${record.source.fetchedAt}`].filter(Boolean).join("\n");
 }
 
 function positionText(record: KnowledgeRecord): string {
   const values = [record.role, record.category].filter((value): value is string => Boolean(value));
   return [...new Set(values.flatMap(value => value.split(/[；·]/).map(part => part.trim()).filter(Boolean)))].join("；");
+}
+
+export function institutionContactText(institution: Institution): string {
+  const contact = institution.contact;
+  return contact ? [`${institution.name}办公联系方式`, contact.phone && `电话：${contact.phone}`, contact.email && `邮箱：${contact.email}`, `来源：${contact.source.url}`, `采集时间：${contact.source.fetchedAt}`].filter(Boolean).join("\n") : "";
 }
 
 function excerpt(text: string, limit: number): string {
@@ -30,6 +35,12 @@ export function researchDirection(text: string): string {
   return excerpt(value, 160);
 }
 
+export function contactEmail(value: string): string {
+  const text = value.replace(/\s*(?:\[\s*at\s*\]|\(\s*at\s*\)|（\s*at\s*）)\s*|\s+at\s+/gi, "@").replace(/\s*(?:\[\s*dot\s*\]|\(\s*dot\s*\)|（\s*dot\s*）)\s*|\s+dot\s+/gi, ".");
+  const match = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  return match && !/^(?:\.{2,}|…)/.test(text.slice(match.index! + match[0].length)) && !/^(?:username|yourname|your\.name|example|xxx+)@/i.test(match[0]) ? match[0] : "";
+}
+
 export function basicTeacher(text: string, name = ""): { text: string; role: string; phone: string; email: string; office: string } {
   const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
   const labeled = (labels: string): string[] => {
@@ -38,16 +49,17 @@ export function basicTeacher(text: string, name = ""): { text: string; role: str
     for (const [index, line] of lines.entries()) {
       const match = line.match(pattern);
       if (!match) continue;
-      const value = (match[1]?.trim() || lines[index + 1] || "").split(/(?:\s|[，。；;])(?:姓名|职称|职务|学系|电话|邮箱|电子邮箱|电子邮件|办公地址|办公地点|邮编|Email|E-mail|Phone|Office|Title|Position)\s*[：:]/i)[0]!.trim();
-      if (value && !/^(?:电话|邮箱|地址|办公地址|办公地点|邮编|职称|Email|E-mail|Phone|Office|Title|Position)\s*[：:]/i.test(value) && !/^(?:个人简介|个人简历|个人情况|研究方向|研究成果|教育经历|工作经历|联系方式)$/.test(value)) values.push(value);
+      const value = (match[1]?.trim() || lines[index + 1] || "").split(/(?:\s|[，。；;])(?:姓名|职称|职务|学系|电话|传真|联系邮箱|邮箱|电子邮箱|电子邮件|电子信箱|邮件|办公地址|办公地点|邮编|Email|E-mail|Mail|Phone|Fax|Office|Title|Position)\s*[：:]/i)[0]!.trim();
+      if (value && !/^(?:电话|传真|联系邮箱|邮箱|电子邮箱|电子邮件|电子信箱|邮件|地址|办公地址|办公地点|邮编|职称|Email|E-mail|Mail|Phone|Fax|Office|Title|Position)\s*[：:]/i.test(value) && !/^(?:个人简介|个人简历|个人情况|研究方向|研究成果|教育经历|工作经历|联系方式)$/.test(value)) values.push(value);
     }
     return values;
   };
   const emailPattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i;
-  const phonePattern = /\+?[\d(（][\d\s()（）-]{6,}\d(?:\s*转\s*\d+)?/g;
-  const phoneValues = labeled("联系电话|办公电话|办公室电话|电话|手机|联系方式|联络方式|系方式|Phone|Telephone|Tel\\.?").flatMap(value => value.match(phonePattern) ?? []);
-  const phone = [...new Set(phoneValues.map(value => value.trim()))].join("；") || lines.slice(0, 6).find(line => /^\+?[\d(（][\d\s()（）-]{6,}\d$/.test(line)) || "";
-  const email = labeled("联系邮箱|电子邮箱|电子邮件|邮箱|联系方式|联络方式|系方式|Email|E-mail|E_mail").map(value => value.match(emailPattern)?.[0]).find(Boolean) ?? lines.slice(0, 25).find(line => emailPattern.test(line) && line.match(emailPattern)?.[0] === line) ?? "";
+  const phonePattern = /\+?[\d(（][\d\s()（）-]{6,}\d(?:\s*(?:转|ext\.?|extension)\s*\d+)?/gi;
+  const date = /^\d{4}[-/.]\d{1,2}[-/.]\d{1,2}$/;
+  const phoneValues = labeled("联系电话|办公电话|办公室电话|电话|手机|联系方式|联络方式|系方式|Phone|Telephone|Tel\\.?").flatMap(value => value.match(phonePattern) ?? []).map(value => value.trim()).filter(value => !date.test(value));
+  const phone = [...new Set(phoneValues)].join("；") || lines.slice(0, 6).find((line, index) => !date.test(line) && !/^(Fax|传真)/i.test(lines[index - 1] ?? "") && /^\+?[\d(（][\d\s()（）-]{6,}\d$/.test(line)) || "";
+  const email = labeled("联系邮箱|电子邮箱|电子邮件|电子信箱|信箱|邮箱|邮件|联系方式|联络方式|系方式|Email|E-mail|E_mail|Mail").map(contactEmail).find(Boolean) ?? lines.slice(0, 25).map(line => { const email = contactEmail(line); return email === line ? email : ""; }).find(Boolean) ?? "";
   const officeValue = labeled("办公地址|办公地点|办公室地址|办公室|Office(?: address)?")[0] ?? "";
   const office = officeValue && !emailPattern.test(officeValue) && !/https?:|个人网页|个人主页|课题组主页/.test(officeValue) ? excerpt(officeValue, 100) : "";
   const heading = /^(?:主要)?(?:研究方向|研究领域|研究兴趣|研究内容|Research Interests|Research Areas|Research Fields)\s*(?:[：:]\s*(.*)|$)/i;
@@ -106,6 +118,7 @@ export function institutionMarkdown(institution: Institution, snapshot: Institut
   const records = snapshot.records.filter(record => record.institutionId === institution.id);
   const coverage = snapshot.coverage.find(item => item.institutionId === institution.id);
   const lines = [`# ${institution.name}`, "", `机构 ID：${institution.id}；分类：${institution.category}`, `快照时间：${snapshot.generatedAt}`, ...(institution.url ? [`官网：${institution.url}`] : []), ""];
+  if (institution.contact) lines.push("## 办公联系方式", "", institutionContactText(institution).split("\n").slice(1).join("\n\n"), "");
   for (const record of records.filter(item => item.kind === "overview")) lines.push("## 学院简介", "", record.text, "", `来源：${record.source.url}`, "");
   const teachers = records.filter(item => item.kind === "teacher");
   if (teachers.length) {
