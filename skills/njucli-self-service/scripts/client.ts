@@ -43,7 +43,7 @@ function parse<T>(schema: z.ZodType<T>, value: unknown): T {
 export class SelfServiceClient {
   private identity: Identity | undefined;
 
-  constructor(private readonly fetch: FetchLike, private readonly boundEmail?: string | null) {}
+  constructor(private readonly fetch: FetchLike, private readonly boundEmail: () => Promise<string | null> = async () => null) {}
 
   async hasSession(): Promise<boolean> {
     const result = await this.json<{ success: boolean; data: unknown }>("/mobile/isLogin");
@@ -62,18 +62,20 @@ export class SelfServiceClient {
     const config = parse(configSchema, JSON.parse(await this.data<string>("/mobile/getDict/PRINT_RELATED_CONFIGURATION/ELECTRONIC_FILE_CONFIG")));
     const platformEmail = user.email || null;
     const canChangeEmail = config.MODIFY_MAIL === "1";
+    const boundEmail = await this.boundEmail();
     return {
-      ...me, platformEmail, boundEmail: this.boundEmail ?? null,
-      defaultEmail: platformEmail || (canChangeEmail ? this.boundEmail : null) || null,
+      ...me, platformEmail, boundEmail,
+      defaultEmail: platformEmail || (canChangeEmail ? boundEmail : null),
       emailEnabled: config.DOWN_LOAD_TYPE[1] === "1", downloadEnabled: config.DOWN_LOAD_TYPE[0] === "1",
       canChangeEmail, emailPattern: config.MAIL_PATTERN,
     };
   }
 
-  async items(query = "") {
+  async items(query = "", parentId?: string) {
     await this.current();
     const result = await this.data<{ records: unknown[]; total: number }>("/item/sp-print-item/list/terminal", {
       name: query, state: "1", rows: "5000", page: "1",
+      ...(parentId ? { parentId } : {}),
     });
     return { total: result.total, items: result.records.map((row) => parse(itemSchema, row)) };
   }
@@ -149,6 +151,27 @@ export class SelfServiceClient {
     const recipient = await this.recipient(email);
     await this.deliver(order.orderId, recipient);
     return { orderId: order.orderId, email: recipient, emailSent: true };
+  }
+
+  async cancel(id: string) {
+    const pending = await this.orders("pending");
+    const order = pending.find((row) => row.orderId === id);
+    if (!order) throw new AppError("INVALID_INPUT", "此申请不在本人的未完成列表中");
+    if (order.fee !== 0) throw new AppError("USER_ACTION_REQUIRED", "涉及费用的申请请在官方页面处理");
+    await this.data("/order/cancelOrders", { orderIds: id, schoolCode: order.schoolCode });
+    if ((await this.orders("pending")).some((row) => row.orderId === id))
+      throw new AppError("USER_ACTION_REQUIRED", "申请仍在未完成列表中，请查询状态后再处理");
+    return { orderId: id, cancelled: true };
+  }
+
+  async cloud() {
+    await this.current();
+    const config = parse(z.object({
+      price: z.string(), initFreeCopies: z.number(), singlePrintPages: z.number(), filePageLimit: z.string(),
+    }), await this.data("/order/cloud-print/config"));
+    const result = await this.data<{ records: unknown[]; total: number }>("/order/cloud-print-list?rows=10000&page=1&type=0");
+    const files = result.records.map((row) => parse(z.object({ orderId: z.string(), title: z.string(), fileType: z.string() }), row));
+    return { config, total: result.total, files };
   }
 
   async terminals() {

@@ -52,7 +52,7 @@ curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/inst
 | [云盘](../skills/njucli-box/SKILL.md) | 查询资料库和路径，上传下载或管理文件；分享后将返回的 `url` 交给用户，保留 `id` 供撤销 |
 | [教务与办事大厅](../skills/njucli-ehall/SKILL.md) | 查询课表、选课、成绩、考试与培养方案；办理行程时一次补齐缺项，提交后回读 |
 | [论文写作](../skills/njucli-tex/SKILL.md) | 按用户材料修改正文、上传素材，编译后读取日志和 PDF |
-| [自助服务](../skills/njucli-self-service/SKILL.md) | 从实时项目目录申请正式电子成绩单或纸质证明，查询费用、申请及设备位置；电子文件默认发至绑定邮箱，询问下载后按授权保存邮件附件 |
+| [自助服务](../skills/njucli-self-service/SKILL.md) | 从实时项目目录申请正式电子成绩单或纸质证明，查询费用、管理申请、查找设备和查询云打印；电子文件默认发至绑定邮箱，询问下载后按授权保存邮件附件 |
 | [邮箱](../skills/njucli-mail/SKILL.md) | 绑定和切换邮箱，查询、搜索、读取正文并下载附件；读取保持原有已读状态 |
 | [软件学院课程](../skills/njucli-se/SKILL.md) | 查询课程、作业、名单与成绩，下载作业资料 |
 | [校园信息](../skills/njucli-campus/SKILL.md) | 查询新闻、通知和食堂；`campus today` 汇总当天课程、借阅和预约 |

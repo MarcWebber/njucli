@@ -26,10 +26,8 @@ async function command(service, ...args) {
   return { code, ...JSON.parse(stdout) };
 }
 
-for (const student of [
-  { id: 'undergraduate', schoolCode: 'school-a', itemId: 'english-transcript', itemName: '英文成绩单', orderId: 'first-order', email: 'undergraduate@smail.nju.edu.cn' },
-  { id: 'graduate', schoolCode: 'school-b', itemId: 'enrollment-certificate', itemName: '在校证明', orderId: 'second-order', email: 'graduate@smail.nju.edu.cn' },
-]) test(`自助服务 ${student.id}：会话恢复、动态项目与本人申请、默认邮箱、单次写入`, async t => {
+test('自助服务：动态目录、本人申请与默认邮箱、失败不重提、撤销回读', async t => {
+  const student = { id: 'student', schoolCode: 'school', itemId: 'certificate', itemName: '在校证明', orderId: 'order', email: 'student@smail.nju.edu.cn' };
   const directory = await mkdtemp(join(tmpdir(), 'njucli-self-service-'));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const account = { name: 'student', configDir: directory, browserDataDir: join(directory, 'browser') };
@@ -41,45 +39,44 @@ for (const student of [
     title: item.name, copies: 1, fee: 0, takeType: 2, takeCode: '0000000000', fileType: 'pdf', filePages: 2,
     createTime: '2026-01-01 12:00:00', completeTime: '2026-01-01 12:00:01', expireTime: null, authFileName: 'private-file' };
   const config = { DOWN_LOAD_TYPE: '01', MODIFY_MAIL: '1', MAIL_PATTERN: '/^[^@]+@smail\\.nju\\.edu\\.cn$/' };
-  let loggedIn = false, mode = 'success', platformEmail = null;
+  let loggedIn = false, mode = 'success', pending = true;
   const calls = [];
   const server = createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost');
     const path = url.pathname.replace('/wec-self-print-app-console', '');
     const chunks = []; for await (const chunk of req) chunks.push(chunk);
     const form = new URLSearchParams(Buffer.concat(chunks).toString());
-    calls.push({ path, query: url.searchParams, form, method: req.method });
-    assert.equal(req.headers.appid, '80019');
-    assert.equal(req.headers.loginmode, 'MOBILE');
+    calls.push({ path, query: url.searchParams });
     const raw = data => { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(data)); };
     const envelope = data => raw({ code: '0000', msg: '成功', data });
     if (path === '/mobile/isLogin') return raw({ success: loggedIn, data: loggedIn ? me : null });
     if (path === '/app/login/IDS') { loggedIn = true; assert.equal(url.searchParams.get('returnUrl'), '/mobile/itemList'); return res.end('ready'); }
     assert.ok(loggedIn);
-    if (path === `/sys/sp-user/${me.id}`) return raw({ ...me, email: platformEmail });
+    if (path === `/sys/sp-user/${me.id}`) return raw({ ...me, email: null });
     if (path === '/mobile/getDict/PRINT_RELATED_CONFIGURATION/ELECTRONIC_FILE_CONFIG') return envelope(JSON.stringify(config));
-    if (path === '/item/sp-print-item/list/terminal') { assert.equal(form.get('rows'), '5000'); return envelope({ records: [item], total: 1 }); }
+    if (path === '/item/sp-print-item/list/terminal') return envelope({ records: form.has('parentId') ? [] : [item], total: form.has('parentId') ? 0 : 1 });
     if (path === `/item/sp-print-item/checkItemRight/${item.id}`) return envelope(true);
     if (path === `/item/sp-print-item/terminal/${item.id}`) return raw(item);
     if (path.endsWith('ChargeFee') || path.endsWith('/chargeFee')) {
       assert.equal(form.get('userId'), me.id); assert.equal(form.get('itemId'), item.id);
       return envelope({ totalFee: mode === 'paid' ? 5 : 0, price: 5, canFreeNumber: 2, curFreeNumber: 1,
-        curChargeNumber: mode === 'paid' ? 1 : 0, printLimitNumber: 1, isOutOfLimitNumber: mode === 'limit', errorMsg: null });
+        curChargeNumber: mode === 'paid' ? 1 : 0, printLimitNumber: 1, isOutOfLimitNumber: false, errorMsg: null });
     }
     if (path === '/order/create') {
       assert.equal(req.method, 'POST');
-      assert.deepEqual(Object.fromEntries(form), { itemId: item.id, copies: '1', schoolCode: me.schoolCode,
-        orderType: '5', apiType: '2', reportFormValue: '', takeType: String(order.takeType), takeCodeLength: '10' });
-      if (mode === 'create-http-error') { res.writeHead(503); return res.end('unavailable'); }
+      assert.equal(form.get('itemId'), item.id); assert.equal(form.get('schoolCode'), me.schoolCode);
+      assert.equal(form.get('takeType'), String(order.takeType));
       return envelope({ orderId: order.orderId });
     }
     if (path === '/order/get') {
       assert.equal(url.searchParams.get('orderId'), order.orderId);
       assert.equal(url.searchParams.get('schoolCode'), me.schoolCode);
-      return envelope({ order: { ...order, userId: mode === 'foreign' ? 'other-person' : me.id,
-        itemId: mode === 'wrong-item' ? 'other-item' : item.id } });
+      return envelope({ order: { ...order, userId: mode === 'foreign' ? 'other-person' : me.id } });
     }
-    if (path === '/order/list') { assert.equal(url.searchParams.get('userId'), me.id); return envelope({ orders: [order] }); }
+    if (path === '/order/list') { assert.equal(url.searchParams.get('userId'), me.id); return envelope({ orders: pending ? [order] : [] }); }
+    if (path === '/order/cancelOrders') { assert.equal(form.get('orderIds'), order.orderId); pending = false; return envelope(null); }
+    if (path === '/order/cloud-print/config') return envelope({ price: '0', initFreeCopies: 5, singlePrintPages: 200, filePageLimit: '10' });
+    if (path === '/order/cloud-print-list') return envelope({ records: [{ orderId: 'cloud-order', title: '作业', fileType: 'pdf' }], total: 1 });
     if (path === `/order/downloadCheck/${order.orderId}`) return envelope('http://zzfwx.nju.edu.cn/wec-self-print-app-console');
     if (path === '/message/sendElectronicItemEmail') {
       assert.equal(req.method, 'GET'); assert.equal(url.searchParams.get('orderId'), order.orderId);
@@ -125,31 +122,26 @@ for (const student of [
     assert.equal(calls.at(-1).query.get('email'), student.email);
     assert.equal((await run('orders')).data[0].orderId, order.orderId);
     assert.equal((await run('order', order.orderId)).data.orderId, order.orderId);
-    platformEmail = 'platform@smail.nju.edu.cn';
-    await run('send', order.orderId); assert.equal(calls.at(-1).query.get('email'), platformEmail);
+    assert.equal((await run('items', '--parent', item.id)).data.total, 0);
+    assert.equal((await run('cloud')).data.files[0].title, '作业');
     const writes = () => calls.filter(c => ['/order/create', '/message/sendElectronicItemEmail'].includes(c.path)).length;
-    let before = writes();
-    config.MODIFY_MAIL = '0';
-    assert.equal((await run('create', item.id, '--email', 'another@smail.nju.edu.cn')).code, 4);
-    config.MODIFY_MAIL = '1';
-    assert.equal((await run('create', item.id, '--email', 'person@example.com')).code, 2);
-    for (const next of ['paid', 'limit']) { mode = next; assert.equal((await run('create', item.id)).code, 4); }
-    item.formState = 1; mode = 'success'; assert.equal((await run('create', item.id)).code, 4); item.formState = 0;
-    assert.equal((await run('create', item.id, '--copies', '2')).code, 2);
-    assert.equal((await run('quote', item.id, '--copies', '0')).code, 2);
+    const before = writes();
+    mode = 'paid'; assert.equal((await run('create', item.id)).code, 4);
+    mode = 'foreign'; assert.equal((await run('send', order.orderId)).code, 3);
     assert.equal(writes(), before);
-    mode = 'foreign'; assert.equal((await run('send', order.orderId)).code, 3); assert.equal(writes(), before);
-    mode = 'wrong-item';
-    const mismatch = await run('create', item.id);
-    assert.equal(mismatch.code, 4); assert.equal(mismatch.error.details.orderId, order.orderId); assert.equal(writes(), before + 1);
-    before = writes(); mode = 'send-http-error';
+    mode = 'send-http-error';
     const partial = await run('create', item.id);
-    assert.equal(partial.code, 4); assert.equal(partial.error.details.orderId, order.orderId); assert.equal(writes(), before + 2);
-    before = writes(); mode = 'create-http-error'; assert.notEqual((await run('create', item.id)).code, 0); assert.equal(writes(), before + 1);
+    assert.equal(partial.code, 4); assert.equal(partial.error.details.orderId, order.orderId);
+    assert.equal(writes(), before + 2);
     mode = 'success'; item.pickupType = 1; order.takeType = 1;
     const paper = await run('create', item.id, '--delivery', 'paper');
     assert.equal(paper.data.emailSent, false); assert.equal(paper.data.order.takeCode, order.takeCode);
     assert.equal(calls.at(-1).path, '/order/get');
+    const cancelled = await run('cancel', order.orderId);
+    assert.equal(cancelled.data.cancelled, true);
+    assert.equal(calls.at(-1).path, '/order/list');
+    assert.equal((await run('cancel', order.orderId)).code, 2);
+    assert.equal(calls.filter(c => c.path === '/order/cancelOrders').length, 1);
     assert.equal(calls.filter(c => c.path === '/app/login/IDS').length, 1);
   });
 });

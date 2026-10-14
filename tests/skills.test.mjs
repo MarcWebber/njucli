@@ -65,9 +65,9 @@ test("独立 Skill：单目录、声明依赖、共用账号与 MCP 契约", asy
     }
   }
   const unified = await tools(join(root, "dist/cli.js"));
-  assert.equal(unified.length, 106);
+  assert.equal(unified.length, 107);
   const toolNames = new Set(unified.map((tool) => tool.name));
-  for (const name of ["self_service_items", "self_service_quote", "self_service_order", "campus_today", "ehall_grades", "ehall_graduate_schedule", "ehall_today", "ehall_selected", "se_courses", "itxia_status", "itxia_retrieve", "institution_list", "institution_teacher", "institution_search"]) {
+  for (const name of ["self_service_cloud", "self_service_items", "self_service_quote", "self_service_order", "campus_today", "ehall_grades", "ehall_graduate_schedule", "ehall_today", "ehall_selected", "se_courses", "itxia_status", "itxia_retrieve", "institution_list", "institution_teacher", "institution_search"]) {
     assert.ok(toolNames.has(name), name);
   }
   assert.equal(unified.some((tool) => /^(nju_today$|academic_|course_|softse_)/.test(tool.name)), false);
