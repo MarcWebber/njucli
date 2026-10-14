@@ -19,7 +19,7 @@ test("独立 Skill：单目录、声明依赖、共用账号与 MCP 契约", asy
   delete env.NJUCLI_ACCOUNT;
   const run = async (skill, args) => (await execute(process.execPath, [join(directory, skill, "scripts/run.mjs"), ...args], { cwd: directory, env })).stdout;
   const names = (await readdir(join(root, "skills"))).filter((name) => name.startsWith("njucli-"));
-  assert.equal(names.length, 13);
+  assert.equal(names.length, 14);
 
   for (const name of names) {
     const target = join(directory, name);
@@ -36,6 +36,10 @@ test("独立 Skill：单目录、声明依赖、共用账号与 MCP 契约", asy
 
   const full = JSON.parse((await execute(process.execPath, [join(root, "dist/cli.js"), "campus", "sources", "--format", "json"], { env })).stdout);
   assert.deepEqual(JSON.parse(await run("njucli-campus", ["campus", "sources", "--format", "json"])), full);
+  const institutions = JSON.parse((await execute(process.execPath, [join(root, "dist/cli.js"), "institution", "list", "--format", "json"], { env })).stdout);
+  assert.deepEqual(JSON.parse(await run("njucli-institution", ["institution", "list", "--format", "json"])), institutions);
+  assert.ok(institutions.data.items.length > 0);
+  await assert.rejects(readFile(join(root, "dist/skills/njucli-institution/references/机构资料.json")), { code: "ENOENT" });
   const preset = join(directory, "gradebook.json");
   assert.equal(JSON.parse(await run("njucli-table", ["table", "preset", "gradebook", "--output", preset, "--format", "json"])).ok, true);
   assert.equal(JSON.parse(await readFile(preset, "utf8")).tables[0].name, "课程成绩");
@@ -61,9 +65,9 @@ test("独立 Skill：单目录、声明依赖、共用账号与 MCP 契约", asy
     }
   }
   const unified = await tools(join(root, "dist/cli.js"));
-  assert.equal(unified.length, 93);
+  assert.equal(unified.length, 99);
   const toolNames = new Set(unified.map((tool) => tool.name));
-  for (const name of ["campus_today", "ehall_grades", "ehall_graduate_schedule", "ehall_today", "ehall_selected", "se_courses", "itxia_status", "itxia_retrieve"]) {
+  for (const name of ["campus_today", "ehall_grades", "ehall_graduate_schedule", "ehall_today", "ehall_selected", "se_courses", "itxia_status", "itxia_retrieve", "institution_list", "institution_teacher", "institution_search"]) {
     assert.ok(toolNames.has(name), name);
   }
   assert.equal(unified.some((tool) => /^(nju_today$|academic_|course_|softse_)/.test(tool.name)), false);

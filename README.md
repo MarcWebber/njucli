@@ -59,6 +59,7 @@ curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/inst
 | [njucli-youth](skills/njucli-youth/SKILL.md) | 青年平台 |
 | [njucli-table](skills/njucli-table/SKILL.md) | 协同表格 |
 | [njucli-itxia](skills/njucli-itxia/SKILL.md) | IT 侠维修预约、进度查询与取消 |
+| [njucli-institution](skills/njucli-institution/SKILL.md) | 学院简介、教师基础信息与后勤电话；本地检索、官网读取与导出 |
 
 ```bash
 njucli ehall schedule
@@ -68,6 +69,20 @@ njucli campus today
 ```
 
 完整命令通过 `njucli --help` 和 `njucli <domain> --help` 查看。
+
+查找学院、研究方向或后勤联系方式，无需校园账号：
+
+```bash
+njucli institution show public
+njucli institution teachers 社会保障 --institution public
+njucli institution search 人工智能 --kind teacher
+njucli institution teacher software/李宣东
+njucli institution services 水电 --live
+njucli institution dump --output ./nju-knowledge
+rg -n '公共政策' ./nju-knowledge/institutions
+```
+
+支持按姓名、职称/身份、分类、单位及联系方式（电话、邮箱、办公地点）等检索已收录的机构与教师基础资料。提供指定来源的官网实时核对功能，并支持将整个本地资料库导出为按学院分类的中文 Markdown 文件。收录范围详见 [资料范围](skills/njucli-institution/references/coverage.md)，跨院兼任按官网标注保留。
 
 IT 侠支持 `njucli itxia create --input order.json --agree-terms` 提交维修预约，`njucli itxia status ORDER_ID` 查询状态与回复、`njucli itxia open ORDER_ID` 获取预约单页面打开方法，以及 `njucli itxia cancel ORDER_ID --yes` 取消预约。也可通过 `status --name "预约姓名" --phone "预约手机号"` 找回当前预约；字段和服务条款见 [IT 侠 Skill](skills/njucli-itxia/SKILL.md)。
 
