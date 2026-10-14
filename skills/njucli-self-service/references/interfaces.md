@@ -8,6 +8,25 @@
 
 `GET /mobile/isLogin` 返回 `success` 与本人资料。会话过期时，统一认证恢复后访问 `GET /app/login/IDS?type=2&returnUrl=%2Fmobile%2FitemList`，随后回读 `isLogin`。认证 driver 在 `src/auth/drivers/self-service.ts`，依赖 `sso`；登录、探测与业务复用同一调用的 BrowserSession。微信链接中的临时票据无需保存或复用。
 
+## 参数与路由的复用边界
+
+2026-10-14 重新读取无账号参数的 `mobile.html` 及其引用的当前移动端脚本，确认官方 HTTP 客户端直接设置 `appId: "80019"`、`LoginMode: "MOBILE"`。80019 是该部署的客户端标识，与账号、证明项目及申请无关；它不是登录票据。微信入口的 `appId=wx…` 和临时 `ticket` 未用于 CLI 认证。查询会话和目录时省略 appId 也成功，但这不能证明写接口同样不需要它，因此请求继续遵循官方客户端契约。
+
+| 地址或字段 | 含义与复用方式 |
+| --- | --- |
+| `mobile.html#/mobile/itemList` | 公共项目目录入口；返回当前登录身份有权使用的项目 |
+| `mobile.html#/mobile/orderDetail?id=ITEM_ID` | 公共文件详情路由；ITEM_ID 是证明项目编号，由目录发现，与个人申请编号不同 |
+| `/mobile/orderListUnCompleted`、`/mobile/orderListCompleted` | 官方前端的本人申请列表路由；CLI 通过 `/order/list` 查询 |
+| `userId`、`schoolCode` | 从本次登录会话取得，随当前账号变化 |
+| `orderId` | 每次创建返回的申请号；查询和发放时校验其属于当前登录者 |
+| `static/js/mobile.<hash>.<version>.js` | 前端版本资源，文件名会随发布变化；CLI 不依赖其文件名，也不把脚本解析作为日常调用的前提 |
+
+隔离的 HTTP 会话仅携带现有统一认证 Cookie，不带自助服务 Cookie、微信 appId 或分享票据：先确认自助服务未登录，再经 IDS 入口登录，成功读取实时目录、四个项目详情和申请列表。本人账号的实网验证证明入口可重新进入，并非只在原分享链接的会话里有效。
+
+不同用户用各自账号登录后，使用相同流程获取各自可用的项目和本人文件。当前目录中的四项只是本次研究生账号的权限结果；学校的[自助服务说明](https://oi.nju.edu.cn/zzfw_37059/list.htm)还列出本科生、研究生的不同项目。不同身份、学校代码、项目 ID、申请 ID 和绑定邮箱的本地 HTTP 集成均分别验证，其他真实用户的签发仍未实测。
+
+这些是当前官方应用使用的路由与接口，尚无学校公开的版本兼容承诺，不能据此保证永不变更。当前封装支持已验证的无额外表单、免费证明流程；分类项目和额外表单继续使用官方页面。接口变更时应依据新的官方请求更新 client 与本文件。
+
 ## 请求契约
 
 除注明原始响应的接口外，业务响应使用 `{code,msg,data}`，成功码为字符串 `0000`。表单请求为 `application/x-www-form-urlencoded`。所有 ID 使用字符串。
