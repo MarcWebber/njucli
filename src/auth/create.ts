@@ -13,6 +13,7 @@ import { EHallTimetableClient } from "../../skills/njucli-ehall/scripts/timetabl
 import { opacSessionDriver } from "./drivers/opac-browser.js";
 import { YouthClient } from "../../skills/njucli-youth/scripts/client.js";
 import { TableClient } from "../../skills/njucli-table/scripts/client.js";
+import { selfServiceSessionDriver } from "./drivers/self-service.js";
 
 const VPN_TEST_URL = "https://www-nju-edu-cn-s.atrust.nju.edu.cn/";
 
@@ -57,6 +58,7 @@ export function createAuthCoordinator(): AuthCoordinator {
       table: { login: restoreTableSession, probe: restoreTableSession },
       vpn: { login: interactiveVpnLogin, probe: probeVpn },
       opac: opacSessionDriver,
+      "self-service": selfServiceSessionDriver,
     },
   });
 }

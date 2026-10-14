@@ -13,6 +13,7 @@ export const AUTH_DEPENDENCIES: Readonly<Record<AuthCapability, readonly AuthCap
   youth: ["sso"],
   table: ["sso"],
   opac: ["sso"],
+  "self-service": ["sso"],
 };
 
 export function dependsOn(

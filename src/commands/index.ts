@@ -1,4 +1,5 @@
 import { registerInstitutionCommands } from "../../skills/njucli-institution/scripts/commands.js";
+import { registerSelfServiceCommands } from "../../skills/njucli-self-service/scripts/commands.js";
 import { registerYouthCommands } from '../../skills/njucli-youth/scripts/commands.js';
 import { registerItxiaCommands } from '../../skills/njucli-itxia/scripts/commands.js';
 import { registerTableCommands } from '../../skills/njucli-table/scripts/commands.js';
@@ -24,6 +25,7 @@ export function createCli(services: NjuServices, runtime: CommandRuntime): Comma
   const program = createProgram("njucli").description("南京大学校园服务命令行工具");
 
   registerInstitutionCommands(program, services.institution, runtime);
+  registerSelfServiceCommands(program, services.selfService, runtime);
   registerAccountCommands(program, services.account, runtime);
   registerAuthCommands(program, services.auth, runtime);
   registerBoxCommands(program, services.box, runtime);

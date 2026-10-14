@@ -22,7 +22,7 @@ node scripts/run.mjs auth login box
 node scripts/run.mjs account use ACCOUNT
 ```
 
-省略登录目标时默认使用 `sso`。也支持单独登录 `box`、`selection`、`ehall`、`timetable`、`se`、`tex`、`sports`、`youth`、`table`、`vpn`、`opac` 等站点。
+省略登录目标时默认使用 `sso`。也支持单独登录 `box`、`selection`、`ehall`、`timetable`、`se`、`tex`、`sports`、`youth`、`table`、`vpn`、`opac`、`self-service` 等站点。
 
 `account use` 或环境变量 `NJUCLI_ACCOUNT` 用于选择本地账号。业务命令会按需恢复登录，`auth status` 返回 `valid` 表示会话可用。CLI 使用专用浏览器与账号目录，普通浏览器中的登录由该浏览器独立保存。
 

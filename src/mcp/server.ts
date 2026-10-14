@@ -1,4 +1,5 @@
 import { registerInstitutionTools } from "../../skills/njucli-institution/scripts/mcp.js";
+import { registerSelfServiceTools } from "../../skills/njucli-self-service/scripts/mcp.js";
 import { registerYouthTools } from '../../skills/njucli-youth/scripts/mcp.js';
 import { registerItxiaTools } from '../../skills/njucli-itxia/scripts/mcp.js';
 import { registerTableTools } from '../../skills/njucli-table/scripts/mcp.js';
@@ -17,6 +18,7 @@ import { registerSportsTools } from '../../skills/njucli-sports/scripts/mcp.js';
 export function startMcpServer(services: NjuServices) {
   return startReadMcp('njucli', read => {
     registerInstitutionTools(read, services.institution);
+    registerSelfServiceTools(read, services.selfService);
     registerBoxTools(read, services.box);
     registerYouthTools(read, services.youth);
     registerItxiaTools(read, services.itxia);

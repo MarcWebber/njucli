@@ -13,6 +13,7 @@ export const AUTH_CAPABILITIES = [
   "youth",
   "table",
   "opac",
+  "self-service",
 ] as const;
 
 export type AuthCapability = (typeof AUTH_CAPABILITIES)[number];

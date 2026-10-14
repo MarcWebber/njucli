@@ -5,6 +5,7 @@
 | 能力 | 资料 |
 | --- | --- |
 | 统一认证 | [登录与会话](#统一认证) |
+| 自助服务 | [正式成绩单、证明申请与邮件领取](../skills/njucli-self-service/references/interfaces.md) |
 | 教务与办事大厅 | [课表、选课、成绩、考试、培养方案及行程登记](../skills/njucli-ehall/references/interfaces.md) |
 | 软件学院课程 | [课程、作业、名单与成绩](#软件学院课程) |
 | TeX | [项目、文件、编辑与编译](../skills/njucli-tex/references/interfaces.md) |
