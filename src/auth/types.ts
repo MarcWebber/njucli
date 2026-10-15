@@ -1,22 +1,7 @@
 import type { AccountRecord } from "../account/types.js";
+import type { AUTH_SITES } from "./capabilities.js";
 
-export const AUTH_CAPABILITIES = [
-  "sso",
-  "selection",
-  "vpn",
-  "ehall",
-  "se",
-  "tex",
-  "box",
-  "timetable",
-  "sports",
-  "youth",
-  "table",
-  "opac",
-  "self-service",
-] as const;
-
-export type AuthCapability = (typeof AUTH_CAPABILITIES)[number];
+export type AuthCapability = keyof typeof AUTH_SITES;
 
 export interface SessionMetadata {
   capability: AuthCapability;

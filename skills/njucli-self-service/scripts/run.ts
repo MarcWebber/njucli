@@ -1,8 +1,7 @@
 import { createRuntime } from "../../../src/app/runtime.js";
 import { runSkill } from "../../../src/app/skill.js";
-import { registerSelfServiceCommands } from "./commands.js";
-import { registerSelfServiceTools } from "./mcp.js";
-import { createSelfServiceServices } from "./services.js";
+import { registerSelfServiceCommands, registerSelfServiceTools } from "./commands.js";
+import { createSelfServiceServices } from "./client.js";
 
 const context = createRuntime();
 const service = createSelfServiceServices(context);

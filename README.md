@@ -53,6 +53,7 @@ curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/inst
 | [njucli-library](skills/njucli-library/SKILL.md) | 图书馆 |
 | [njucli-sports](skills/njucli-sports/SKILL.md) | 体育场馆 |
 | [njucli-se](skills/njucli-se/SKILL.md) | 软件学院课程平台 |
+| [njucli-lms](skills/njucli-lms/SKILL.md) | 智汇南雍课程、作业、测试与助教布置作业 |
 | [njucli-tex](skills/njucli-tex/SKILL.md) | TeX 写作 |
 | [njucli-mail](skills/njucli-mail/SKILL.md) | 校园邮箱 |
 | [njucli-software](skills/njucli-software/SKILL.md) | 正版软件 |
@@ -67,6 +68,7 @@ njucli ehall schedule
 njucli ehall grades
 njucli self-service items 成绩单
 njucli se assignments --pending
+njucli lms courses
 njucli campus today
 ```
 

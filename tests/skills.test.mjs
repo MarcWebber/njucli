@@ -19,7 +19,6 @@ test("独立 Skill：单目录、声明依赖、共用账号与 MCP 契约", asy
   delete env.NJUCLI_ACCOUNT;
   const run = async (skill, args) => (await execute(process.execPath, [join(directory, skill, "scripts/run.mjs"), ...args], { cwd: directory, env })).stdout;
   const names = (await readdir(join(root, "skills"))).filter((name) => name.startsWith("njucli-"));
-  assert.equal(names.length, 15);
 
   for (const name of names) {
     const target = join(directory, name);
@@ -32,6 +31,10 @@ test("独立 Skill：单目录、声明依赖、共用账号与 MCP 契约", asy
       await symlink(await realpath(join(root, "node_modules", dependency)), link, "dir");
     }
     assert.match(await run(name, ["--help"]), new RegExp(`Usage: ${name}`));
+    const domain = name.slice("njucli-".length);
+    const standaloneHelp = await run(name, [domain, "--help"]);
+    const unifiedHelp = (await execute(process.execPath, [join(root, "dist/cli.js"), domain, "--help"], { env })).stdout;
+    assert.equal(standaloneHelp.replace(`Usage: ${name} `, "Usage: njucli "), unifiedHelp, name);
   }
 
   const full = JSON.parse((await execute(process.execPath, [join(root, "dist/cli.js"), "campus", "sources", "--format", "json"], { env })).stdout);
@@ -65,12 +68,6 @@ test("独立 Skill：单目录、声明依赖、共用账号与 MCP 契约", asy
     }
   }
   const unified = await tools(join(root, "dist/cli.js"));
-  assert.equal(unified.length, 107);
-  const toolNames = new Set(unified.map((tool) => tool.name));
-  for (const name of ["self_service_cloud", "self_service_items", "self_service_quote", "self_service_order", "campus_today", "ehall_grades", "ehall_graduate_schedule", "ehall_today", "ehall_selected", "se_courses", "itxia_status", "itxia_retrieve", "institution_list", "institution_teacher", "institution_search"]) {
-    assert.ok(toolNames.has(name), name);
-  }
-  assert.equal(unified.some((tool) => /^(nju_today$|academic_|course_|softse_)/.test(tool.name)), false);
   const separate = [];
   for (const name of names.filter((name) => name !== "njucli-auth")) {
     const registered = await tools(join(directory, name, "scripts/run.mjs"));

@@ -1,3 +1,5 @@
+import type { SkillRuntime } from "../../../src/app/runtime.js";
+import { MailClient } from "../../njucli-mail/scripts/client.js";
 import { z } from "zod";
 import { AppError } from "../../../src/core/errors.js";
 import type { FetchLike } from "../../../src/core/types.js";
@@ -228,3 +230,13 @@ export class SelfServiceClient {
     return result.data;
   }
 }
+
+export function createSelfServiceServices({ withBrowser }: SkillRuntime) {
+  return <T>(operation: (client: SelfServiceClient) => Promise<T>): Promise<T> => {
+    return withBrowser("self-service", async (session, account) => {
+      return operation(new SelfServiceClient(session.request, async () => (await new MailClient(account.configDir).status()).address));
+    }, (session) => new SelfServiceClient(session.request).hasSession());
+  };
+}
+
+export type SelfServiceServices = ReturnType<typeof createSelfServiceServices>;

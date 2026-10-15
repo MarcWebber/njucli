@@ -10,8 +10,8 @@ import { writeJsonFile } from '../dist/src/core/fs.js';
 import { AuthCoordinator } from '../dist/src/auth/coordinator.js';
 import { SessionStore } from '../dist/src/auth/session-store.js';
 import { withBrowserSession } from '../dist/src/auth/browser-session.js';
-import { selfServiceSessionDriver } from '../dist/src/auth/drivers/self-service.js';
-import { createSelfServiceServices } from '../dist/skills/njucli-self-service/scripts/services.js';
+import { AUTH_SITES } from '../dist/src/auth/capabilities.js';
+import { createSelfServiceServices } from '../dist/skills/njucli-self-service/scripts/client.js';
 import { registerSelfServiceCommands } from '../dist/skills/njucli-self-service/scripts/commands.js';
 
 async function command(service, ...args) {
@@ -93,7 +93,7 @@ test('自助服务：动态目录、本人申请与默认邮箱、失败不重�
   const request = (url, init) => { const u = new URL(url); return fetch(origin + u.pathname + u.search, init); };
   await writeJsonFile(join(directory, 'mail.json'), { current: student.email, mailboxes: [{ address: student.email, password: 'local-secret' }] });
   const auth = new AuthCoordinator({ sessions: new SessionStore(), drivers: {
-    sso: { probe: async () => true, login: async () => true }, 'self-service': selfServiceSessionDriver,
+    sso: { probe: async () => true, login: async () => true }, 'self-service': AUTH_SITES['self-service'].driver,
   } });
   await withBrowserSession(account, true, async session => {
     session.request = request;

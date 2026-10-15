@@ -1,12 +1,12 @@
 import { AccountStore } from "../account/store.js";
 import type { AccountRecord } from "../account/types.js";
 import { type BrowserSession, withBrowserSession } from "../auth/browser-session.js";
-import { createAuthCoordinator } from "../auth/create.js";
+import { AuthCoordinator } from "../auth/coordinator.js";
 import type { AuthCapability } from "../auth/types.js";
 
 export function createRuntime() {
   const accountStore = new AccountStore();
-  const auth = createAuthCoordinator();
+  const auth = new AuthCoordinator();
   const withBrowser = async <T>(
     capability: AuthCapability,
     operation: (session: BrowserSession, account: AccountRecord) => Promise<T>,
