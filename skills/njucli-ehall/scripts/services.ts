@@ -1,3 +1,4 @@
+import { ScholarshipClient } from "./scholarship.js";
 import type { SkillRuntime } from "../../../src/app/runtime.js";
 import { addDays, parseCampusDate, weekRange } from "../../../src/core/dates.js";
 import { AppError } from "../../../src/core/errors.js";
@@ -12,7 +13,8 @@ import { scheduleToIcs } from "./ics.js";
 import { GraduateCourseSelectionClient } from "./selection-client.js";
 import type { AcademicTerm, CourseOccurrence, CourseSchedule, ScheduledCourse } from "./types.js";
 
-export type EHallServices = Pick<EHallPortalClient, "services" | "tasks" | "applications"> &
+export type EHallServices = Pick<ScholarshipClient, "scholarships" | "scholarship" | "scholarshipForm" | "scholarshipApplications" | "scholarshipApplication" | "saveScholarshipDraft"> &
+  Pick<EHallPortalClient, "services" | "tasks" | "applications"> &
   Pick<EHallTripClient, "trip" | "submitTrip"> &
   Pick<EHallProfileClient, "profile" | "profileFields" | "addProfile" | "removeProfile"> &
   Pick<GraduateAcademicClient, "grades" | "exams" | "plan"> &
@@ -55,6 +57,12 @@ export function createEHallServices({ withBrowser }: SkillRuntime): EHallService
     return { term, courses: (await client.listSchedule(term.id)).map(mapCourse) };
   });
   return {
+    scholarships: (page, pageSize) => withBrowser("ehall", session => new ScholarshipClient(session.request).scholarships(page, pageSize)),
+    scholarshipForm: (awardId, category) => withBrowser("ehall", session => new ScholarshipClient(session.request).scholarshipForm(awardId, category)),
+    scholarship: (awardId) => withBrowser("ehall", session => new ScholarshipClient(session.request).scholarship(awardId)),
+    scholarshipApplications: (page, pageSize) => withBrowser("ehall", session => new ScholarshipClient(session.request).scholarshipApplications(page, pageSize)),
+    scholarshipApplication: (applicationId) => withBrowser("ehall", session => new ScholarshipClient(session.request).scholarshipApplication(applicationId)),
+    saveScholarshipDraft: (input, dryRun) => withBrowser("ehall", session => new ScholarshipClient(session.request).saveScholarshipDraft(input, dryRun)),
     services: (query) => withEHall((client) => client.services(query)),
     tasks: (kind, page, pageSize) => withEHall((client) => client.tasks(kind, page, pageSize)),
     applications: (state, page, pageSize) => withEHall((client) => client.applications(state, page, pageSize)),

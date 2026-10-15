@@ -1,3 +1,4 @@
+import { scholarshipDraftSchema } from "./scholarship.js";
 import type { Command } from "commander";
 import { readFile } from "node:fs/promises";
 
@@ -112,6 +113,47 @@ export function registerEHallCommands(
     .action(async (kind: string, id: string, options: FormatOptions) => runCommand(runtime, options, async () => {
       const data = await service.removeProfile(profileKind(kind), id);
       return { data, text: `已删除并核对：${data.title}\n编号：${data.id}` };
+    }));
+
+  const scholarship = ehall.command("scholarship").description("研究生奖学金查询、填写与草稿保存");
+  for (const [name, description, method] of [
+    ["list", "查询奖种与开放时间", service.scholarships],
+    ["applications", "查询本人奖学金申请与审核状态", service.scholarshipApplications],
+  ] as const) {
+    addFormatOption(scholarship.command(name).description(description).option("--page <page>", "页码").option("--page-size <size>", "每页条数"))
+      .action(async (options: PageOptions) => runCommand(runtime, options, async () => {
+        const data = await method(optionalPositiveInteger(options.page, "--page"), optionalPositiveInteger(options.pageSize, "--page-size"));
+        return { data, text: JSON.stringify(data, null, 2) };
+      }));
+  }
+  for (const [name, description, method] of [
+    ["show", "查询奖种说明与等级", service.scholarship],
+    ["application", "读取本人的申请详情和可填写内容", service.scholarshipApplication],
+  ] as const) {
+    addFormatOption(scholarship.command(name + " <id>").description(description))
+      .action(async (id: string, options: FormatOptions) => runCommand(runtime, options, async () => {
+        const data = await method(id);
+        return { data, text: JSON.stringify(data, null, 2) };
+      }));
+  }
+  addFormatOption(scholarship.command("form <awardId>").description("读取奖种填写模板、等级与开放批次")
+    .requiredOption("--category <category>", "官网申请分类代码（1 至 6）"))
+    .action(async (awardId: string, options: FormatOptions & { category: string }) => runCommand(runtime, options, async () => {
+      if (!/^[1-6]$/.test(options.category)) throw new AppError("INVALID_INPUT", "分类代码须为 1 至 6");
+      const data = await service.scholarshipForm(awardId, options.category);
+      return { data, text: JSON.stringify(data, null, 2) };
+    }));
+  addFormatOption(scholarship.command("save").description("填写并保存奖学金草稿，保持未提交状态")
+    .requiredOption("--input <file>", "草稿 JSON 文件")
+    .option("--dry-run", "读取并核对填写内容，仅预览"))
+    .action(async (options: FormatOptions & { input: string; dryRun?: boolean }) => runCommand(runtime, options, async () => {
+      let value: unknown;
+      try { value = JSON.parse(await readFile(options.input, "utf8")); }
+      catch (error) { if (!(error instanceof SyntaxError)) throw error; throw new AppError("INVALID_INPUT", "草稿文件不是有效 JSON"); }
+      const parsed = scholarshipDraftSchema.safeParse(value);
+      if (!parsed.success) throw new AppError("INVALID_INPUT", parsed.error.issues.map(i => `${i.path.join(".")}: ${i.message}`).join("；"));
+      const data = await service.saveScholarshipDraft(parsed.data, options.dryRun);
+      return { data, text: `${data.saved ? `草稿已保存并回读确认，尚未提交\n核对链接：${data.reviewUrl}\n${data.nextStep}` : "填写预览（未保存）"}\n${JSON.stringify(data, null, 2)}` };
     }));
 
   addFormatOption(ehall.command("trip").description("查询研究生节假日行程登记、默认联系方式与缺失信息"))

@@ -16,6 +16,12 @@ const OPTIONAL_TERM = z
   .describe("Academic term ID; omit to use the current term");
 
 export function registerEHallTools(read: ReadTool, service: EHallServices): void {
+  read("ehall_scholarships", "List graduate scholarship offerings.", { page: z.number().int().min(1).optional(), pageSize: z.number().int().min(1).optional() }, ({ page, pageSize }) => service.scholarships(page, pageSize));
+  read("ehall_scholarship", "Read scholarship details and award levels.", { awardId: z.string().min(1) }, ({ awardId }) => service.scholarship(awardId));
+  read("ehall_scholarship_applications", "Read the current account's scholarship application statuses.", { page: z.number().int().min(1).optional(), pageSize: z.number().int().min(1).optional() }, ({ page, pageSize }) => service.scholarshipApplications(page, pageSize));
+  read("ehall_scholarship_application", "Read an owned scholarship application and its editable content.", { applicationId: z.string().min(1) }, ({ applicationId }) => service.scholarshipApplication(applicationId));
+  read("ehall_scholarship_form", "Read a scholarship draft template and available batches.", { awardId: z.string().min(1), category: z.enum(["1", "2", "3", "4", "5", "6"]) }, ({ awardId, category }) => service.scholarshipForm(awardId, category));
+
   read("ehall_profile", "Read the signed-in graduate student's papers, awards, patents, books, and supervisor projects.", {
     kind: z.enum(PROFILE_KINDS).optional().describe("Omit to read all available categories"),
   }, ({ kind }) => service.profile(kind));

@@ -1,6 +1,6 @@
 ---
 name: njucli-ehall
-description: 南京大学教务、e-Hall、课表、成绩、考试、培养方案、导出日历、研究生选退课、假期行程填报，及研究生论文/获奖/专利等个人资料维护
+description: 查询南京大学教务与网上办事大厅 (e-Hall)，包括课表、成绩、考试、培养方案与日历导出，办理研究生选退课、行程填报、个人资料维护及奖学金草稿填写。
 ---
 
 # 教务与网上办事
@@ -73,5 +73,18 @@ node scripts/run.mjs ehall trip --format json
 `tasks` 查看任务（`--kind` 支持 `todo/done/started`）；`applications` 查看本人发起的审批（`--state` 支持 `active/completed/cancelled`）。
 
 假期行程先用 `trip` 查询当前假期、已有登记与必填字段。留校、离返校及多段行程的具体填报参数见[行程填报](references/trip.md)。提交结果不明时先查 `trip` 确认。
+
+## 研究生奖学金
+
+```bash
+node scripts/run.mjs ehall scholarship list --format json
+node scripts/run.mjs ehall scholarship applications --format json
+node scripts/run.mjs ehall scholarship save --input ./draft.json --dry-run --format json
+node scripts/run.mjs ehall scholarship save --input ./draft.json --format json
+```
+
+使用 `scholarship list`、`show` 和 `form` 查询奖种、等级及填写模板。先用 `save --dry-run` 预览，再保存本人 `SHZT=0` 的草稿并回读确认；支持申请理由、社会实践、科研创新说明、联系方式及首次附件上传。已有附件保留，替换和删除在官网办理。参数及验证范围见[奖学金填写](references/scholarship.md)。
+
+使用 `scholarship applications` 和 `application` 核对本人申请，状态采用远端原文；“待辅导员审核”表示流程仍在进行。大厅通用 `ehall applications` 的空结果不能判断奖学金未提交。草稿保存后向用户提供返回的 `reviewUrl` 核对链接和申请编号，说明用相应账号进入“我的申请”，确认内容及附件后自行提交。
 
 接口字段见[接口说明](references/interfaces.md)。
