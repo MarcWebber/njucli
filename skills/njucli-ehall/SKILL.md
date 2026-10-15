@@ -1,6 +1,6 @@
 ---
 name: njucli-ehall
-description: 查询南京大学教务与网上办事大厅 (e-Hall)，包括课表、成绩、考试、培养方案、导出日历，办理研究生选退课与假期行程填报。用户涉及教务、选课或办事大厅时使用。
+description: 南京大学教务、e-Hall、课表、成绩、考试、培养方案、导出日历、研究生选退课、假期行程填报，及研究生论文/获奖/专利等个人资料维护
 ---
 
 # 教务与网上办事
@@ -8,6 +8,17 @@ description: 查询南京大学教务与网上办事大厅 (e-Hall)，包括课�
 以下命令在本 Skill 目录运行。
 
 正式电子成绩单和自助打印证明使用已安装的 `njucli-self-service` Skill，或统一 CLI 的 `njucli self-service items 成绩单`。本 Skill 的成绩查询用于查看课程成绩。
+
+## 研究生个人资料
+
+查询、填写和管理南京大学研究生的学术与荣誉资料，包括论文、获奖、专利、著作和参与项目。支持上传证书等附件。
+
+- `node scripts/run.mjs ehall profile --format json`：查询已有资料记录（省略 kind 返回所有开放栏目）。
+- `node scripts/run.mjs ehall profile-fields <kind> --format json`：查询指定类别的表单字段和字典选项。
+- `node scripts/run.mjs ehall profile-add <kind> --input <file> [--attachment <file>] --format json`：新增一条个人资料。
+- `node scripts/run.mjs ehall profile-remove <kind> <RECORD_ID> --format json`：删除指定资料记录。
+
+详细字段、验证逻辑与填写指引，请参阅 [个人资料填写](references/profile.md)。
 
 ## 课表查询与日历导出
 

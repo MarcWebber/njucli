@@ -142,3 +142,86 @@
 | `DQRS / KXRS / IS_CONFLICT` | 已选人数 / 容量 / 冲突标记 |
 
 接口来自选课站官方前端。已验证方案内、公选课和已选课程查询；真实选课、退课待验证。
+
+## 研究生个人资料接口 (Profile)
+
+### 1. 接口入口与角色切换
+
+- **业务入口**：`https://ehall.nju.edu.cn/appShow?appId=5897665714264135`
+- **应用根路径**：`https://ehallapp.nju.edu.cn/xxfw/sys/yjsjbxxappnju/`
+- 页面元数据包含 `pageMeta.params.USERID`。
+
+**角色与权限控制：**
+1. `POST ../swpubapp/indexmenu/getAppConfig.do?appId=5897665714264135&appName=yjsjbxxappnju` 获取当前 active 角色。
+2. `POST ../funauthapp/api/changeAppRole/yjsjbxxappnju/<roleId>.do` 切换角色。
+3. `POST ../swpubapp/userinfo/setXgCommonAppRole.do` 参数 `requestParamStr={ROLEID}` 确认应用内角色。
+
+### 2. 批次与表单配置查询
+
+- **批次信息与维护状态**：
+  `POST modules/infoStudent/getStuBatchInfo.do`，参数 `requestParamStr={XSBH}`。响应使用 `PCDM`/`SFXS`/`WHKSRQ`/`WHJSRQ`/`XTDQSJ`/`SFYXRCWH`/`SHZT`/`SFTH` 来检查维护开放状态和审核状态。
+  `POST modules/infoStudent/getLcslInfo.do`，参数 `data={SLDM}`。流程节点多于1表示需要审核。
+
+- **栏目分组与字段配置**：
+  `POST ../swpubapp/baseInfoSet/getSetFzInfo.do`，参数 `requestParamStr={APP,querySetting}`。需要核对 `NRLXDM` 为 `LXDM5` 或 `LXDM3`。
+  `POST ../swpubapp/baseInfoSet/getSetNrInfo.do`，参数 `requestParamStr={APP,ID}`（ID为分组id）。返回栏目的 `NRDZ`/`NRDM`/`NRMC`；`CZLX=1,XSKWH=1` 表示该栏目对学生可编辑。
+  获取表单规则：`POST modules/baseInfo.do` 或 `modules/wdxx.do`，查询参数 `*json=1`；返回的 `controls` 节点包含 `required`/`hidden`/`readonly`/`dataType`/`dataSize`/`url` 等校验规则。
+
+- **字典选项**：
+  `POST` 至同站 `/xxfw/code/` 路径，响应结构为 `datas.code.rows`，从中提取 `id` 和 `name`。
+
+### 3. 分类映射表
+
+| 分类 (kind) | TYPE | NRDZ | model | 接口 |
+| --- | --- | --- | --- | --- |
+| papers | 10 | JBXXLWQK | xslwqkbd | baseInfo |
+| awards | 7 | JBXXXWJL | xsjlxxbd | baseInfo |
+| patents | 11 | JBXXZLQK | xszlqkbd | baseInfo |
+| books | 13 | JBXXZZQK | xszzqkbd | wdxx |
+| projects | 14 | JBXXDSKYXM | dskyxmqkbd | wdxx |
+
+### 4. 数据读写接口
+
+- **读取资料**：
+  `POST modules/infoStudent/getStuExtendInfo.do`
+  参数：`requestParamStr={TYPE,XSBH}`
+  响应：`data` 为记录数组，包含稳定编号 `WID`。
+
+- **保存资料 (新增)**：
+  `POST modules/infoStudent/saveStuExtendInfo.do`
+  参数：`data=JSON.stringify(保留原记录后追加一条的数组)`。每条记录需包含 `TYPE`/`NRDM`，新增项注入当前 `XSBH`，论文类型要求注入 `YL1=0`。
+  响应校验：`returnCode=#E000000000000` 表示成功。保存后必须使用新内容重新回读，获取生成的 `WID`，并验证原记录未被破坏。
+
+- **删除资料**：
+  `POST modules/infoStudent/deleteStuExtendInfo.do`
+  参数：`requestParamStr=JSON.stringify(已回读待删记录+TYPE+NRDM)`。
+  响应校验：回读接口确认指定的 `WID` 消失，且其他记录均保留。
+
+### 5. 附件管理
+
+附件管理路径根为 `https://ehallapp.nju.edu.cn/xxfw/sys/emapcomponent/file/`。
+
+1. **上传临时文件**：
+   `POST uploadTempFile.do`
+   请求体格式：`multipart` (参数: `scope`, `fileToken`, `storeId=file`, `isSingle=0`, `size=0`, `files[]`)
+   响应：返回 `success`/`id`/`name`/`size`。
+
+2. **持久化保存附件**：
+   `POST saveAttachment/<scope>/<fileToken>.do`
+   请求体格式：普通表单参数 `scope`, `fileToken`, `attachmentParam=JSON.stringify({storeId:file,orderMap:{上传返回id:序号}})`, `authAppName=yjsjbxxappnju`, `authBeanName=jbxxFileOpAuthManager`。
+   响应校验：检查 `success=true` 和 `successCount=文件数`。
+
+3. **回读附件信息 (必须在保存资料后)**：
+   **严格顺序**：必须先调用资料保存接口（`saveStuExtendInfo.do`）并将生成的 `fileToken` 绑定到资料记录的 `FJ` 字段。保存资料后，再发起 `POST getUploadedAttachment/<fileToken>.do` 回读。如果在保存资料前调用回读，将无法返回 `items`。
+   响应校验：检查 `success` 状态，并从 `items` 中获取已关联的文件名、大小和数量。
+
+### 字段映射
+
+- 字段映射：`title`/LWTM, `affiliation`/DYSMDW, `journal`/FBQK, `journalLevel`/KWJB, `published`/YL2(布尔), `publishedOn`/FBRQ, `acceptedOn`/YL3, `wordCount`/ZS(文本), `authorRole`/ZZWC, `impactFactor`/YXYZ(文本), `remarks`/BZ。
+- 字段映射：`title`/JLMC, `awardedOn`/HJRQ, `organization`/JLBM, `amount`/JLJE(非负数值), `level`/JLJB, `ranking`/HJPMQK(文本), `description`/JLSM, `remarks`/BZ。
+- 字段映射：`title`/ZLMC, `number`/ZLBH, `inventorRank`/BRPM(非负整数), `type`/ZLLX, `category`/ZLLB, `status`/WCQK, `date`/HDSJ。
+- 可选字段：`projectLevel`/XMJB, `projectCategory`/XMLB, `projectNumber`/XMH, `projectTitle`/XMMC, `projectLeaderId`/XMFZRXGH, `projectLeader`/XMFZRXM, `funding`/XMJF(文本), `fundingSource`/JFLY, `studentRank`/XSPM(文本)。
+
+著作：`title/ZZM`、`category/ZZLB`、`ranking/ZZPM`、`publisher/CBDW`、`publishedOn/CBSJ`。导师项目：`title/XMMC`、`participatedOn/CYSJ`、`hasPublication/FBJG`。
+
+验证范围见[个人资料说明](profile.md#实网验证状态)。

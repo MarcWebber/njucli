@@ -6,6 +6,7 @@ import { EHallTimetableClient } from "./timetable-client.js";
 import { GraduateAcademicClient } from "./academic-client.js";
 import { EHallPortalClient, serviceLink } from "./client.js";
 import { EHallTripClient } from "./trip.js";
+import { EHallProfileClient } from "./profile.js";
 import type { CourseRow, TermDateRow, TermRow } from "./timetable-contract.js";
 import { scheduleToIcs } from "./ics.js";
 import { GraduateCourseSelectionClient } from "./selection-client.js";
@@ -13,6 +14,7 @@ import type { AcademicTerm, CourseOccurrence, CourseSchedule, ScheduledCourse } 
 
 export type EHallServices = Pick<EHallPortalClient, "services" | "tasks" | "applications"> &
   Pick<EHallTripClient, "trip" | "submitTrip"> &
+  Pick<EHallProfileClient, "profile" | "profileFields" | "addProfile" | "removeProfile"> &
   Pick<GraduateAcademicClient, "grades" | "exams" | "plan"> &
   Pick<GraduateCourseSelectionClient, "select" | "withdraw"> & {
   serviceLink: typeof serviceLink;
@@ -59,6 +61,10 @@ export function createEHallServices({ withBrowser }: SkillRuntime): EHallService
     serviceLink,
     trip: () => withBrowser("ehall", (session, account) => new EHallTripClient(session.request, account.configDir).trip()),
     submitTrip: (input, dryRun) => withBrowser("ehall", (session, account) => new EHallTripClient(session.request, account.configDir).submitTrip(input, dryRun)),
+    profile: (kind) => withBrowser("ehall", (session) => new EHallProfileClient(session.request).profile(kind)),
+    profileFields: (kind) => withBrowser("ehall", (session) => new EHallProfileClient(session.request).profileFields(kind)),
+    addProfile: (kind, input, attachments, dryRun) => withBrowser("ehall", (session) => new EHallProfileClient(session.request).addProfile(kind, input, attachments, dryRun)),
+    removeProfile: (kind, id) => withBrowser("ehall", (session) => new EHallProfileClient(session.request).removeProfile(kind, id)),
     grades: (termId) => withAcademic((client) => client.grades(termId)),
     exams: (termId) => withAcademic((client) => client.exams(termId)),
     graduateSchedule: (termId) => withAcademic((client) => client.schedule(termId)),

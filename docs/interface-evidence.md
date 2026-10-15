@@ -6,7 +6,7 @@
 | --- | --- |
 | 统一认证 | [登录与会话](#统一认证) |
 | 自助服务 | [证明申请、邮件领取、申请管理与云打印](../skills/njucli-self-service/references/interfaces.md) |
-| 教务与办事大厅 | [课表、选课、成绩、考试、培养方案及行程登记](../skills/njucli-ehall/references/interfaces.md) |
+| 教务与办事大厅 | [课表、选课、成绩、考试、培养方案、个人资料及行程登记](../skills/njucli-ehall/references/interfaces.md) |
 | 软件学院课程 | [课程、作业、名单与成绩](#软件学院课程) |
 | 智汇南雍 | [课程、课件、作业、测试与助教作业创建](../skills/njucli-lms/references/interfaces.md) |
 | TeX | [项目、文件、编辑与编译](../skills/njucli-tex/references/interfaces.md) |
