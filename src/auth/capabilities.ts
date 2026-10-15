@@ -1,3 +1,4 @@
+import { SelfServiceClient, SELF_SERVICE_BASE, SELF_SERVICE_HEADERS } from "../../skills/njucli-self-service/scripts/client.js";
 import type { AccountRecord } from "../account/types.js";
 import { withBrowserSession } from "./browser-session.js";
 import { seSessionDriver } from "./drivers/se-browser.js";
@@ -52,6 +53,15 @@ const restoreLmsSession = (account: AccountRecord): Promise<boolean> => withBrow
   return /\bglobalData\s*=\s*\{\s*user\s*:\s*\{\s*id\s*:\s*\d+/.test(await response.text());
 });
 
+const selfServiceSessionDriver: AuthSessionDriver = {
+  probe: (account) => withBrowserSession(account, true, (session) => new SelfServiceClient(session.request).hasSession()),
+  login: (account) => withBrowserSession(account, true, async (session) => {
+    const response = await session.request(`${SELF_SERVICE_BASE}/app/login/IDS?${new URLSearchParams({ type: "2", returnUrl: "/mobile/itemList" })}`, { headers: SELF_SERVICE_HEADERS });
+    if (!response.ok) throw new Error(`自助服务登录返回 HTTP ${response.status}`);
+    return new SelfServiceClient(session.request).hasSession();
+  }),
+};
+
 export const AUTH_SITES = {
   sso: { dependencies: [], driver: ssoSessionDriver },
   selection: { dependencies: [], driver: selectionSessionDriver },
@@ -66,6 +76,7 @@ export const AUTH_SITES = {
   youth: { dependencies: ["sso"], driver: { login: restoreYouthSession, probe: restoreYouthSession } },
   table: { dependencies: ["sso"], driver: { login: restoreTableSession, probe: restoreTableSession } },
   opac: { dependencies: ["sso"], driver: opacSessionDriver },
+  "self-service": { dependencies: ["sso"], driver: selfServiceSessionDriver },
 } as const satisfies Record<string, { dependencies: readonly string[]; driver: AuthSessionDriver }>;
 
 export const AUTH_CAPABILITIES = Object.keys(AUTH_SITES) as readonly AuthCapability[];

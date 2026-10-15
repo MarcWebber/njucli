@@ -7,6 +7,8 @@ description: 查询南京大学教务与网上办事大厅 (e-Hall)，包括课�
 
 以下命令在本 Skill 目录运行。
 
+正式电子成绩单和自助打印证明使用已安装的 `njucli-self-service` Skill，或统一 CLI 的 `njucli self-service items 成绩单`。本 Skill 的成绩查询用于查看课程成绩。
+
 ## 课表查询与日历导出
 
 ```bash

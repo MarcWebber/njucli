@@ -1,3 +1,5 @@
+import { createSelfServiceServices } from "../../skills/njucli-self-service/scripts/client.js";
+import { registerSelfServiceCommands, registerSelfServiceTools } from "../../skills/njucli-self-service/scripts/commands.js";
 import type { Command } from "commander";
 import { createRuntime } from "./runtime.js";
 import { addHelpActions, createProgram, type CommandRuntime } from "../core/command.js";
@@ -82,6 +84,8 @@ export function createCli(runtime: CommandRuntime): Command {
   mount(createSeServices(context), registerSeCommands, registerSeTools);
   mount(createLmsServices(context), registerLmsCommands, registerLmsTools);
   mount(createTexServices(context), registerTexCommands, registerTexTools);
+
+  mount(createSelfServiceServices(context), registerSelfServiceCommands, registerSelfServiceTools);
 
   registerUpgradeCommand(program, runtime);
   program.command("mcp").description("启动只读 MCP stdio 服务")
