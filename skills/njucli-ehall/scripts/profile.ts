@@ -93,7 +93,13 @@ export class EHallProfileClient {
     const plan = { kind, name: string(section, "NRMC"), values: input, attachments: files.map((f) => ({ name: f.name, size: f.bytes.length })),
       previousCount: previous.length, requiresReview: context.requiresReview };
     if (dryRun) return { submitted: false as const, plan };
-    if (files.length) payload.FJ = await this.upload(files);
+    if (files.length) {
+      payload.FJ = await this.upload(files);
+      const current = await this.rows(kind, context.userId);
+      if (current.length !== previous.length || previous.some(old => !current.some(row => row.WID === old.WID && matches(row, old)))) {
+        throw new AppError("USER_ACTION_REQUIRED", "附件上传期间资料已变化，本次未保存资料", { hint: `运行 njucli ehall profile ${kind} 核对当前记录后再操作` });
+      }
+    }
     // 官网保存整个栏目；每条原记录原样保留，再追加本次资料。
     await this.custom("modules/infoStudent/saveStuExtendInfo.do", [
       ...previous.map((r) => ({ ...r, TYPE: payload.TYPE, NRDM: payload.NRDM })), payload,
@@ -110,12 +116,13 @@ export class EHallProfileClient {
 
   async removeProfile(kind: ProfileKind, id: string) {
     const context = await this.prepare();
-    this.canEdit(kind, context, this.section(kind, context));
+    const section = this.section(kind, context);
+    this.canEdit(kind, context, section);
     const previous = await this.rows(kind, context.userId);
     const row = previous.find((r) => r.WID === id);
     if (!row) throw new AppError("NOT_FOUND", "本人资料中没有此记录");
     if (row.KZXXWID || (kind === "papers" && String(row.YL1) !== "0")) throw new AppError("USER_ACTION_REQUIRED", "此记录由学校系统维护，请联系对应管理部门");
-    await this.custom("modules/infoStudent/deleteStuExtendInfo.do", { ...row, TYPE: DEFINITIONS[kind].type, NRDM: string(this.section(kind, context), "NRDM") });
+    await this.custom("modules/infoStudent/deleteStuExtendInfo.do", { ...row, TYPE: DEFINITIONS[kind].type, NRDM: string(section, "NRDM") });
     const saved = await this.rows(kind, context.userId);
     if (saved.some((r) => r.WID === id) || previous.some((old) => old.WID !== id && !saved.some((r) => r.WID === old.WID && matches(r, old)))) {
       throw new AppError("REMOTE_SCHEMA_CHANGED", "删除后回读核对失败", { hint: `运行 njucli ehall profile ${kind} 查看当前资料` });

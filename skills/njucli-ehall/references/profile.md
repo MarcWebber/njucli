@@ -110,6 +110,12 @@ node scripts/run.mjs auth login ehall
 - **著作 (books)**：`title`/ZZM, `category`/ZZLB, `ranking`/ZZPM(文本), `publisher`/CBDW, `publishedOn`/CBSJ（全部必填）。类别以官网实时选项为准，当前无附件支持。简短示例：`{"title": "示例著作", "category": "专著", "ranking": "1/3", "publisher": "示例出版社", "publishedOn": "2026-10-14"}`。
 - **项目 (projects)**：`title`/XMMC, `participatedOn`/CYSJ, `hasPublication`/FBJG(布尔)（全部必填）。当前无附件支持。简短示例：`{"title": "示例项目", "participatedOn": "2026-10-14", "hasPublication": true}`。
 
+## 保存与验证
+
+附件上传后会重新读取栏目记录；期间有新增、删除或修改时，本次停止保存，保留远端当前资料。远端整组保存没有原子版本条件，操作期间请避免同时在网页维护同一栏目。上传与资料保存分步进行，中途失败可能留下未绑定附件。
+
+本地 HTTP 集成覆盖命令和 client 组合、本人归属、只读栏目、附件绑定、原记录保留、上传期间并发变更以及失败单次提交。
+
 ## 实网验证状态
 
 - 论文和专利临时新增及删除、获奖记录与证书上传均已实网核对。
