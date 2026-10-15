@@ -106,7 +106,7 @@ export function registerEHallCommands(
       const parsed = scholarshipDraftSchema.safeParse(value);
       if (!parsed.success) throw new AppError("INVALID_INPUT", parsed.error.issues.map(i => `${i.path.join(".")}: ${i.message}`).join("；"));
       const data = await service.saveScholarshipDraft(parsed.data, options.dryRun);
-      return { data, text: `${data.saved ? "草稿已保存并回读确认，尚未提交" : "填写预览（未保存）"}\n${JSON.stringify(data, null, 2)}` };
+      return { data, text: `${data.saved ? `草稿已保存并回读确认，尚未提交\n核对链接：${data.reviewUrl}\n${data.nextStep}` : "填写预览（未保存）"}\n${JSON.stringify(data, null, 2)}` };
     }));
 
   addFormatOption(ehall.command("trip").description("查询研究生节假日行程登记、默认联系方式与缺失信息"))

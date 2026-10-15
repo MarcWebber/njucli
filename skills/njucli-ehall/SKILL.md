@@ -72,6 +72,6 @@ node scripts/run.mjs ehall scholarship save --input ./draft.json --format json
 
 使用 `scholarship list`、`show` 和 `form` 查询奖种、等级及填写模板。先用 `save --dry-run` 预览，再保存本人 `SHZT=0` 的草稿并回读确认；支持申请理由、社会实践、科研创新说明、联系方式及首次附件上传。已有附件保留，替换和删除在官网办理。参数及验证范围见[奖学金填写](references/scholarship.md)。
 
-使用 `scholarship applications` 和 `application` 核对本人申请，状态采用远端原文；“待辅导员审核”表示流程仍在进行。大厅通用 `ehall applications` 的空结果不能判断奖学金未提交。CLI 提供草稿保存，正式提交由用户在官网完成。
+使用 `scholarship applications` 和 `application` 核对本人申请，状态采用远端原文；“待辅导员审核”表示流程仍在进行。大厅通用 `ehall applications` 的空结果不能判断奖学金未提交。草稿保存后向用户提供返回的 `reviewUrl` 核对链接和申请编号，说明用相应账号进入“我的申请”，确认内容及附件后自行提交。
 
 接口字段见[接口说明](references/interfaces.md)。

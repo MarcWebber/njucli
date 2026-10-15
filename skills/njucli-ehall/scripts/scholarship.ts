@@ -200,6 +200,7 @@ export class ScholarshipClient {
     if (files.length) {
       const scope = randomUUID().replaceAll("-", "");
       const token = scope + "1";
+      const orderMap: Record<string, number> = {};
       for (const file of files) {
         const form = new FormData();
         form.set("scope", scope); form.set("fileToken", token); form.set("size", "5120"); form.set("type", extname(file.name).slice(1)); form.set("storeId", "file"); form.set("isSingle", "0"); form.set("fileName", "");
@@ -207,11 +208,12 @@ export class ScholarshipClient {
         const response = await this.fetch("https://ehallapp.nju.edu.cn/xxfw/sys/emapcomponent/file/uploadTempFile.do", { method: "POST", body: form });
         if (!response.ok) throw new AppError("REMOTE_UNAVAILABLE", "附件上传失败；不会自动重试");
         const result = JSON.parse(await response.text()) as Row;
-        if (result.success !== true) throw new AppError("REMOTE_UNAVAILABLE", "附件上传未确认成功；不会自动重试");
+        if (result.success !== true || typeof result.id !== "string") throw new AppError("REMOTE_UNAVAILABLE", "附件上传未确认成功；不会自动重试");
+        orderMap[result.id as string] = Object.keys(orderMap).length + 1;
       }
       const response = await this.fetch(`https://ehallapp.nju.edu.cn/xxfw/sys/emapcomponent/file/saveAttachment/${scope}/${token}.do`, {
         method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams(text(data, "DZ_SFQYSQBSZ") === "1" ? { authAppName: "jxjapp", authBeanName: "jxjFileOpAuthManager" } : {}).toString(),
+        body: new URLSearchParams({ attachmentParam: JSON.stringify({ storeId: "file", orderMap }), ...(text(data, "DZ_SFQYSQBSZ") === "1" ? { authAppName: "jxjapp", authBeanName: "jxjFileOpAuthManager" } : {}) }).toString(),
       });
       if (!response.ok || (JSON.parse(await response.text()) as Row).success !== true) throw new AppError("REMOTE_UNAVAILABLE", "附件保存未确认成功；不会自动重试");
       const uploaded = await this.attachments(token);
@@ -230,7 +232,7 @@ export class ScholarshipClient {
     if (text(after.entry, "SHZT") !== "0" || text(after.row, "SHZT") !== "0" || Object.entries(EDIT_FIELDS).some(([key, remote]) => input[key as keyof typeof EDIT_FIELDS] !== undefined && text(after.row, remote) !== input[key as keyof typeof EDIT_FIELDS]) || text(after.row, "FJ") !== text(data, "FJ")) {
       throw new AppError("REMOTE_SCHEMA_CHANGED", "保存已返回成功，但草稿状态、内容或附件回读不一致，请到官网核对；不会自动重试");
     }
-    return { saved: true, application: application(after.entry), values: values(after.row) };
+    return { saved: true, application: application(after.entry), values: values(after.row), reviewUrl: SCHOLARSHIP_LINK, nextStep: "请使用保存草稿的账号打开官网，在“我的申请”中核对该申请，确认无误后自行提交。" };
   }
 }
 function text(row: Row, key: string): string { const v = row[key]; return v === null || v === undefined ? "" : String(v); }

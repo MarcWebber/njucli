@@ -42,7 +42,7 @@ node scripts/run.mjs ehall scholarship save --input ./draft.json --dry-run --for
 node scripts/run.mjs ehall scholarship save --input ./draft.json --format json
 ```
 
-`--dry-run` 读取账号、奖种及申请数据，检查本地附件并返回预览，不创建草稿编号、不上传附件、不保存。保存完成后回读目标记录、草稿状态和所改内容。写入结果不明时先查询申请，不自动重试。
+`--dry-run` 读取账号、奖种及申请数据，检查本地附件并返回预览，不创建草稿编号、不上传附件、不保存。保存完成后回读目标记录、草稿状态和所改内容，返回 `reviewUrl` 官网核对链接、申请编号和 `nextStep` 操作提示。打开链接后使用相应账号进入“我的申请”，核对该草稿内容及附件，确认无误后由用户自行提交。写入结果不明时先查询申请，不自动重试。
 
 | 输入字段 | 含义 |
 | --- | --- |
@@ -78,10 +78,10 @@ CLI 仅提供个人奖学金草稿保存，不提供提交、撤回、删除或�
 
 保存接口为 `modules/scholarShipApply/Applyjxj.do`。官网 `wysq.js` 的 `FormSave` 使用 `ACTIONTYPE=ADD`，`wysq_edit.js` 的 `Save` 使用 `ACTIONTYPE=MODIFY`；两者均为 `MODE=T_JXJ_PDXX`、`TYPE=0`，`INDATA` 是申请 JSON。提交按钮共用该路径但使用 `TYPE=1`，CLI 固定为 `0`。资格检查采用表单字段 `requestParamStr=JSON.stringify(params)`；保存采用表单字段 `data=JSON.stringify({INDATA,MODE,ACTIONTYPE,TYPE})`，其中 `INDATA` 再序列化为 JSON 字符串。两者不能混用。成功须满足 `returnCode=#E000000000000`、`data.flag=1`，随后回读状态仍为草稿及所改字段。
 
-附件沿用官网 emap 上传组件：`/xxfw/sys/emapcomponent/file/uploadTempFile.do`，multipart 字段 `bhFile/scope/fileToken/size/type/storeId/isSingle/fileName`；随后 `saveAttachment/<scope>/<token>.do`，通过 `getUploadedAttachment/<token>.do` 回读核对文件名和数量后，把 token 绑定至申请的 `FJ`。动态表单使用官网权限参数 `authAppName=jxjapp`、`authBeanName=jxjFileOpAuthManager`。
+附件沿用官网 emap 上传组件：`/xxfw/sys/emapcomponent/file/uploadTempFile.do`，multipart 字段 `bhFile/scope/fileToken/size/type/storeId/isSingle/fileName`；随后 `saveAttachment/<scope>/<token>.do`，携带 `attachmentParam=JSON.stringify({storeId:"file",orderMap})`，`orderMap` 按上传响应中的文件 `id` 记录顺序。缺少该参数时服务端可能返回 `success=true` 但提示未检测到附件保存信息，因此必须回读。通过 `getUploadedAttachment/<token>.do` 回读核对文件名和数量后，把 token 绑定至申请的 `FJ`。动态表单使用官网权限参数 `authAppName=jxjapp`、`authBeanName=jxjFileOpAuthManager`。
 
 ## 验证范围
 
-2026-10-15 已核对官网前端保存/提交区别、参数编码、身份来源、字段及附件组件契约。实网验证覆盖两个账号的申请列表、奖种等级、申请详情、填写模板及只读预览。实网未调用保存、提交、撤回、删除或上传接口。
+2026-10-15 已核对官网前端保存/提交区别、参数编码、身份来源、字段及附件组件契约。实网验证覆盖两个账号的申请列表、奖种等级、申请详情、填写模板及只读预览。随后使用已准备好的真实材料完成个人奖学金草稿新建、3 个 PDF 上传及绑定；独立回读确认状态仍为草稿、陈述与实践内容一致、附件文件名及数量一致。没有调用提交、撤回或删除接口。
 
-本地 HTTP 集成覆盖新建/修改草稿、附件上传绑定、预览零写入、本人记录校验、审核中拒绝修改、保留附件、重复申请拒绝、失败不重试、保存后回读与输入控制字段拒绝。实际远端草稿及附件写入尚未验证；接口未提供原子状态条件，保存时避免同时在网页修改或提交同一申请。
+本地 HTTP 集成覆盖新建/修改草稿、附件上传绑定、预览零写入、本人记录校验、审核中拒绝修改、保留附件、重复申请拒绝、失败不重试、保存后回读与输入控制字段拒绝。新建草稿与首次附件写入已实网验证；修改已有草稿的写入仅通过本地集成验证。接口未提供原子状态条件，保存时避免同时在网页修改或提交同一申请。

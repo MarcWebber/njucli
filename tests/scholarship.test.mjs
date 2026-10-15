@@ -21,10 +21,14 @@ async function fixture(t, initial = true) {
     if (path.endsWith('/uploadTempFile.do')) {
       assert.match(req.headers['content-type'], /multipart\/form-data/);
       assert.match(body, /name="bhFile"/); assert.match(body, /name="fileToken"/);
-      return res.end(JSON.stringify({ success: true }));
+      return res.end(JSON.stringify({ success: true, id: 'uploaded-file' }));
     }
     if (path.includes('/getUploadedAttachment/')) return res.end(JSON.stringify({ success: true, items: [{ name: 'proof.pdf', size: 20 }] }));
-    if (path.includes('/saveAttachment/')) return res.end(JSON.stringify({ success: true }));
+    if (path.includes('/saveAttachment/')) {
+      const metadata = JSON.parse(params.get('attachmentParam'));
+      assert.equal(metadata.storeId, 'file'); assert.deepEqual(metadata.orderMap, { 'uploaded-file': 1 });
+      return res.end(JSON.stringify({ success: true }));
+    }
     const action = path.split('/').at(-1).replace('.do', '');
     if (action === 'cxxsysqjxjjl') return res.end(JSON.stringify({ code: '0', datas: { [action]: { totalSize: record ? 1 : 0, rows: record ? [{ ...record, FLDM: '3', SHZT_DISPLAY: record.SHZT === '0' ? '草稿' : '待辅导员审核', JXJMC: '测试奖', BBTOKEN: 'must-not-leak' }] : [] } } }));
     if (action === 'xsdcxjzxx2') return res.end(JSON.stringify({ code: '0', datas: { [action]: { totalSize: 1, rows: [{ JXJDM: 'award-a', JXJMC: '测试奖' }] } } }));
@@ -90,6 +94,7 @@ test('scholarship creation stays draft, rejects duplicate and reports ambiguous 
   assert.equal((await f.client.saveScholarshipDraft(input, true)).saved, false);
   assert.equal(f.requests.some(r => r.params.get('actionName') === 'zdscwid' || r.path.includes('/file/')), false);
   const result = await f.client.saveScholarshipDraft(input);
+  assert.equal(result.reviewUrl, 'https://ehall.nju.edu.cn/appShow?appId=5907343959144076'); assert.match(result.nextStep, /确认无误后自行提交/);
   assert.equal(result.application.applicationId, 'new-draft'); assert.equal(result.application.statusCode, '0');
   assert.equal(f.record.DZ_DZYX, 'a@example.org'); assert.ok(f.record.FJ);
   assert.equal(f.requests.filter(r => r.path.endsWith('/uploadTempFile.do')).length, 1);
@@ -112,9 +117,15 @@ test('CLI rejects workflow parameters before service calls and exposes no submis
   let calls = 0; const output = [];
   const program = new Command(); program.exitOverride();
   let exitCode; const runtime = { environment: {}, output: { stdout: value => output.push(value), stderr: value => output.push(value) }, setExitCode: value => { exitCode = value; } };
-  registerEHallCommands(program, { saveScholarshipDraft: () => { calls++; } }, runtime);
+  registerEHallCommands(program, { saveScholarshipDraft: () => { calls++; return { saved: true, reviewUrl: 'https://ehall.nju.edu.cn/appShow?appId=5907343959144076', nextStep: '确认无误后自行提交' }; } }, runtime);
   const cmd = program.commands.find(c => c.name() === 'ehall').commands.find(c => c.name() === 'scholarship');
   assert.deepEqual(cmd.commands.map(c => c.name()), ['list', 'applications', 'show', 'application', 'form', 'save']);
   await program.parseAsync(['ehall', 'scholarship', 'save', '--input', file, '--format', 'json'], { from: 'user' });
   assert.equal(calls, 0); assert.equal(exitCode, 2); assert.equal(JSON.parse(output[0]).error.code, "INVALID_INPUT");
+  await writeFile(file, JSON.stringify({ applicationId: 'draft-a', reason: '陈述' })); output.length = 0;
+  await program.parseAsync(['ehall', 'scholarship', 'save', '--input', file, '--format', 'text'], { from: 'user' });
+  assert.equal(calls, 1); assert.equal(exitCode, 0);
+  assert.ok(output.join('').includes('核对链接：https://ehall.nju.edu.cn/appShow'));
+  assert.match(output.join(''), /确认无误后自行提交/);
+
 });
