@@ -48,7 +48,7 @@ curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/inst
 | --- | --- |
 | [njucli-auth](skills/njucli-auth/SKILL.md) | 统一认证与会话维护 |
 | [njucli-campus](skills/njucli-campus/SKILL.md) | 校园信息与今日汇总 |
-| [njucli-ehall](skills/njucli-ehall/SKILL.md) | 课表、选课、成绩、考试、培养方案与办事大厅 |
+| [njucli-ehall](skills/njucli-ehall/SKILL.md) | 课表、选课、成绩、考试、培养方案、奖学金草稿与办事大厅 |
 | [njucli-library](skills/njucli-library/SKILL.md) | 图书馆 |
 | [njucli-sports](skills/njucli-sports/SKILL.md) | 体育场馆 |
 | [njucli-se](skills/njucli-se/SKILL.md) | 软件学院课程平台 |
