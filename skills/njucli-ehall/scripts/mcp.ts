@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { ReadTool } from '../../../src/mcp/read.js';
 import type { EHallServices } from './services.js';
 import { COURSE_SELECTION_KINDS, EHALL_APPLICATION_STATES, EHALL_TASK_KINDS } from './types.js';
+import { PROFILE_KINDS } from './profile.js';
 
 const CAMPUS_DATE = z
   .string()
@@ -20,6 +21,13 @@ export function registerEHallTools(read: ReadTool, service: EHallServices): void
   read("ehall_scholarship_applications", "Read the current account's scholarship application statuses.", { page: z.number().int().min(1).optional(), pageSize: z.number().int().min(1).optional() }, ({ page, pageSize }) => service.scholarshipApplications(page, pageSize));
   read("ehall_scholarship_application", "Read an owned scholarship application and its editable content.", { applicationId: z.string().min(1) }, ({ applicationId }) => service.scholarshipApplication(applicationId));
   read("ehall_scholarship_form", "Read a scholarship draft template and available batches.", { awardId: z.string().min(1), category: z.enum(["1", "2", "3", "4", "5", "6"]) }, ({ awardId, category }) => service.scholarshipForm(awardId, category));
+
+  read("ehall_profile", "Read the signed-in graduate student's papers, awards, patents, books, and supervisor projects.", {
+    kind: z.enum(PROFILE_KINDS).optional().describe("Omit to read all available categories"),
+  }, ({ kind }) => service.profile(kind));
+  read("ehall_profile_fields", "Read current personal-record field requirements, official choices, and edit permissions.", {
+    kind: z.enum(PROFILE_KINDS),
+  }, ({ kind }) => service.profileFields(kind));
   read("ehall_services", "Search official NJU EHall service entries.", { query: z.string().optional().describe("Service name keyword") }, ({ query }) => service.services(query));
   read("ehall_trip", "Read the current graduate holiday travel registration, contact defaults, and missing fields.", {}, () => service.trip());
   read("ehall_tasks", "List EHall todo, done, or initiated tasks without opening forms.", {

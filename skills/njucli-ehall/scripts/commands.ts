@@ -7,6 +7,7 @@ import { addFormatOption, runCommand, type CommandRuntime, type FormatOptions } 
 import { AppError } from "../../../src/core/errors.js";
 import { COURSE_SELECTION_KINDS, type CourseSelectionKind, EHALL_APPLICATION_STATES, EHALL_TASK_KINDS, type EHallApplicationState, type EHallTaskKind } from "./types.js";
 import { tripInputSchema } from "./trip.js";
+import { PROFILE_KINDS, profileInputSchema, type ProfileKind } from "./profile.js";
 import { optionalPositiveInteger } from "../../../src/core/options.js";
 import {
   graduateExamsText,
@@ -66,7 +67,53 @@ export function registerEHallCommands(
   service: EHallServices,
   runtime: CommandRuntime,
 ): Command {
-  const ehall = program.command("ehall").description("教务、课表、选课、办事大厅与行程填报");
+  const ehall = program.command("ehall").description("教务、课表、选课、个人资料与办事大厅");
+
+  addFormatOption(ehall.command("profile [kind]").description("查询研究生论文、获奖、专利、著作和导师项目"))
+    .action(async (kind: string | undefined, options: FormatOptions) => runCommand(runtime, options, async () => {
+      const data = await service.profile(kind === undefined ? undefined : profileKind(kind));
+      return { data, text: data.categories.map((category) => [
+        `${category.name}：${category.records.length} 条；${category.editable ? "可补充" : "当前只读"}${category.requiresReview ? "；需审核" : ""}`,
+        ...category.records.flatMap((record) => [
+          `\n${record.title}\n编号：${record.id}`,
+          ...category.fields.filter((field) => field.name !== "title" && record.values[field.name] !== undefined)
+            .map((field) => `  ${field.label}：${typeof record.values[field.name] === "boolean" ? record.values[field.name] ? "是" : "否" : record.values[field.name]}`),
+          ...(record.attachmentToken ? [`  附件编号：${record.attachmentToken}`] : []),
+        ]),
+      ].join("\n")).join("\n\n") || "当前账号没有开放的资料栏目" };
+    }));
+
+  addFormatOption(ehall.command("profile-fields <kind>").description("查询个人资料必填字段、官网选项和附件支持"))
+    .action(async (kind: string, options: FormatOptions) => runCommand(runtime, options, async () => {
+      const data = await service.profileFields(profileKind(kind));
+      return { data, text: [
+        `${data.name}：${data.editable ? "可补充" : "当前只读"}${data.requiresReview ? "；保存后需在官网提交审核" : ""}`,
+        ...data.fields.map((field) => `${field.name}：${field.label}${field.required ? field.requiredWhen ? `（published=${field.requiredWhen.published} 时必填）` : "（必填）" : ""}；${field.type}${field.choices ? `；${field.choices.map((c) => `${c.name} (${c.id})`).join("、")}` : ""}`),
+        `附件：${data.attachments ? "可用 --attachment 提供本地文件" : "此栏目未开放"}`,
+        ...(data.kind === "papers" ? ["published=true 时填写 publishedOn；published=false 时填写 acceptedOn。"] : []),
+      ].join("\n") };
+    }));
+
+  addFormatOption(ehall.command("profile-add <kind>").description("新增一条个人资料，保留已有记录并回读核对")
+    .requiredOption("--input <file>", "新增资料的 JSON 文件")
+    .option("--attachment <file...>", "佐证材料文件，可提供多个")
+    .option("--dry-run", "校验资料并预览，正式记录和附件均不写入"))
+    .action(async (kind: string, options: FormatOptions & { input: string; attachment?: string[]; dryRun?: boolean }) => runCommand(runtime, options, async () => {
+      const selected = profileKind(kind);
+      const value = JSON.parse(await readFile(options.input, "utf8")) as unknown;
+      const parsed = profileInputSchema.safeParse(value);
+      if (!parsed.success) throw new AppError("INVALID_INPUT", "资料 JSON 应为字段对象，字段值使用文本、数值或布尔值");
+      const data = await service.addProfile(selected, parsed.data, options.attachment, options.dryRun);
+      return { data, text: data.submitted
+        ? `${data.plan.name}已保存并核对：${data.record.title}\n编号：${data.record.id}${data.plan.requiresReview ? "\n请在官网提交审核；当前结果表示资料已保存。" : ""}`
+        : `${data.plan.name}预览通过：${data.plan.values.title}\n原有 ${data.plan.previousCount} 条记录将保留；附件 ${data.plan.attachments.length} 个。` };
+    }));
+
+  addFormatOption(ehall.command("profile-remove <kind> <id>").description("删除本人维护的一条资料并回读核对"))
+    .action(async (kind: string, id: string, options: FormatOptions) => runCommand(runtime, options, async () => {
+      const data = await service.removeProfile(profileKind(kind), id);
+      return { data, text: `已删除并核对：${data.title}\n编号：${data.id}` };
+    }));
 
   const scholarship = ehall.command("scholarship").description("研究生奖学金查询、填写与草稿保存");
   for (const [name, description, method] of [
@@ -320,6 +367,11 @@ export function registerEHallCommands(
     }));
 
   return ehall;
+}
+
+function profileKind(value: string): ProfileKind {
+  if (!PROFILE_KINDS.includes(value as ProfileKind)) throw new AppError("INVALID_INPUT", `资料类别应为 ${PROFILE_KINDS.join("、")}`);
+  return value as ProfileKind;
 }
 
 function taskKind(value: string): EHallTaskKind {

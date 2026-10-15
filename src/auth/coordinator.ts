@@ -1,18 +1,21 @@
 import type { AccountRecord } from "../account/types.js";
 import { AppError } from "../core/errors.js";
-import { AUTH_DEPENDENCIES, dependsOn } from "./capabilities.js";
-import type { SessionStore } from "./session-store.js";
-import { AUTH_CAPABILITIES, type AuthCapability, type AuthSessionDriver, type SessionMetadata } from "./types.js";
+import { AUTH_SITES, AUTH_CAPABILITIES, dependsOn } from "./capabilities.js";
+import { SessionStore } from "./session-store.js";
+import type { AuthCapability, AuthSessionDriver, SessionMetadata } from "./types.js";
 
 export class AuthCoordinator {
   constructor(private readonly options: {
     drivers: Record<AuthCapability, AuthSessionDriver>;
     sessions: SessionStore;
+  } = {
+    drivers: Object.fromEntries(AUTH_CAPABILITIES.map(name => [name, AUTH_SITES[name].driver])) as Record<AuthCapability, AuthSessionDriver>,
+    sessions: new SessionStore(),
   }) {}
 
   async login(account: AccountRecord, capability: AuthCapability = "sso"): Promise<SessionMetadata> {
     await this.save(account, capability, false);
-    for (const dependency of AUTH_DEPENDENCIES[capability]) await this.ensureSession(account, dependency);
+    for (const dependency of AUTH_SITES[capability].dependencies) await this.ensureSession(account, dependency);
     const metadata = await this.save(account, capability, await this.options.drivers[capability].login(account));
     if (metadata.status !== "valid") throw new AppError("AUTH_REQUIRED", `${capability} 登录未完成`);
     return metadata;

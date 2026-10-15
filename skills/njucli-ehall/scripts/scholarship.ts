@@ -100,7 +100,6 @@ export class ScholarshipClient {
   }
 
   async scholarshipForm(awardId: string, category: string) {
-    await this.prepare();
     const award = await this.scholarship(awardId);
     const batches = await this.query("cxpcdydjxlxxx2", "MINE", { FLDM: category, JXJDM: awardId });
     return { award, category, batches: batches.map(row => ({ batchId: text(row, "PCDM"), year: text(row, "PDXN_DISPLAY"), term: text(row, "PDXQ_DISPLAY") })),
@@ -217,7 +216,9 @@ export class ScholarshipClient {
       });
       if (!response.ok || (JSON.parse(await response.text()) as Row).success !== true) throw new AppError("REMOTE_UNAVAILABLE", "附件保存未确认成功；不会自动重试");
       const uploaded = await this.attachments(token);
-      if (uploaded.length !== files.length || uploaded.map(f => f.name).sort().join("\n") !== files.map(f => f.name).sort().join("\n")) throw new AppError("REMOTE_SCHEMA_CHANGED", "上传文件回读不一致，尚未绑定草稿；不会自动重试");
+      const expectedFiles = files.map(f => JSON.stringify([f.name, f.bytes.length])).sort();
+      const actualFiles = uploaded.map(f => JSON.stringify([f.name, Number(f.size)])).sort();
+      if (JSON.stringify(actualFiles) !== JSON.stringify(expectedFiles)) throw new AppError("REMOTE_SCHEMA_CHANGED", "上传文件回读不一致，尚未绑定草稿；不会自动重试");
       data.FJ = token;
     }
     if (input.applicationId) {
@@ -229,7 +230,7 @@ export class ScholarshipClient {
     if (result.returnCode !== "#E000000000000" || !result.data || String((result.data as Row).flag) !== "1") throw new AppError("REMOTE_UNAVAILABLE", "草稿保存未确认成功，请先查询申请；不会自动重试");
     const applicationId = required(data, "WID");
     const after = await this.ownRecord(applicationId);
-    if (text(after.entry, "SHZT") !== "0" || text(after.row, "SHZT") !== "0" || Object.entries(EDIT_FIELDS).some(([key, remote]) => input[key as keyof typeof EDIT_FIELDS] !== undefined && text(after.row, remote) !== input[key as keyof typeof EDIT_FIELDS]) || text(after.row, "FJ") !== text(data, "FJ")) {
+    if (text(after.entry, "SHZT") !== "0" || text(after.row, "SHZT") !== "0" || PRESERVED_FIELDS.some(key => data[key] !== undefined && text(after.row, key) !== text(data, key))) {
       throw new AppError("REMOTE_SCHEMA_CHANGED", "保存已返回成功，但草稿状态、内容或附件回读不一致，请到官网核对；不会自动重试");
     }
     return { saved: true, application: application(after.entry), values: values(after.row), reviewUrl: SCHOLARSHIP_LINK, nextStep: "请使用保存草稿的账号打开官网，在“我的申请”中核对该申请，确认无误后自行提交。" };

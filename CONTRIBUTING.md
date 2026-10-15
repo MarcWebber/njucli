@@ -17,7 +17,7 @@
 4. 向 `main` 发起 PR，说明具体问题、修改后的行为和验证结果。实网结果与本地模拟测试分开记录。
 5. 根据评审意见更新 PR。新增提交会重新运行 CI，并使旧批准失效。
 
-账号凭据、会话 Cookie、真实邮件和课程成员数据保留在个人配置或临时目录中。测试使用合成数据、本机 HTTP 服务和自动清理的临时文件。远端写操作仅在明确授权的目标上验证。
+账号凭据、会话 Cookie、真实邮件和课程成员数据保留在个人配置或临时目录中。当前没有测试账号，开发验证使用合成数据、本机 HTTP 服务和自动清理的临时文件。个人账号仅用于用户当次明确要求的实际业务操作。
 
 ## CI 与合入
 
@@ -31,7 +31,11 @@
 
 完整开发规范见 [AGENTS.md](AGENTS.md)。业务实现与说明放在所属 `skills/njucli-*/`；教务、课表、选课和办事大厅归 `njucli-ehall`，软件学院课程归 `njucli-se`。认证集中在 `src/auth/`。
 
-新增远端能力先验证实际契约，再接入所属 Skill 的 client、命令和只读 MCP。简短说明直接写入 `SKILL.md`，较长流程和接口表放入 `references/`；接口索引见[校园服务接口](docs/interface-evidence.md)。
+新增远端能力先验证实际契约，再接入所属 Skill 的 client、命令和只读 MCP。
+
+简单业务将输入校验与 MCP 放在 `commands.ts`，请求与简短会话包装放在 `client.ts`，由 `run.ts` 启动独立 Skill。统一 CLI 在 `src/app/production.ts` 用一次 `mount` 关联业务实例、命令和 MCP；新认证站点在 `src/auth/capabilities.ts` 的 `AUTH_SITES` 声明依赖与 driver。
+
+简短说明直接写入 `SKILL.md`，较长流程和接口表放入 `references/`；接口索引见[校园服务接口](docs/interface-evidence.md)。
 
 构建为每个 Skill 生成 `scripts/run.mjs` 和依赖清单 `package.json`，共享源码打入入口。修改认证等共享代码后重新构建全部 Skill；生成的目录可独立安装运行。
 

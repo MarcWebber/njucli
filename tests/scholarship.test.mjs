@@ -11,7 +11,7 @@ import { Command } from 'commander';
 
 async function fixture(t, initial = true) {
   let record = initial ? { WID: 'draft-a', XSBH: 'student-a', SHZT: '0', PCDM: 'batch-a', PDXN: '2026', PDXQ: '1', JXJDM: 'award-a', JXJDJDM: 'level-a', SQDJ: 'level-a', JE: '1000', DZ_SFQYSQBSZ: '0', SQLY: '旧陈述', BZ5: '旧实践', FJ: 'existing-files', BZ18: '123', BZ19: '456', DZ_DZYX: 'a@example.org' } : undefined;
-  const requests = []; let failSave = false; let wrongReadback = false;
+  const requests = []; let failSave = false; let wrongReadback = false; let wrongAttachment = false;
   const server = createServer(async (req, res) => {
     let body = ''; for await (const c of req) body += c;
     const params = new URLSearchParams(body); const path = new URL(req.url, 'http://localhost').pathname;
@@ -23,7 +23,7 @@ async function fixture(t, initial = true) {
       assert.match(body, /name="bhFile"/); assert.match(body, /name="fileToken"/);
       return res.end(JSON.stringify({ success: true, id: 'uploaded-file' }));
     }
-    if (path.includes('/getUploadedAttachment/')) return res.end(JSON.stringify({ success: true, items: [{ name: 'proof.pdf', size: 20 }] }));
+    if (path.includes('/getUploadedAttachment/')) return res.end(JSON.stringify({ success: true, items: [{ name: 'proof.pdf', size: wrongAttachment ? 1 : Buffer.byteLength('%PDF-1.4 local test') }] }));
     if (path.includes('/saveAttachment/')) {
       const metadata = JSON.parse(params.get('attachmentParam'));
       assert.equal(metadata.storeId, 'file'); assert.deepEqual(metadata.orderMap, { 'uploaded-file': 1 });
@@ -41,7 +41,7 @@ async function fixture(t, initial = true) {
       assert.equal(operation.TYPE, '0'); assert.equal(operation.MODE, 'T_JXJ_PDXX');
       assert.equal(incoming.XSBH, 'student-a'); assert.equal(incoming.SHZT, undefined);
       record = { ...record, ...incoming, SHZT: '0' };
-      if (wrongReadback) record.SQLY = '未保存';
+      if (wrongReadback) record[wrongReadback] = '未保存';
       return res.end(JSON.stringify({ returnCode: '#E000000000000', data: { flag: '1' } }));
     }
     const query = params.get('actionName');
@@ -62,7 +62,7 @@ async function fixture(t, initial = true) {
   server.listen(0, '127.0.0.1'); await once(server, 'listening');
   t.after(() => { server.closeAllConnections(); server.close(); });
   const client = new ScholarshipClient((input, init) => fetch(`http://127.0.0.1:${server.address().port}${new URL(input).pathname}${new URL(input).search}`, init));
-  return { client, requests, get record() { return record; }, set failSave(v) { failSave = v; }, set wrongReadback(v) { wrongReadback = v; } };
+  return { client, requests, get record() { return record; }, set failSave(v) { failSave = v; }, set wrongReadback(v) { wrongReadback = v; }, set wrongAttachment(v) { wrongAttachment = v; } };
 }
 
 test('scholarship read, preview and draft modification preserve attachment and account boundaries', async t => {
@@ -93,19 +93,26 @@ test('scholarship creation stays draft, rejects duplicate and reports ambiguous 
   const input = scholarshipDraftSchema.parse({ awardId: 'award-a', levelId: 'level-a', category: '3', reason: '真实成果陈述', attachments: [attachment] });
   assert.equal((await f.client.saveScholarshipDraft(input, true)).saved, false);
   assert.equal(f.requests.some(r => r.params.get('actionName') === 'zdscwid' || r.path.includes('/file/')), false);
+  f.wrongAttachment = true;
+  await assert.rejects(f.client.saveScholarshipDraft(input), /上传文件回读不一致/);
+  assert.equal(f.requests.some(r => r.path.endsWith('Applyjxj.do')), false);
+  f.wrongAttachment = false;
   const result = await f.client.saveScholarshipDraft(input);
   assert.equal(result.reviewUrl, 'https://ehall.nju.edu.cn/appShow?appId=5907343959144076'); assert.match(result.nextStep, /确认无误后自行提交/);
   assert.equal(result.application.applicationId, 'new-draft'); assert.equal(result.application.statusCode, '0');
   assert.equal(f.record.DZ_DZYX, 'a@example.org'); assert.ok(f.record.FJ);
-  assert.equal(f.requests.filter(r => r.path.endsWith('/uploadTempFile.do')).length, 1);
+  assert.equal(f.requests.filter(r => r.path.endsWith('/uploadTempFile.do')).length, 2);
   await assert.rejects(f.client.saveScholarshipDraft({ applicationId: 'new-draft', attachments: [attachment] }), /已有附件/);
   await assert.rejects(f.client.saveScholarshipDraft(input), /本学年已有/);
   f.failSave = true;
   await assert.rejects(f.client.saveScholarshipDraft({ applicationId: 'new-draft', reason: '修改' }), /HTTP 503/);
   assert.equal(f.requests.filter(r => r.path.endsWith('Applyjxj.do')).length, 2);
-  f.failSave = false; f.wrongReadback = true;
+  f.failSave = false; f.wrongReadback = 'SQLY';
   await assert.rejects(f.client.saveScholarshipDraft({ applicationId: 'new-draft', reason: '再次修改' }), /回读不一致/);
   assert.equal(f.requests.filter(r => r.path.endsWith('Applyjxj.do')).length, 3);
+  f.wrongReadback = 'PCDM';
+  await assert.rejects(f.client.saveScholarshipDraft({ applicationId: 'new-draft', reason: '保留原批次' }), /回读不一致/);
+  assert.equal(f.requests.filter(r => r.path.endsWith('Applyjxj.do')).length, 4);
 });
 
 test('CLI rejects workflow parameters before service calls and exposes no submission command', async t => {

@@ -48,10 +48,12 @@ curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/inst
 | --- | --- |
 | [njucli-auth](skills/njucli-auth/SKILL.md) | 统一认证与会话维护 |
 | [njucli-campus](skills/njucli-campus/SKILL.md) | 校园信息与今日汇总 |
-| [njucli-ehall](skills/njucli-ehall/SKILL.md) | 课表、选课、成绩、考试、培养方案、奖学金草稿与办事大厅 |
+| [njucli-ehall](skills/njucli-ehall/SKILL.md) | 课表、选课、成绩、考试、培养方案、个人资料、奖学金草稿与办事大厅 |
+| [njucli-self-service](skills/njucli-self-service/SKILL.md) | 证明目录与申请、费用额度、邮件领取、申请撤销、打印机位置与云打印查询 |
 | [njucli-library](skills/njucli-library/SKILL.md) | 图书馆 |
 | [njucli-sports](skills/njucli-sports/SKILL.md) | 体育场馆 |
 | [njucli-se](skills/njucli-se/SKILL.md) | 软件学院课程平台 |
+| [njucli-lms](skills/njucli-lms/SKILL.md) | 智汇南雍课程、作业、测试与助教布置作业 |
 | [njucli-tex](skills/njucli-tex/SKILL.md) | TeX 写作 |
 | [njucli-mail](skills/njucli-mail/SKILL.md) | 校园邮箱 |
 | [njucli-software](skills/njucli-software/SKILL.md) | 正版软件 |
@@ -64,9 +66,13 @@ curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/inst
 ```bash
 njucli ehall schedule
 njucli ehall grades
+njucli self-service items 成绩单
 njucli se assignments --pending
+njucli lms courses
 njucli campus today
 ```
+
+正式电子成绩单从自助服务的实时目录选择项目，使用 `njucli self-service create ITEM_ID` 申请并默认发送到绑定邮箱；发放后询问是否需要下载，确认后通过邮箱附件保存原 PDF。纸质证明、申请管理、云打印查询与取件指引见[自助服务 Skill](skills/njucli-self-service/SKILL.md)。
 
 完整命令通过 `njucli --help` 和 `njucli <domain> --help` 查看。
 

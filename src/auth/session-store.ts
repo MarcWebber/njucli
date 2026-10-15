@@ -2,7 +2,8 @@ import { join } from "node:path";
 
 import type { AccountRecord } from "../account/types.js";
 import { readJsonFile, writeJsonFile } from "../core/fs.js";
-import { AUTH_CAPABILITIES, type SessionMetadata } from "./types.js";
+import { AUTH_CAPABILITIES } from "./capabilities.js";
+import type { SessionMetadata } from "./types.js";
 
 export class SessionStore {
   async list(account: AccountRecord): Promise<SessionMetadata[]> {
