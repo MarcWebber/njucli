@@ -10,10 +10,12 @@ import { setTimeout as delay } from "node:timers/promises";
 import { test } from "node:test";
 import { Command } from "commander";
 import { AccountStore } from "../dist/src/account/store.js";
-import { createProductionServices } from "../dist/src/app/production.js";
+import { createRuntime } from "../dist/src/app/runtime.js";
+import { createAccountServices } from "../dist/src/account/service.js";
+import { createMailServices } from "../dist/skills/njucli-mail/scripts/services.js";
 import { AuthCoordinator } from "../dist/src/auth/coordinator.js";
 import { SessionStore } from "../dist/src/auth/session-store.js";
-import { AUTH_CAPABILITIES } from "../dist/src/auth/types.js";
+import { AUTH_CAPABILITIES } from "../dist/src/auth/capabilities.js";
 import { registerCampusCommands } from "../dist/skills/njucli-campus/scripts/commands.js";
 import { createEHallServices } from "../dist/skills/njucli-ehall/scripts/services.js";
 import { registerTexCommands } from "../dist/skills/njucli-tex/scripts/commands.js";
@@ -1048,7 +1050,7 @@ test("认证：定时维护自动恢复失效会话并保存，后续调用复�
     await session.request(`${origin}/login`);
     return true;
   }));
-  const services = createProductionServices();
+  const services = { auth: createAuthServices(createRuntime()) };
   const missing = await command(registerAuthCommands, services.auth, ["auth", "maintain"]);
   assert.equal(missing.error.code, "AUTH_REQUIRED");
   assert.equal(logins, 0);
@@ -1908,7 +1910,8 @@ test("账号装配：默认邮箱与统一认证同号，独立邮箱保留全�
   t.mock.method(MailClient.prototype, "connect", async (_credentials, run) => run({
     mailboxOpen: async () => {}, list: async () => [],
   }));
-  const services = createProductionServices();
+  const runtime = createRuntime();
+  const services = { mail: createMailServices(runtime), account: createAccountServices(runtime) };
   const first = await command(registerMailCommands, services.mail, ["mail", "bind", "--password", "synthetic-mail-secret"]);
   assert.equal(first.data.address, "sso-student@smail.nju.edu.cn");
   const second = await command(registerMailCommands, services.mail, ["mail", "bind", "--address", "different@smail.nju.edu.cn", "--password", "synthetic-mail-secret"]);

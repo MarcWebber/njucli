@@ -9,25 +9,27 @@ NjuCLI 服务南京大学学生及其 AI 助手，围绕写作、邮件、上课
 | 路径 | 职责 |
 | --- | --- |
 | `src/cli.ts` | 进程入口 |
-| `src/commands/` | 统一 CLI 装配与全包升级 |
-| `src/app/production.ts` | 统一 CLI 装配及推导业务类型；各 Skill 有独立入口 |
+| `src/commands/` | 全包升级命令 |
+| `src/app/production.ts` | 集中装配业务实例、CLI 命令与 MCP 工具；各 Skill 保留独立入口 |
 | `src/account/` | 本地账号及隔离目录 |
 | `src/auth/` | 统一认证命令、凭据、全部站点 driver、浏览器交接及会话恢复 |
 | `skills/<任务>/scripts/` | 所属业务的 client、命令、展示、服务、MCP 定义及独立入口 |
 | `src/core/` | 文件、输入、日期、输出与脱敏函数 |
-| `src/mcp/` | 只读 MCP，调用相同业务方法 |
+| `src/mcp/` | 只读 MCP 协议与输出处理 |
 | `tests/` | 业务组合与独立 Skill 的少量本地集成测试 |
 | `skills/<任务>/SKILL.md`、`references/` | 使用说明；较长流程和接口资料按需拆入 references |
 | `.codex-plugin/`、`.mcp.json` | 插件清单与本地 MCP 配置 |
 | `docs/` | AI 接入与接口契约、验证范围 |
 
-现有 14 个 Skill：auth、campus、ehall、library、sports、se、tex、mail、software、box、youth、table、itxia、institution。教务、课表、选课和办事大厅统一归 `njucli-ehall`；`campus today` 组合课表、借阅和预约。IT 侠使用访客预约接口，按预约单编号或姓名、手机号查询。机构知识使用公开来源，教师为 `institution` 子命令；本地快照、实时读取和 Markdown 导出共用来源与采集时间。
+业务能力与使用入口见 [README](README.md#现有-skills)，源码与说明随所属 Skill 维护。跨业务组合通过已有服务显式传入。
 
-调用关系为：统一 CLI 或独立 Skill 入口 → Skill 的业务方法 → 同目录 client；受保护操作复用同一次调用的认证会话。参数处理归入口，远端请求归 client，展示归 CLI/MCP 输出边界。
+调用关系为：统一 CLI 或独立 Skill 入口 → Skill 的业务方法 → 远端请求；受保护操作复用同一次调用的认证会话。参数处理归入口，远端请求归 client，展示归 CLI/MCP 输出边界。
 
 ## 实现约定
 
 - 功能性优先，采用完成当前任务的最简单实现。业务代码和资料按 Skill 归属；外层只保留统一认证、实际共用工具、安装构建和入口装配。解析和小型返回结构就近定义。
+- 简单业务以 `client.ts`、`commands.ts` 和 `run.ts` 组织：client 包含请求与简短会话包装，commands 包含输入校验、CLI 和只读 MCP，run 是独立启动入口。文件按独立职责或实际复用拆分。
+- 统一入口在 `src/app/production.ts` 的同一次 `mount` 调用中关联业务实例、CLI 和 MCP。认证在 `src/auth/capabilities.ts` 的 `AUTH_SITES` 中声明站点、依赖与 driver，能力名称和类型由声明推导。
 - 每个动作绑定一个明确业务方法，每份远端契约对应一个 client 和一条请求路径。
 - 直接复用已有函数与 client 方法类型。共享工具以实际重复调用、相同语义为依据；单实现存储直接使用具体类。删除无调用代码、冗余字段、透传包装和重复注册表。
 - Adapter、Provider 及等价中间层的引入以维护者明确要求为前提。
@@ -56,7 +58,7 @@ NjuCLI 服务南京大学学生及其 AI 助手，围绕写作、邮件、上课
 
 1. 确认工作目录、Git 状态与现有命令，保留用户已有修改；明确学生任务、输出和授权范围。
 2. 新能力先用临时最小脚本验证入口、认证、请求和响应，默认只读，记录脱敏证据。纯重构直接依据现有契约开展。
-3. 将确认的请求路径收敛至所属 Skill 的 client，接入本 Skill 的命令、MCP 和统一生产装配。验证完成后移除临时请求代码；长期复用的辅助脚本随对应 Skill 保存。
+3. 将确认的请求路径收敛至所属 Skill 的 client，完成命令、MCP 和独立入口，在 `src/app/production.ts` 注册业务；需要新站点会话时补充 `AUTH_SITES`。验证完成后移除临时请求代码；长期复用的辅助脚本随对应 Skill 保存。
 4. 调整受影响的集成用例，执行本地检查，清理重复实现与失效结构。
 5. 将确认的任务流程整理到所属 `SKILL.md`。简短能力直接写在入口文档；仅将较长流程、参数表和接口资料拆入 `references/`。检查 frontmatter、链接和脚本。
 6. 同步 README 和所属 Skill 的操作说明、接口契约与验证范围。构建与独立运行说明见 [贡献指南](CONTRIBUTING.md#实现约定)。
@@ -76,7 +78,7 @@ npm pack --dry-run
 
 `pnpm test` 先构建，再验证认证与文件存储、校园信息命令与解析、软件目录与流式下载、TeX 命令与 HTTP client、邮箱绑定命令与页面交接。邮箱用例隔离浏览器和 IMAP，覆盖本地凭据、多邮箱切换、默认地址派生、MIME 正文与附件。新增用例沿用这种轻量集成方式。
 
-独立 Skill 用例将各目录复制到临时位置，仅提供其声明的第三方依赖，核对命令、公共账号配置及业务入口的 MCP 工具。运行产物以 `scripts/run.mjs` 为入口；源码中的共享模块由构建打入，认证源码保持一份。
+独立 Skill 用例将各目录复制到临时位置，仅提供其声明的第三方依赖，逐一比较独立入口与统一入口的命令帮助、完整 MCP 工具契约，并核对公共账号配置。运行产物以 `scripts/run.mjs` 为入口；源码中的共享模块由构建打入，认证源码保持一份。
 
 源码/构建、本地集成、公开实网、认证实网分别记录。实网里程碑以对应 CLI 的真实结果与后置条件为依据；实网核对按当轮任务和授权范围进行。
 
