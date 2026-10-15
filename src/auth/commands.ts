@@ -1,6 +1,7 @@
 import type { Command } from "commander";
 import { readFile } from "node:fs/promises";
-import { AUTH_CAPABILITIES, type AuthCapability, type AuthCredentials, type SessionMetadata } from "./types.js";
+import { AUTH_CAPABILITIES } from "./capabilities.js";
+import type { AuthCapability, AuthCredentials, SessionMetadata } from "./types.js";
 import { requiredText } from "../core/guards.js";
 import { AppError } from "../core/errors.js";
 
