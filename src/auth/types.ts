@@ -6,6 +6,7 @@ export const AUTH_CAPABILITIES = [
   "vpn",
   "ehall",
   "se",
+  "lms",
   "tex",
   "box",
   "timetable",

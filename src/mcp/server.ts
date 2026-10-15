@@ -10,6 +10,7 @@ import { registerMailTools } from '../../skills/njucli-mail/scripts/mcp.js';
 import { registerCampusTools } from '../../skills/njucli-campus/scripts/mcp.js';
 import { registerEHallTools } from '../../skills/njucli-ehall/scripts/mcp.js';
 import { registerSeTools } from '../../skills/njucli-se/scripts/mcp.js';
+import { registerLmsTools } from '../../skills/njucli-lms/scripts/mcp.js';
 import { registerTexTools } from '../../skills/njucli-tex/scripts/mcp.js';
 import { registerLibraryTools } from '../../skills/njucli-library/scripts/mcp.js';
 import { registerSportsTools } from '../../skills/njucli-sports/scripts/mcp.js';
@@ -26,6 +27,7 @@ export function startMcpServer(services: NjuServices) {
     registerCampusTools(read, services.campus);
     registerEHallTools(read, services.ehall);
     registerSeTools(read, services.se);
+    registerLmsTools(read, services.lms);
     registerTexTools(read, services.tex);
     registerLibraryTools(read, services.library);
     registerSportsTools(read, services.sports);

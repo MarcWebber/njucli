@@ -6,6 +6,7 @@ export const AUTH_DEPENDENCIES: Readonly<Record<AuthCapability, readonly AuthCap
   vpn: ["sso"],
   ehall: ["sso"],
   se: ["sso"],
+  lms: ["sso"],
   tex: ["sso"],
   box: [],
   timetable: ["ehall"],

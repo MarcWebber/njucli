@@ -17,6 +17,7 @@ import { registerMailCommands } from "../../skills/njucli-mail/scripts/commands.
 import { registerSoftwareCommands } from "../../skills/njucli-software/scripts/commands.js";
 import { registerSportsCommands } from "../../skills/njucli-sports/scripts/commands.js";
 import { registerSeCommands } from "../../skills/njucli-se/scripts/commands.js";
+import { registerLmsCommands } from "../../skills/njucli-lms/scripts/commands.js";
 import { registerTexCommands } from "../../skills/njucli-tex/scripts/commands.js";
 import { registerUpgradeCommand } from "./upgrade.js";
 
@@ -37,6 +38,7 @@ export function createCli(services: NjuServices, runtime: CommandRuntime): Comma
   registerSoftwareCommands(program, services.software, runtime);
   registerSportsCommands(program, services.sports, runtime);
   registerSeCommands(program, services.se, runtime);
+  registerLmsCommands(program, services.lms, runtime);
   registerTexCommands(program, services.tex, runtime);
 
   registerUpgradeCommand(program, runtime);

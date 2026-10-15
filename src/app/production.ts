@@ -11,6 +11,7 @@ import { createMailServices } from '../../skills/njucli-mail/scripts/services.js
 import { createCampusServices } from '../../skills/njucli-campus/scripts/services.js';
 import { createEHallServices } from '../../skills/njucli-ehall/scripts/services.js';
 import { createSeServices } from '../../skills/njucli-se/scripts/services.js';
+import { createLmsServices } from '../../skills/njucli-lms/scripts/services.js';
 import { createTexServices } from '../../skills/njucli-tex/scripts/services.js';
 import { createLibraryServices } from '../../skills/njucli-library/scripts/services.js';
 import { createSportsServices } from '../../skills/njucli-sports/scripts/services.js';
@@ -29,6 +30,7 @@ export function createProductionServices() {
     mail: createMailServices(runtime),
     ehall: createEHallServices(runtime),
     se: createSeServices(runtime),
+    lms: createLmsServices(runtime),
     tex: createTexServices(runtime),
     library: createLibraryServices(runtime),
     sports: createSportsServices(runtime),

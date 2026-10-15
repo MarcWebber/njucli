@@ -7,6 +7,7 @@
 | 统一认证 | [登录与会话](#统一认证) |
 | 教务与办事大厅 | [课表、选课、成绩、考试、培养方案及行程登记](../skills/njucli-ehall/references/interfaces.md) |
 | 软件学院课程 | [课程、作业、名单与成绩](#软件学院课程) |
+| 智汇南雍 | [课程、课件、作业、测试与助教作业创建](../skills/njucli-lms/references/interfaces.md) |
 | TeX | [项目、文件、编辑与编译](../skills/njucli-tex/references/interfaces.md) |
 | 图书馆 | [书目、馆藏与借阅](#图书馆) |
 | 体育场馆 | [场馆、时段与预约记录](#体育场馆) |

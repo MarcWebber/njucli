@@ -2,6 +2,7 @@ import type { AccountRecord } from "../account/types.js";
 import { withBrowserSession } from "./browser-session.js";
 import { AuthCoordinator } from "./coordinator.js";
 import { seSessionDriver } from "./drivers/se-browser.js";
+import { lmsSessionDriver } from "./drivers/lms-browser.js";
 import { boxSessionDriver } from "./drivers/box-browser.js";
 import { EHALL_LOGIN_URL, ssoSessionDriver } from "./drivers/sso-browser.js";
 import { selectionSessionDriver } from "./drivers/selection-browser.js";
@@ -48,6 +49,7 @@ export function createAuthCoordinator(): AuthCoordinator {
       sso: ssoSessionDriver,
       selection: selectionSessionDriver,
       se: seSessionDriver,
+      lms: lmsSessionDriver,
       tex: texSessionDriver,
       box: boxSessionDriver,
       ehall: { login: restoreEhallSession, probe: restoreEhallSession },
