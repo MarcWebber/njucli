@@ -1,0 +1,20 @@
+{
+  "format_version": 4,
+  "elements": [
+    {
+      "id": "25a9774d-075e-425c-9154-9ad95248aef2",
+      "type": "title",
+      "children": [{ "id": "cd2e1efb-8453-4b36-8ef2-dd91e15ddf4a", "text": "课程项目周报" }]
+    },
+    {
+      "id": "aeb734d5-c267-4fee-9d5d-a19935a4350b",
+      "type": "header2",
+      "children": [{ "id": "20d8fdfc-f813-486c-8ae0-34a689382379", "text": "本周进展" }]
+    },
+    {
+      "id": "d8f479dd-5c85-413b-8264-cf43ef5b41f7",
+      "type": "paragraph",
+      "children": [{ "id": "93fb8595-fdec-4148-9c98-64e207cff120", "text": "填写已经完成的任务、遇到的问题与下一步安排。" }]
+    }
+  ]
+}
