@@ -29,14 +29,16 @@
 
 ## 实现约定
 
-完整开发规范见 [AGENTS.md](AGENTS.md)。业务实现与说明放在所属 `skills/njucli-*/`；教务、课表、选课和办事大厅归 `njucli-ehall`，软件学院课程归 `njucli-se`。认证集中在 `src/auth/`。
+完整开发规范见 [AGENTS.md](AGENTS.md)。业务实现与说明放在所属 `skills/njucli-*/`；教务、课表、选课和办事大厅归 `njucli-ehall`，软件学院课程归 `njucli-se`。公共 SSO 与会话机制位于 `src/auth/`，业务站点的会话交接随所属 Skill 维护。
 
 新增远端能力先验证实际契约，再接入所属 Skill 的 client、命令和只读 MCP。
 
-简单业务将输入校验与 MCP 放在 `commands.ts`，请求与简短会话包装放在 `client.ts`，由 `run.ts` 启动独立 Skill。统一 CLI 在 `src/app/production.ts` 用一次 `mount` 关联业务实例、命令和 MCP；新认证站点在 `src/auth/capabilities.ts` 的 `AUTH_SITES` 声明依赖与 driver。
+简单业务将输入校验与 MCP 放在 `commands.ts`，请求与简短会话包装放在 `client.ts`，由 `run.ts` 启动独立 Skill。统一 CLI 在 `src/app/production.ts` 用一次 `mount` 关联业务实例、命令和 MCP。
 
 简短说明直接写入 `SKILL.md`，较长流程和接口表放入 `references/`；接口索引见[校园服务接口](docs/interface-evidence.md)。
 
 构建为每个 Skill 生成 `scripts/run.mjs` 和依赖清单 `package.json`，共享源码打入入口。修改认证等共享代码后重新构建全部 Skill；生成的目录可独立安装运行。
 
-`pnpm test` 先构建，再运行本地集成；独立 Skill 用例会将目录复制到临时位置，仅安装声明的依赖，核对入口、账号共享和 MCP 契约。打包前运行 `npm pack --dry-run` 检查清单，并将实际 tarball 安装到临时目录核对命令。评审重点见 [Code Review Rules](AGENTS.md#code-review-rules)。
+`pnpm test` 先构建，再运行本地集成；独立 Skill 用例会将目录复制到临时位置，仅安装声明的依赖，核对入口、账号共享和 MCP 契约。打包前运行 `npm pack --dry-run` 检查清单，并将实际 tarball 安装到临时目录核对命令。
+
+所有评审者在每次评审（包括自评审）前须阅读并遵循根目录的 [REVIEW_RULES.md](REVIEW_RULES.md)，人工评审及任何模型、工具使用同一份规则。
