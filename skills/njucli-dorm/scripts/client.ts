@@ -3,13 +3,19 @@ import { z } from "zod";
 import type { SkillRuntime } from "../../../src/app/runtime.js";
 import { AppError } from "../../../src/core/errors.js";
 import type { FetchLike } from "../../../src/core/types.js";
+import { HousingClient } from "./housing.js";
 
 const EPAY_BASE = "https://epay.nju.edu.cn";
 const EDIT_PATH = "/epay/h5/nju/electric/edit";
-const responseSchema = z.object({ retcode: z.union([z.string(), z.number()]), retmsg: z.string(), list: z.unknown().optional() });
+const responseSchema = z.object({ retcode: z.union([z.string(), z.number()]), retmsg: z.string().optional(), list: z.unknown().optional() });
 const campusSchema = z.object({ elcsysid: z.number().int(), elcname: z.string() });
 const buildingSchema = z.object({ buiId: z.string(), buiName: z.string() });
 const roomSchema = z.object({ roomId: z.string(), roomName: z.string() });
+const bindingSchema = z.object({
+  id: z.union([z.string(), z.number().int()]).transform(String), type: z.literal("elec"),
+  sysId: z.union([z.string(), z.number().int()]).transform(Number).pipe(z.number().int().positive()), sysName: z.string(),
+  buildId: z.string(), buildName: z.string(), roomId: z.string(), roomName: z.string(),
+});
 const billSchema = z.object({
   elcname: z.string(), build_name: z.string(), elecroomno: z.string(), paytime: z.string(),
   amount: z.number(), issend: z.union([z.string(), z.number()]),
@@ -28,9 +34,13 @@ export class DormClient {
 
   async initialize(): Promise<void> {
     this.csrf = undefined;
-    const response = await this.fetch(`${EPAY_BASE}${EDIT_PATH}`);
+    await this.page(EDIT_PATH);
+  }
+
+  private async page(path: string) {
+    const response = await this.fetch(`${EPAY_BASE}${path}`);
     const url = new URL(response.url);
-    if (response.status === 401 || response.status === 403 || url.origin !== EPAY_BASE || url.pathname.split(";")[0] !== EDIT_PATH)
+    if (response.status === 401 || response.status === 403 || url.origin !== EPAY_BASE || url.pathname.split(";")[0] !== path)
       throw new AppError("AUTH_REQUIRED", "电费页面需要统一认证登录", { authCommand: "njucli auth login" });
     if (!response.ok) throw new AppError("REMOTE_UNAVAILABLE", `电费页面返回 HTTP ${response.status}`);
     const $ = load(await response.text());
@@ -39,6 +49,58 @@ export class DormClient {
     if (!header || !token)
       throw new AppError("REMOTE_SCHEMA_CHANGED", "电费页面缺少会话校验字段，请核对官方页面");
     this.csrf = { header, token };
+    return $;
+  }
+
+  async bindings() {
+    const $ = await this.page("/epay/h5/nju/electric/index");
+    const scripts = $("script:not([src])").map((_, script) => $(script).html()).get().join("\n");
+    // 官方页面将当前账号的绑定记录作为 JSON 数组注入 initList。
+    const list = scripts.match(/\blet\s+list\s*=\s*(\[[^\r\n]*\])\s*(?:;|\r?\n)/)?.[1];
+    if (!list) throw new AppError("REMOTE_SCHEMA_CHANGED", "电费页面缺少绑定房间列表");
+    let value: unknown;
+    try { value = JSON.parse(list); }
+    catch { throw new AppError("REMOTE_SCHEMA_CHANGED", "电费页面的绑定房间列表格式发生变化"); }
+    return parse(z.array(bindingSchema), value).map(row => ({
+      id: row.id, campusId: row.sysId, campus: row.sysName.replace("电控", "校区"),
+      buildingId: row.buildId, building: row.buildName, roomId: row.roomId, room: row.roomName,
+    }));
+  }
+
+  async bind(campusId: number, buildingId: string, roomId: string, replace?: string) {
+    const before = await this.bindings();
+    if (replace !== undefined && !before.some(row => row.id === replace))
+      throw new AppError("NOT_FOUND", "当前账号没有该绑定记录，请先运行 dorm bindings");
+    const campus = (await this.campuses()).find(row => row.id === campusId);
+    if (!campus) throw new AppError("INVALID_INPUT", "校区不存在，请使用 dorm campuses 返回的 ID");
+    const building = (await this.buildings(campusId)).find(row => row.id === buildingId);
+    if (!building) throw new AppError("INVALID_INPUT", "该校区没有此楼栋，请使用 dorm buildings 返回的 ID");
+    const room = (await this.rooms(campusId, buildingId)).find(row => row.id === roomId);
+    if (!room) throw new AppError("INVALID_INPUT", "该楼栋没有此房间，请使用 dorm rooms 返回的 ID");
+    const sysId = buildingId.startsWith("west") ? 9 : campusId;
+    const matches = (row: Awaited<ReturnType<DormClient["bindings"]>>[number]) =>
+      row.campusId === sysId && row.buildingId === buildingId && row.roomId === roomId;
+    if (before.some(row => row.id !== replace && matches(row)))
+      throw new AppError("INVALID_INPUT", "该房间已有绑定记录，请运行 dorm bindings 查看");
+    await this.request(replace === undefined ? "addRoom.json" : "updateRoom.json", {
+      ...(replace === undefined ? {} : { id: replace }),
+      type: "elec", areaId: "0", areaName: "0", districtId: "", districtName: "",
+      sysId: String(sysId), sysName: campus.name, buildId: buildingId, buildName: building.name,
+      roomId, roomName: room.name,
+    });
+    const binding = (await this.bindings()).find(row => matches(row) && (replace === undefined
+      ? !before.some(previous => previous.id === row.id) : row.id === replace));
+    if (!binding) throw new AppError("REMOTE_UNAVAILABLE", "绑定请求已提交，回读未确认目标房间，请运行 dorm bindings 核对");
+    return binding;
+  }
+
+  async unbind(id: string) {
+    if (!(await this.bindings()).some(row => row.id === id))
+      throw new AppError("NOT_FOUND", "当前账号没有该绑定记录，请先运行 dorm bindings");
+    await this.request("delRoom.json", { id, type: "elec" });
+    if ((await this.bindings()).some(row => row.id === id))
+      throw new AppError("REMOTE_UNAVAILABLE", "解绑请求已提交，回读仍有该记录，请运行 dorm bindings 核对");
+    return { id, removed: true };
   }
 
   async campuses() {
@@ -87,20 +149,31 @@ export class DormClient {
     });
     if (response.status === 401 || response.status === 403 || new URL(response.url).origin !== EPAY_BASE)
       throw new AppError("AUTH_REQUIRED", "电费会话已失效，请重新登录", { authCommand: "njucli auth login" });
-    if (!response.ok) throw new AppError("REMOTE_UNAVAILABLE", `电费查询返回 HTTP ${response.status}`);
-    const data = parse(responseSchema, JSON.parse(await response.text()));
-    if (String(data.retcode) !== "0") throw new AppError("REMOTE_UNAVAILABLE", data.retmsg || "电费查询失败");
+    if (!response.ok) throw new AppError("REMOTE_UNAVAILABLE", `电费请求返回 HTTP ${response.status}`);
+    let value: unknown;
+    try { value = JSON.parse(await response.text()); }
+    catch { throw new AppError("REMOTE_SCHEMA_CHANGED", "电费接口未返回有效 JSON"); }
+    const data = parse(responseSchema, value);
+    if (String(data.retcode) !== "0") throw new AppError("REMOTE_UNAVAILABLE", data.retmsg || "电费请求失败");
     return data.list;
   }
 }
 
 export function createDormServices({ withBrowser }: SkillRuntime) {
-  return <T>(operation: (client: DormClient) => Promise<T>): Promise<T> =>
-    withBrowser("sso", async session => {
-      const client = new DormClient(session.request);
-      await client.initialize();
-      return operation(client);
-    });
+  return {
+    electricity: <T>(operation: (client: DormClient) => Promise<T>): Promise<T> =>
+      withBrowser("sso", async session => {
+        const client = new DormClient(session.request);
+        await client.initialize();
+        return operation(client);
+      }),
+    housing: <T>(operation: (client: HousingClient) => Promise<T>): Promise<T> =>
+      withBrowser("sso", async session => {
+        const client = new HousingClient(session.request);
+        await client.initialize();
+        return operation(client);
+      }),
+  };
 }
 
 export type DormServices = ReturnType<typeof createDormServices>;

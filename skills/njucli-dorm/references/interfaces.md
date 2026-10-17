@@ -8,7 +8,7 @@
 
 会话检查与业务复用同一次 `BrowserSession`，CSRF 仅存在当次 client 内存。接口与输出不包含服务端配置、会话令牌或内部电控地址。
 
-## 已接入请求
+## 电费查询请求
 
 以下路径相对 `/epay/h5/`，均为只读 POST。成功条件为 `retcode` 数字 `0` 或字符串 `"0"`，失败信息为 `retmsg`，目录和记录取 `list`。
 
@@ -23,15 +23,39 @@
 
 官方编辑页对 `buildid` 以 `west` 开头的楼栋使用 `sysid=9` 查询房间；这些楼栋从苏州电控系统进入。该分支已按页面实现，苏州西区的实际响应待核对。
 
-## 接入范围
+## 电费绑定管理
 
-- 校区、仙林楼栋与房间目录、充值记录空列表已通过实网查询；非空充值记录和苏州西区房间待实网核对。
-- 余额页面 `/epay/h5/nju/electric/charge?id=...` 需要绑定记录 ID，余额读取契约待补充。
-- `addRoom.json`、`updateRoom.json`、`delRoom.json` 为地址写入操作，连同充值提交留待后续接入。
+GET `/epay/h5/nju/electric/index` 的内联 `initList` 将当前账号绑定记录赋给 `let list`。以 JSON 解析该数组，读取 `id/type/sysId/sysName/buildId/buildName/roomId/roomName`；页面脚本不执行。`id` 为绑定记录 ID，`roomId` 为电控房间 ID，两者用途不同。
 
-## 住宿申请
+以下写请求相对 `/epay/h5/`，均为携带 CSRF 的 form POST；成功条件同查询请求。
 
-[宿舍申办](https://ehall.nju.edu.cn/appShow?appId=4618295887225301)用于查询分配结果和住宿费用。应用 ID 为 `4618295887225301`，业务根路径为 `https://ehallapp.nju.edu.cn/xsfw/sys/xszsapp/`。个人查询需要统一认证，开放范围以学校通知及账号权限为准。
+| 请求 | 参数 | 回读条件 |
+| --- | --- | --- |
+| `addRoom.json` | `type=elec`、`areaId=0`、`areaName=0`、`districtId/districtName` 为空，`sysId/sysName`、`buildId/buildName`、`roomId/roomName` | 绑定列表出现本次新增的记录 ID，校区、楼栋及房间 ID 与目标一致 |
+| `updateRoom.json` | 同新增，增加已有绑定的 `id` | 该绑定 ID 的校区、楼栋及房间 ID 与目标一致 |
+| `delRoom.json` | `id`、`type=elec` | 绑定列表已无该 ID |
+
+参数和回读页面来自[编辑页](https://epay.nju.edu.cn/epay/h5/nju/electric/edit)与电费首页。提交前从官方目录解析名称，校验校区、楼栋和房间的从属关系；`sysName` 与官方前端一致使用校区显示名。苏州西区楼栋提交 `sysId=9`。修改与解绑限定当前账号绑定列表中的 ID。一次调用内完成会话交接、提交和回读，写操作不自动重试。
+
+## 住宿查询
+
+[宿舍申办](https://ehall.nju.edu.cn/appShow?appId=4618295887225301)的业务根路径为 `https://ehallapp.nju.edu.cn/xsfw/sys/xszsapp/`。复用 SSO 后 GET 应用入口，回跳 `*default/index.do` 建立业务会话；后续请求使用同一会话。
+
+以下路径相对业务根路径，均为只读 form POST，表单 `data` 的值为 JSON 字符串 `{}`。响应 `code="0"` 表示成功，消息取 `msg`，记录取 `data` 数组。账号由服务端会话确定。
+
+| 请求 | 使用的字段 | 命令 |
+| --- | --- | --- |
+| `modules/studentApplyDorm/getStudentAddress.do` | `ZSDZ` 住宿地址 | `dorm housing` |
+| `modules/studentApplyDorm/getDormApplyInfo.do` | `WID`、`SQLB/SQLB_DISPLAY`、`SQRQ`、`SHZT/SHZT_DISPLAY` | `dorm applications` |
+
+契约见官方前端 [xsDormApply.js](https://ehallapp.nju.edu.cn/xsfw/sys/xszsapp/modules/xsDormApply/xsDormApply.js)、[myDormApplyBs.js](https://ehallapp.nju.edu.cn/xsfw/sys/xszsapp/modules/myDormApply/myDormApplyBs.js) 和[申请列表模板](https://ehallapp.nju.edu.cn/xsfw/sys/xszsapp/modules/myDormApply/myDormApplyIndexPage.html)。类别与状态使用服务端显示字段，同时保留原始码。
+
+## 验证范围
+
+- 校区、仙林楼栋与房间目录、充值记录空列表已有实网响应依据。
+- 电费绑定列表、本人住宿地址与住宿申请列表已取得当前账号的空列表响应。
+- 非空绑定、住宿地址与住宿申请字段依据官方前端；写入、写后回读、非空充值记录及苏州西区房间待实网核对。
+- 余额页面 `/epay/h5/nju/electric/charge?id=...` 需要绑定记录 ID，余额读取与充值提交契约待补充。
 
 ## 宿舍报修
 

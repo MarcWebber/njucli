@@ -49,7 +49,7 @@ curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/inst
 | [njucli-auth](skills/njucli-auth/SKILL.md) | 统一认证与会话维护 |
 | [njucli-campus](skills/njucli-campus/SKILL.md) | 校园信息与今日汇总 |
 | [njucli-ehall](skills/njucli-ehall/SKILL.md) | 课表、选课、成绩、考试、培养方案、个人资料、奖学金草稿与办事大厅 |
-| [njucli-dorm](skills/njucli-dorm/SKILL.md) | 宿舍电费校区、楼栋、房间目录与本人充值记录 |
+| [njucli-dorm](skills/njucli-dorm/SKILL.md) | 电费房间绑定、充值记录、本人住宿地址与申请审核状态 |
 | [njucli-self-service](skills/njucli-self-service/SKILL.md) | 证明目录与申请、费用额度、邮件领取、申请撤销、打印机位置与云打印查询 |
 | [njucli-library](skills/njucli-library/SKILL.md) | 图书馆 |
 | [njucli-sports](skills/njucli-sports/SKILL.md) | 体育场馆 |
@@ -68,7 +68,9 @@ curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/inst
 njucli ehall schedule
 njucli ehall grades
 njucli ehall guides 宿舍
-njucli dorm campuses
+njucli dorm housing
+njucli dorm applications
+njucli dorm bindings
 njucli dorm bills
 njucli self-service items 成绩单
 njucli se assignments --pending
