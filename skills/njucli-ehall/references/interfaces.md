@@ -7,7 +7,7 @@
 | 方法 | 路径 | 契约 |
 | --- | --- | --- |
 | GET | `/jsonp/ywtb/searchAppAndService?searchKey=...` | 公开指南搜索，`result=success`；`data.serviceList` 取 `serviceWid/serviceName/deptStr/roleStr/themeStr/appList`，`appList` 可为 `null` |
-| GET | `/jsonp/ywtb/onlineYwtbApps?searchKeyword=...&labels=` | `result=success`；`data` 为应用数组，取 `appId/appName/hasPermission` |
+| GET | `/jsonp/ywtb/service/getServices?searchKeyword=...&labels=` | 桌面应用目录及关键词搜索；`result=success`，`data` 为应用数组，取 `serviceId/serviceName/hasPermission` |
 | POST | `/taskcenterapp/sys/taskCenter/taskNew/getTaskRestful.do` | `flag=1/2/3` 分别为待办、已办、我发起 |
 | POST | `/taskcenterapp/sys/taskCenter/taskNew/queryProcessTrack.do` | `state=1/2/3` 分别为进行中、已完成、已撤销 |
 

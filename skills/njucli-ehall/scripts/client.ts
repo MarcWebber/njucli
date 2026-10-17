@@ -68,15 +68,15 @@ export class EHallPortalClient {
   }
 
   async services(query = ""): Promise<EHallService[]> {
-    const url = new URL("jsonp/ywtb/onlineYwtbApps", PORTAL);
+    const url = new URL("jsonp/ywtb/service/getServices", PORTAL);
     url.search = new URLSearchParams({ searchKeyword: query.trim(), labels: "" }).toString();
     const value = await this.json<{ result: string; data: Row[] }>(url);
     if (value.result !== "success") throw new Error(`EHall 服务目录请求失败：${value.result}`);
     return value.data.map((row) => {
-      const appId = required(row, "appId");
+      const appId = required(row, "serviceId");
       return {
         appId,
-        name: required(row, "appName"),
+        name: required(row, "serviceName"),
         available: [true, 1, "1", "true"].includes(row.hasPermission as string | number | boolean),
         url: serviceLink(appId).url,
       };
