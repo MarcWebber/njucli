@@ -31,7 +31,7 @@ NjuCLI 提供统一 CLI、只读 stdio MCP 工具和独立 Skill。安装步骤�
 
 ## MCP 工具概览
 
-`njucli mcp` 当前提供 129 个只读工具，兼容 MCP 规范的客户端可通过 `tools/list` 协议自动发现。各领域工具数量分布如下：
+`njucli mcp` 当前提供 131 个只读工具，兼容 MCP 规范的客户端可通过 `tools/list` 协议自动发现。各领域工具数量分布如下：
 
 | 领域 | 标识 | 工具数量 |
 | :--- | :--- | :--- |
@@ -47,17 +47,18 @@ NjuCLI 提供统一 CLI、只读 stdio MCP 工具和独立 Skill。安装步骤�
 | 论文写作 | tex | 5 |
 | 邮箱 | mail | 4 |
 | 体育场馆 | sports | 3 |
+| 校园卡与个人支付 | pay | 2 |
 | 正版软件 | software | 2 |
 | 图书馆 | library | 2 |
 | IT 侠 | itxia | 2 |
 | 校园信息 | campus | 2 |
-| **总计** | - | **129** |
+| **总计** | - | **131** |
 
 部分客户端对一次性启用的工具总数敏感（例如超过 80 个工具可能影响模型响应质量），建议在客户端设置中根据实际需要关闭未使用的工具。
 
 ## 客户端指南
 
-- [WorkBuddy](workbuddy.md)：腾讯推出的桌面端 AI 办公工作台，支持接入 NjuCLI 的 MCP 工具与 17 个 Skill 扩展。
+- [WorkBuddy](workbuddy.md)：腾讯推出的桌面端 AI 办公工作台，支持接入 NjuCLI 的 MCP 工具与 18 个 Skill 扩展。
 
 ## 独立 Skill
 

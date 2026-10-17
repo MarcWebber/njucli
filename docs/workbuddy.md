@@ -65,7 +65,7 @@ WorkBuddy 支持用户级与项目级两处 MCP 配置文件：
 2. 点击顶部 **Connectors** 标签。
 3. 点击右上角 **Custom connectors**，打开 **MCP Server Management** 弹窗。
 
-正常状态下 `njucli` 前显示绿点，并标注已启用的工具数量。当前完整工具清单为 129 个，具体数量随安装版本变化。
+正常状态下 `njucli` 前显示绿点，并标注已启用的工具数量。当前完整工具清单为 131 个，具体数量随安装版本变化。
 
 ![MCP Server Management 中的 njucli 工具列表与数量提示](images/workbuddy/02-mcp-server-management.png)
 
@@ -77,7 +77,7 @@ WorkBuddy 支持用户级与项目级两处 MCP 配置文件：
 
 ## 3. 安装 Skills
 
-NjuCLI 附带 17 个以 `njucli-*` 命名的 Skill。通过向安装脚本传递目标目录变量为 WorkBuddy 安装：
+NjuCLI 附带 18 个以 `njucli-*` 命名的 Skill。通过向安装脚本传递目标目录变量为 WorkBuddy 安装：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/install.sh | NJUCLI_SKILLS_DIR=~/.workbuddy/skills bash
@@ -105,7 +105,7 @@ WorkBuddy 会自动调用 `njucli-institution`，返回软件学院官网 `softw
 
 ## 5. 限制与注意事项
 
-- **只读设计**：MCP 服务当前提供 129 个只读工具，不执行任何写操作。
+- **只读设计**：MCP 服务当前提供 131 个只读工具，不执行任何写操作。
 - **写操作执行**：提交、取消、预约等写操作由 Skill 通过 CLI 命令完成，且仅在用户提出明确要求时才会执行。
 - **身份认证**：查询课表、成绩、邮件、云盘等需要登录的服务前，必须先在运行 WorkBuddy 的计算机终端执行 `njucli auth login` 保存统一认证凭据。
 - **使用许可**：NjuCLI 采用个人使用许可证，机构或组织批量使用须另获书面授权。
