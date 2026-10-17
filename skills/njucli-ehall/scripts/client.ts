@@ -1,4 +1,5 @@
 import { AppError } from "../../../src/core/errors.js";
+import { z } from "zod";
 import type { FetchLike } from "../../../src/core/types.js";
 import type {
   EHallApplicationPage,
@@ -24,6 +25,20 @@ const APPLICATION_STATES: Record<EHallApplicationState, string> = {
 
 type Row = Record<string, unknown>;
 
+const guideSearchSchema = z.object({
+  result: z.literal("success"),
+  data: z.object({
+    serviceList: z.array(z.object({
+      serviceWid: z.string().min(1),
+      serviceName: z.string().min(1),
+      deptStr: z.string(),
+      roleStr: z.string(),
+      themeStr: z.string(),
+      appList: z.array(z.object({ appId: z.string().min(1), appName: z.string().min(1) })).nullable(),
+    })),
+  }),
+});
+
 export class EHallPortalClient {
   constructor(private readonly fetch: FetchLike) {}
 
@@ -32,16 +47,36 @@ export class EHallPortalClient {
     return value.hasLogin;
   }
 
+  async guides(query: string) {
+    const url = new URL("jsonp/ywtb/searchAppAndService", PORTAL);
+    url.searchParams.set("searchKey", query);
+    const parsed = guideSearchSchema.safeParse(await this.json<unknown>(url));
+    if (!parsed.success) throw new AppError("REMOTE_SCHEMA_CHANGED", "EHall 服务指南响应不符合已确认的契约");
+    return parsed.data.data.serviceList.map((row) => ({
+      id: row.serviceWid,
+      name: row.serviceName,
+      department: row.deptStr,
+      audience: row.roleStr,
+      category: row.themeStr,
+      url: `${PORTAL}ywtb-portal/official/index.html#/matter_detail?${new URLSearchParams({ serviceWid: row.serviceWid })}`,
+      applications: (row.appList ?? []).map((app) => ({
+        appId: app.appId,
+        name: app.appName,
+        url: serviceLink(app.appId).url,
+      })),
+    }));
+  }
+
   async services(query = ""): Promise<EHallService[]> {
-    const url = new URL("jsonp/ywtb/onlineYwtbApps", PORTAL);
+    const url = new URL("jsonp/ywtb/service/getServices", PORTAL);
     url.search = new URLSearchParams({ searchKeyword: query.trim(), labels: "" }).toString();
     const value = await this.json<{ result: string; data: Row[] }>(url);
     if (value.result !== "success") throw new Error(`EHall 服务目录请求失败：${value.result}`);
     return value.data.map((row) => {
-      const appId = required(row, "appId");
+      const appId = required(row, "serviceId");
       return {
         appId,
-        name: required(row, "appName"),
+        name: required(row, "serviceName"),
         available: [true, 1, "1", "true"].includes(row.hasPermission as string | number | boolean),
         url: serviceLink(appId).url,
       };

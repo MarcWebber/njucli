@@ -20,6 +20,7 @@
 | 南大云盘 | [资料库、文件、分享与协作](../skills/njucli-box/references/interfaces.md) |
 | IT 侠 | [维修预约、打开预约单、进度查询与取消](../skills/njucli-itxia/references/interfaces.md)（取消仅 CLI，须 `--yes`，只读 MCP 不暴露） |
 | 学院与教师知识 | [官方目录、教师基础信息与后勤电话](../skills/njucli-institution/references/interfaces.md) |
+| 宿舍服务 | [电费绑定管理、充值记录与住宿查询](../skills/njucli-dorm/references/interfaces.md) |
 
 本地检查见[贡献指南](../CONTRIBUTING.md#实现约定)。各节记录对应的实网验证范围；远端写入使用用户指定的目标和材料。
 

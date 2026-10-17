@@ -65,9 +65,9 @@ WorkBuddy 支持用户级与项目级两处 MCP 配置文件：
 2. 点击顶部 **Connectors** 标签。
 3. 点击右上角 **Custom connectors**，打开 **MCP Server Management** 弹窗。
 
-正常状态下 `njucli` 前显示绿点，并标注 `121/121 tools enabled`。
+正常状态下 `njucli` 前显示绿点，并标注已启用的工具数量。当前完整工具清单为 129 个，具体数量随安装版本变化。
 
-![MCP Server Management 弹窗，njucli 显示 121/121 tools enabled 与工具过多提示](images/workbuddy/02-mcp-server-management.png)
+![MCP Server Management 中的 njucli 工具列表与数量提示](images/workbuddy/02-mcp-server-management.png)
 
 ### 工具数量建议
 
@@ -77,7 +77,7 @@ WorkBuddy 支持用户级与项目级两处 MCP 配置文件：
 
 ## 3. 安装 Skills
 
-NjuCLI 附带 16 个以 `njucli-*` 命名的 Skill。通过向安装脚本传递目标目录变量为 WorkBuddy 安装：
+NjuCLI 附带 17 个以 `njucli-*` 命名的 Skill。通过向安装脚本传递目标目录变量为 WorkBuddy 安装：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/install.sh | NJUCLI_SKILLS_DIR=~/.workbuddy/skills bash
@@ -85,9 +85,9 @@ curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/inst
 
 注意：环境变量必须置于 `bash` 命令前以使其生效。安装脚本会建立指向已安装 NjuCLI 包的符号链接，因此执行 `njucli upgrade` 后 Skill 会自动更新。如果 WorkBuddy 无法正确识别符号链接，可直接将 Skill 目录复制至该路径。
 
-安装完成后，进入 **Experts · Skills · Connectors** → **Skills** → **Installed** → **All skills**，可在 **Custom (16)** 分组中看到安装的 Skill，每个 Skill 均配有独立开关。
+安装完成后，进入 **Experts · Skills · Connectors** → **Skills** → **Installed** → **All skills**，可在 **Custom** 分组中看到安装的 Skill，每个 Skill 均配有独立开关。
 
-![Skills 已安装列表，Custom (16) 个 njucli-* Skill](images/workbuddy/03-skills-installed.png)
+![Skills 已安装列表与 njucli-* Skill 开关](images/workbuddy/03-skills-installed.png)
 
 ## 4. 试用
 
@@ -105,7 +105,7 @@ WorkBuddy 会自动调用 `njucli-institution`，返回软件学院官网 `softw
 
 ## 5. 限制与注意事项
 
-- **只读设计**：MCP 服务当前提供 121 个只读工具，不执行任何写操作。
+- **只读设计**：MCP 服务当前提供 129 个只读工具，不执行任何写操作。
 - **写操作执行**：提交、取消、预约等写操作由 Skill 通过 CLI 命令完成，且仅在用户提出明确要求时才会执行。
 - **身份认证**：查询课表、成绩、邮件、云盘等需要登录的服务前，必须先在运行 WorkBuddy 的计算机终端执行 `njucli auth login` 保存统一认证凭据。
 - **使用许可**：NjuCLI 采用个人使用许可证，机构或组织批量使用须另获书面授权。
@@ -120,7 +120,7 @@ WorkBuddy 未在系统环境变量中找到 `njucli`。请检查系统的 `PATH`
 2. 确认是否已彻底关闭 WorkBuddy 进程并重新打开。
 3. 检查首次启动时是否弹出了信任提示，若被忽略需重新触发并点击 Trust。
 
-### Skills 列表中看不到 Custom (16)
+### Skills 列表中看不到已安装的扩展
 1. 检查 `~/.workbuddy/skills` 目录下是否存在对应文件。
 2. 若当前系统或客户端对符号链接支持受限，将原始 Skill 目录直接拷贝至 `~/.workbuddy/skills`。
 3. 重启 WorkBuddy 客户端刷新缓存。
