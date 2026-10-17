@@ -37,21 +37,8 @@ GET `/epay/h5/nju/electric/index` 的内联 `initList` 将当前账号绑定记�
 
 参数和回读页面来自[编辑页](https://epay.nju.edu.cn/epay/h5/nju/electric/edit)与电费首页。提交前从官方目录解析名称，校验校区、楼栋和房间的从属关系；`sysName` 与官方前端一致使用校区显示名。苏州西区楼栋提交 `sysId=9`。修改与解绑限定当前账号绑定列表中的 ID。一次调用内完成会话交接、提交和回读，写操作不自动重试。
 
-## 住宿查询
-
-[宿舍申办](https://ehall.nju.edu.cn/appShow?appId=4618295887225301)的业务根路径为 `https://ehallapp.nju.edu.cn/xsfw/sys/xszsapp/`。复用 SSO 后 GET 应用入口，回跳 `*default/index.do` 建立业务会话；后续请求使用同一会话。
-
-以下路径相对业务根路径，均为只读 form POST，表单 `data` 的值为 JSON 字符串 `{}`。响应 `code="0"` 表示成功，消息取 `msg`，记录取 `data` 数组。账号由服务端会话确定。
-
-| 请求 | 使用的字段 | 命令 |
-| --- | --- | --- |
-| `modules/studentApplyDorm/getStudentAddress.do` | `ZSDZ` 住宿地址 | `dorm housing` |
-| `modules/studentApplyDorm/getDormApplyInfo.do` | `WID`、`SQLB/SQLB_DISPLAY`、`SQRQ`、`SHZT/SHZT_DISPLAY` | `dorm applications` |
-
-契约见官方前端 [xsDormApply.js](https://ehallapp.nju.edu.cn/xsfw/sys/xszsapp/modules/xsDormApply/xsDormApply.js)、[myDormApplyBs.js](https://ehallapp.nju.edu.cn/xsfw/sys/xszsapp/modules/myDormApply/myDormApplyBs.js) 和[申请列表模板](https://ehallapp.nju.edu.cn/xsfw/sys/xszsapp/modules/myDormApply/myDormApplyIndexPage.html)。类别与状态使用服务端显示字段，同时保留原始码。
-
 ## 验证范围
 
 - 校区、仙林楼栋与房间目录、充值记录空列表已有实网响应依据。
-- 电费绑定列表、本人住宿地址与住宿申请列表已取得当前账号的空列表响应。
-- 非空绑定、住宿地址与住宿申请字段依据官方前端；写入、写后回读、非空充值记录及苏州西区房间待实网核对。
+- 电费绑定列表已取得当前账号的空列表响应。
+- 非空绑定字段依据官方前端；写入、写后回读、非空充值记录及苏州西区房间待实网核对。

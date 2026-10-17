@@ -3,7 +3,6 @@ import { z } from "zod";
 import type { SkillRuntime } from "../../../src/app/runtime.js";
 import { AppError } from "../../../src/core/errors.js";
 import type { FetchLike } from "../../../src/core/types.js";
-import { HousingClient } from "./housing.js";
 
 const EPAY_BASE = "https://epay.nju.edu.cn";
 const EDIT_PATH = "/epay/h5/nju/electric/edit";
@@ -160,20 +159,12 @@ export class DormClient {
 }
 
 export function createDormServices({ withBrowser }: SkillRuntime) {
-  return {
-    electricity: <T>(operation: (client: DormClient) => Promise<T>): Promise<T> =>
-      withBrowser("sso", async session => {
-        const client = new DormClient(session.request);
-        await client.initialize();
-        return operation(client);
-      }),
-    housing: <T>(operation: (client: HousingClient) => Promise<T>): Promise<T> =>
-      withBrowser("sso", async session => {
-        const client = new HousingClient(session.request);
-        await client.initialize();
-        return operation(client);
-      }),
-  };
+  return <T>(operation: (client: DormClient) => Promise<T>): Promise<T> =>
+    withBrowser("sso", async session => {
+      const client = new DormClient(session.request);
+      await client.initialize();
+      return operation(client);
+    });
 }
 
 export type DormServices = ReturnType<typeof createDormServices>;

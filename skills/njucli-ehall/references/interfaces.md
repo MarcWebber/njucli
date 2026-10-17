@@ -6,14 +6,10 @@
 
 | 方法 | 路径 | 契约 |
 | --- | --- | --- |
-| GET | `/jsonp/ywtb/searchAppAndService?searchKey=...` | 公开指南搜索，`result=success`；`data.serviceList` 取 `serviceWid/serviceName/deptStr/roleStr/themeStr/appList`，`appList` 可为 `null` |
-| GET | `/jsonp/ywtb/service/getServices?searchKeyword=...&labels=` | 桌面应用目录及关键词搜索；`result=success`，`data` 为应用数组，取 `serviceId/serviceName/hasPermission` |
 | POST | `/taskcenterapp/sys/taskCenter/taskNew/getTaskRestful.do` | `flag=1/2/3` 分别为待办、已办、我发起 |
 | POST | `/taskcenterapp/sys/taskCenter/taskNew/queryProcessTrack.do` | `state=1/2/3` 分别为进行中、已完成、已撤销 |
 
 服务入口使用 `/appShow?appId=...`，结果中省略含会话参数的内部表单链接。
-
-`ehall guides` 使用公开请求，无需会话；指南链接为 `/ywtb-portal/official/index.html#/matter_detail?serviceWid=...`。搜索结果按远端返回，可能包含相关事项；适用人群来自 `roleStr`，办理权限由学校按账号确认。
 
 ## 研究生节假日行程登记
 

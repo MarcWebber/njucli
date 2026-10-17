@@ -5,7 +5,6 @@ import { readFile } from "node:fs/promises";
 import type { EHallServices } from './services.js';
 import { addFormatOption, runCommand, type CommandRuntime, type FormatOptions } from "../../../src/core/command.js";
 import { AppError } from "../../../src/core/errors.js";
-import { requiredText } from "../../../src/core/guards.js";
 import { COURSE_SELECTION_KINDS, type CourseSelectionKind, EHALL_APPLICATION_STATES, EHALL_TASK_KINDS, type EHallApplicationState, type EHallTaskKind } from "./types.js";
 import { tripInputSchema } from "./trip.js";
 import { PROFILE_KINDS, profileInputSchema, type ProfileKind } from "./profile.js";
@@ -24,7 +23,6 @@ import {
   termsText,
   ehallApplicationsText,
   ehallServiceLinkText,
-  ehallServicesText,
   ehallTasksText,
 } from './text.js';
 
@@ -69,16 +67,6 @@ export function registerEHallCommands(
   runtime: CommandRuntime,
 ): Command {
   const ehall = program.command("ehall").description("教务、课表、选课、个人资料与办事大厅");
-
-  addFormatOption(ehall.command("guides <query>").description("搜索公开办事指南、适用人群与应用入口，无需登录"))
-    .action((query: string, options: FormatOptions) => runCommand(runtime, options, async () => {
-      const data = await service.guides(requiredText(query, "查询关键词"));
-      return { data, text: data.map((guide) => [
-        `${guide.name}｜${guide.department}｜${guide.audience}`,
-        guide.url,
-        ...guide.applications.map((app) => `${app.name} (${app.appId})\t${app.url}`),
-      ].join("\n")).join("\n\n") || "未找到公开服务指南" };
-    }));
 
   addFormatOption(ehall.command("profile [kind]").description("查询研究生论文、获奖、专利、著作和导师项目"))
     .action(async (kind: string | undefined, options: FormatOptions) => runCommand(runtime, options, async () => {
@@ -235,12 +223,6 @@ export function registerEHallCommands(
           `${data.plan.holiday.name}行程检查通过（预览）：${data.plan.stayOnCampus ? "全程留校" : `${data.plan.trips.length} 段离返校行程`}`,
           ...data.plan.trips.flatMap((t) => t.stops.map((s) => `${s.from} 至 ${s.to}：${s.destination.name}，${s.address}，${s.transport.name}${s.serviceNumber ? ` ${s.serviceNumber}` : ""}`)),
         ].join("\n") };
-    }));
-
-  addFormatOption(ehall.command("services [query]").description("搜索可用服务入口"))
-    .action(async (query: string | undefined, options: FormatOptions) => runCommand(runtime, options, async () => {
-      const data = await service.services(query);
-      return { data, text: ehallServicesText(data) };
     }));
 
   addFormatOption(ehall.command("tasks").description("查询待办、已办或我发起的任务")

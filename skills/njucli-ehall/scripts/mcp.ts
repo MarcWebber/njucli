@@ -16,9 +16,6 @@ const OPTIONAL_TERM = z
   .describe("Academic term ID; omit to use the current term");
 
 export function registerEHallTools(read: ReadTool, service: EHallServices): void {
-  read("ehall_guides", "无需登录，搜索公开办事指南及其应用入口；结果中的适用人群和入口不代表当前账号具有办理权限。", {
-    query: z.string().trim().min(1).describe("服务名称关键词，如宿舍、校园卡"),
-  }, ({ query }) => service.guides(query));
   read("ehall_scholarships", "List graduate scholarship offerings.", { page: z.number().int().min(1).optional(), pageSize: z.number().int().min(1).optional() }, ({ page, pageSize }) => service.scholarships(page, pageSize));
   read("ehall_scholarship", "Read scholarship details and award levels.", { awardId: z.string().min(1) }, ({ awardId }) => service.scholarship(awardId));
   read("ehall_scholarship_applications", "Read the current account's scholarship application statuses.", { page: z.number().int().min(1).optional(), pageSize: z.number().int().min(1).optional() }, ({ page, pageSize }) => service.scholarshipApplications(page, pageSize));
@@ -31,7 +28,6 @@ export function registerEHallTools(read: ReadTool, service: EHallServices): void
   read("ehall_profile_fields", "Read current personal-record field requirements, official choices, and edit permissions.", {
     kind: z.enum(PROFILE_KINDS),
   }, ({ kind }) => service.profileFields(kind));
-  read("ehall_services", "Search official NJU EHall service entries.", { query: z.string().optional().describe("Service name keyword") }, ({ query }) => service.services(query));
   read("ehall_trip", "Read the current graduate holiday travel registration, contact defaults, and missing fields.", {}, () => service.trip());
   read("ehall_tasks", "List EHall todo, done, or initiated tasks without opening forms.", {
     kind: z.enum(EHALL_TASK_KINDS).default("todo"),
