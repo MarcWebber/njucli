@@ -13,7 +13,6 @@ import { opacSessionDriver } from "./drivers/opac-browser.js";
 import { YouthClient } from "../../skills/njucli-youth/scripts/client.js";
 import { TableClient } from "../../skills/njucli-table/scripts/client.js";
 import { AppError } from "../core/errors.js";
-import { DormClient } from "../../skills/njucli-dorm/scripts/client.js";
 import type { AuthCapability, AuthSessionDriver } from "./types.js";
 
 const VPN_TEST_URL = "https://www-nju-edu-cn-s.atrust.nju.edu.cn/";
@@ -22,8 +21,6 @@ const restoreYouthSession = (account: AccountRecord): Promise<boolean> =>
   withBrowserSession(account, true, (session) => new YouthClient(session.request).restoreSession());
 const restoreTableSession = (account: AccountRecord): Promise<boolean> =>
   withBrowserSession(account, true, (session) => new TableClient(session.request).restoreSession());
-const restoreEpaySession = (account: AccountRecord): Promise<boolean> =>
-  withBrowserSession(account, true, (session) => new DormClient(session.request).hasSession());
 const restoreEhallSession = (account: AccountRecord): Promise<boolean> => withBrowserSession(account, true, async (session) => {
   const client = new EHallPortalClient(session.request);
   if (await client.hasSession())
@@ -70,7 +67,6 @@ export const AUTH_SITES = {
   selection: { dependencies: [], driver: selectionSessionDriver },
   vpn: { dependencies: ["sso"], driver: { login: interactiveVpnLogin, probe: probeVpn } },
   ehall: { dependencies: ["sso"], driver: { login: restoreEhallSession, probe: restoreEhallSession } },
-  epay: { dependencies: ["sso"], driver: { login: restoreEpaySession, probe: restoreEpaySession } },
   se: { dependencies: ["sso"], driver: seSessionDriver },
   lms: { dependencies: ["sso"], driver: { login: restoreLmsSession, probe: restoreLmsSession } },
   tex: { dependencies: ["sso"], driver: texSessionDriver },

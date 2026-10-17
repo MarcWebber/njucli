@@ -26,20 +26,19 @@ export class DormClient {
 
   constructor(private readonly fetch: FetchLike) {}
 
-  async hasSession(): Promise<boolean> {
+  async initialize(): Promise<void> {
     this.csrf = undefined;
     const response = await this.fetch(`${EPAY_BASE}${EDIT_PATH}`);
-    if (response.status === 401 || response.status === 403) return false;
-    if (!response.ok) throw new AppError("REMOTE_UNAVAILABLE", `电费页面返回 HTTP ${response.status}`);
     const url = new URL(response.url);
-    if (url.origin !== EPAY_BASE || url.pathname.split(";")[0] !== EDIT_PATH) return false;
+    if (response.status === 401 || response.status === 403 || url.origin !== EPAY_BASE || url.pathname.split(";")[0] !== EDIT_PATH)
+      throw new AppError("AUTH_REQUIRED", "电费页面需要统一认证登录", { authCommand: "njucli auth login" });
+    if (!response.ok) throw new AppError("REMOTE_UNAVAILABLE", `电费页面返回 HTTP ${response.status}`);
     const $ = load(await response.text());
     const header = $("meta[name=_csrf_header]").attr("content");
     const token = $("meta[name=_csrf]").attr("content");
     if (!header || !token)
       throw new AppError("REMOTE_SCHEMA_CHANGED", "电费页面缺少会话校验字段，请核对官方页面");
     this.csrf = { header, token };
-    return true;
   }
 
   async campuses() {
@@ -77,7 +76,7 @@ export class DormClient {
   }
 
   private async request(path: string, form?: Record<string, string>): Promise<unknown> {
-    if (!this.csrf) throw new AppError("AUTH_REQUIRED", "请登录电费系统", { authCommand: "njucli auth login epay" });
+    if (!this.csrf) throw new AppError("AUTH_REQUIRED", "请先初始化电费会话");
     const response = await this.fetch(`${EPAY_BASE}/epay/h5/${path}`, {
       method: "POST",
       headers: {
@@ -87,7 +86,7 @@ export class DormClient {
       body: form ? new URLSearchParams(form).toString() : "{}",
     });
     if (response.status === 401 || response.status === 403 || new URL(response.url).origin !== EPAY_BASE)
-      throw new AppError("AUTH_REQUIRED", "电费会话已失效，请重新登录", { authCommand: "njucli auth login epay" });
+      throw new AppError("AUTH_REQUIRED", "电费会话已失效，请重新登录", { authCommand: "njucli auth login" });
     if (!response.ok) throw new AppError("REMOTE_UNAVAILABLE", `电费查询返回 HTTP ${response.status}`);
     const data = parse(responseSchema, JSON.parse(await response.text()));
     if (String(data.retcode) !== "0") throw new AppError("REMOTE_UNAVAILABLE", data.retmsg || "电费查询失败");
@@ -96,13 +95,12 @@ export class DormClient {
 }
 
 export function createDormServices({ withBrowser }: SkillRuntime) {
-  return <T>(operation: (client: DormClient) => Promise<T>): Promise<T> => {
-    let client: DormClient;
-    return withBrowser("epay", () => operation(client), async session => {
-      client = new DormClient(session.request);
-      return client.hasSession();
+  return <T>(operation: (client: DormClient) => Promise<T>): Promise<T> =>
+    withBrowser("sso", async session => {
+      const client = new DormClient(session.request);
+      await client.initialize();
+      return operation(client);
     });
-  };
 }
 
 export type DormServices = ReturnType<typeof createDormServices>;

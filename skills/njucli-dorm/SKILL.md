@@ -7,7 +7,7 @@ description: 查询南京大学宿舍电费系统的校区、楼栋、房间目�
 
 本 Skill 统一承接电量、住宿与报修。当前已接入电费目录和充值记录；其余能力按实际接口逐步补充到本组。
 
-在本 Skill 目录运行以下命令，统一 CLI 将 `node scripts/run.mjs` 换成 `njucli`。业务通过当前账号自动恢复 `epay` 会话；[官方电费入口](https://epay.nju.edu.cn/epay/h5/nju/electric/index)。
+在本 Skill 目录运行以下命令，统一 CLI 将 `node scripts/run.mjs` 换成 `njucli`。命令复用当前账号的统一认证会话，由本 Skill 完成电费站点的会话交接；[官方电费入口](https://epay.nju.edu.cn/epay/h5/nju/electric/index)。
 
 ## 电费查询
 

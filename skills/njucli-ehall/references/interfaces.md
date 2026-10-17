@@ -13,7 +13,7 @@
 
 服务入口使用 `/appShow?appId=...`，结果中省略含会话参数的内部表单链接。
 
-`ehall guides` 使用公开请求，无需会话；指南链接为 `/ywtb-portal/official/index.html#/matter_detail?serviceWid=...`。搜索结果按远端返回，可能包含相关事项；适用人群来自 `roleStr`，应用入口不代表当前用户具有办理权限。2026-10-16 匿名请求已取得“宿舍申办”应用 `4618295887225301`，业务根路径为 `https://ehallapp.nju.edu.cn/xsfw/sys/xszsapp/`；其个人查询仍需统一认证。
+`ehall guides` 使用公开请求，无需会话；指南链接为 `/ywtb-portal/official/index.html#/matter_detail?serviceWid=...`。搜索结果按远端返回，可能包含相关事项；适用人群来自 `roleStr`，办理权限由学校按账号确认。
 
 ## 研究生节假日行程登记
 
