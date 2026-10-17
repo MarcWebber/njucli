@@ -50,6 +50,8 @@ node scripts/run.mjs table update UUID "工作表名" --input ./updates.json --f
 每批可提交 1–1000 行。学号等编号保持字符串格式，空数值填 `null`，公式列由平台自动计算。
 复杂字段沿用 `show` 或 `rows` 返回的格式，附件使用已有文件对象。写入结果不明时，先查对应行，确认哪些已保存。
 
+需要从表格生成在线报告时，读取指定数据后使用 Box 的 `doc-create/doc-read/doc-update`；选定字段可整理为 `chart.json`，用 `box chart-create` 生成可编辑图表，再用 `box doc-embed-whiteboard` 嵌入报告。最后把文档返回的 `url` 填回指定行。文档存入南大云盘，访问沿用云盘权限。流程见[表格到在线报告](../njucli-box/references/documents.md#表格到在线报告)。
+
 ## 字段与视图维护
 
 ```bash
