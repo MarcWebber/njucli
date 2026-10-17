@@ -1,3 +1,5 @@
+import { createDormServices } from "../../skills/njucli-dorm/scripts/client.js";
+import { registerDormCommands, registerDormTools } from "../../skills/njucli-dorm/scripts/commands.js";
 import { createSelfServiceServices } from "../../skills/njucli-self-service/scripts/client.js";
 import { registerSelfServiceCommands, registerSelfServiceTools } from "../../skills/njucli-self-service/scripts/commands.js";
 import type { Command } from "commander";
@@ -77,6 +79,7 @@ export function createCli(runtime: CommandRuntime): Command {
   mount(createTableServices(context), registerTableCommands, registerTableTools);
   mount(createCampusServices({ ehall, library, sports }), registerCampusCommands, registerCampusTools);
   mount(ehall, registerEHallCommands, registerEHallTools);
+  mount(createDormServices(context), registerDormCommands, registerDormTools);
   mount(library, registerLibraryCommands, registerLibraryTools);
   mount(createMailServices(context), registerMailCommands, registerMailTools);
   mount(new SoftwareClient(), registerSoftwareCommands, registerSoftwareTools);

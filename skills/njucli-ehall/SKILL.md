@@ -61,6 +61,7 @@ node scripts/run.mjs ehall withdraw 教学班ID --format json
 ## 办事服务与假期行程
 
 ```bash
+node scripts/run.mjs ehall guides "宿舍" --format json
 node scripts/run.mjs ehall services "证明" --format json
 node scripts/run.mjs ehall link 应用ID --format json
 node scripts/run.mjs ehall tasks --kind todo --format json
@@ -69,6 +70,8 @@ node scripts/run.mjs ehall trip --format json
 ```
 
 应用 ID 来自 `services` 的 `appId`，用 `link` 获取官网入口。
+
+`guides` 无需登录，搜索公开办事指南，返回主管部门、适用人群、指南链接及关联应用。可用它查找宿舍申办、校园卡补办等事项。指南中的 `applications[].appId` 也可用于 `link`；办理权限与个人记录在登录后由学校确认。
 
 `tasks` 查看任务（`--kind` 支持 `todo/done/started`）；`applications` 查看本人发起的审批（`--state` 支持 `active/completed/cancelled`）。
 

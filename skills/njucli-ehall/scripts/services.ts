@@ -14,7 +14,7 @@ import { GraduateCourseSelectionClient } from "./selection-client.js";
 import type { AcademicTerm, CourseOccurrence, CourseSchedule, ScheduledCourse } from "./types.js";
 
 export type EHallServices = Pick<ScholarshipClient, "scholarships" | "scholarship" | "scholarshipForm" | "scholarshipApplications" | "scholarshipApplication" | "saveScholarshipDraft"> &
-  Pick<EHallPortalClient, "services" | "tasks" | "applications"> &
+  Pick<EHallPortalClient, "guides" | "services" | "tasks" | "applications"> &
   Pick<EHallTripClient, "trip" | "submitTrip"> &
   Pick<EHallProfileClient, "profile" | "profileFields" | "addProfile" | "removeProfile"> &
   Pick<GraduateAcademicClient, "grades" | "exams" | "plan"> &
@@ -33,6 +33,7 @@ export type EHallServices = Pick<ScholarshipClient, "scholarships" | "scholarshi
 };
 
 export function createEHallServices({ withBrowser }: SkillRuntime): EHallServices {
+  const publicPortal = new EHallPortalClient(fetch);
   const withEHall = <T>(operation: (client: EHallPortalClient) => Promise<T>): Promise<T> =>
     withBrowser("ehall", (session) => operation(new EHallPortalClient(session.request)));
   const withAcademic = <T>(operation: (client: GraduateAcademicClient) => Promise<T>): Promise<T> =>
@@ -57,6 +58,7 @@ export function createEHallServices({ withBrowser }: SkillRuntime): EHallService
     return { term, courses: (await client.listSchedule(term.id)).map(mapCourse) };
   });
   return {
+    guides: publicPortal.guides.bind(publicPortal),
     scholarships: (page, pageSize) => withBrowser("ehall", session => new ScholarshipClient(session.request).scholarships(page, pageSize)),
     scholarshipForm: (awardId, category) => withBrowser("ehall", session => new ScholarshipClient(session.request).scholarshipForm(awardId, category)),
     scholarship: (awardId) => withBrowser("ehall", session => new ScholarshipClient(session.request).scholarship(awardId)),

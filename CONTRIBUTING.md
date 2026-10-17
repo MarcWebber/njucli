@@ -33,6 +33,8 @@
 
 新增远端能力先验证实际契约，再接入所属 Skill 的 client、命令和只读 MCP。
 
+Skill 按完整业务场景组织，相关能力通过组内子命令扩展。电量、住宿与报修统一归 `dorm`，访客及校园身份服务归 `campus`；校园消费卡与个人缴费规划归 `pay`。新增 Skill 以独立、稳定的任务范围和实际可用能力为依据。
+
 简单业务将输入校验与 MCP 放在 `commands.ts`，请求与简短会话包装放在 `client.ts`，由 `run.ts` 启动独立 Skill。统一 CLI 在 `src/app/production.ts` 用一次 `mount` 关联业务实例、命令和 MCP；新认证站点在 `src/auth/capabilities.ts` 的 `AUTH_SITES` 声明依赖与 driver。
 
 简短说明直接写入 `SKILL.md`，较长流程和接口表放入 `references/`；接口索引见[校园服务接口](docs/interface-evidence.md)。
