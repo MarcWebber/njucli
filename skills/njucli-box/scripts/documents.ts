@@ -66,6 +66,9 @@ export async function readDocumentInput<T>(path: string, schema: z.ZodType<T>): 
   try { data = JSON.parse(text); }
   catch { throw new AppError("INVALID_INPUT", "文档输入文件需要合法 JSON"); }
   const parsed = schema.safeParse(data);
-  if (!parsed.success) throw new AppError("INVALID_INPUT", "输入 JSON 字段有误，请参照当前命令的 Skill 示例或读取命令导出的原文");
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0]!;
+    throw new AppError("INVALID_INPUT", `输入 JSON 字段有误（${issue.path.join(".") || "根节点"}）：${issue.message}`);
+  }
   return parsed.data;
 }

@@ -156,7 +156,9 @@ Skill 是给 Agent 的操作指导；npm 依赖是程序运行时加载的代码
 
 ## 验证范围
 
-源码与构建：`pnpm lint`、`pnpm build`、`git diff --check` 通过，统一 CLI 与独立 Box Skill 的命令帮助可用。`npm pack --dry-run --json --ignore-scripts` 确认文档、白板与图表示例及独立入口均进入安装包。本地自动集成测试待补充。
+源码与构建：`pnpm lint`、`pnpm build`、`git diff --check` 通过，统一 CLI 与独立 Box Skill 的命令帮助可用。`npm pack --dry-run --json --ignore-scripts` 确认文档、白板与图表示例及独立入口均进入安装包。
+
+本地集成使用合成数据和本机 HTTP 服务，覆盖 CLI → Box 服务 → client 的文档与白板创建、快照读取和更新；核对每次调用复用同一会话、原文版本或正文变化时停止写入、白板版本冲突后停止落盘、落盘回读失败后停止刷新编辑器，以及编辑器和落盘元素一致后返回成功。用例按请求顺序和次数检查失败单次提交，并检查命令输出中的凭据脱敏及输入错误提示。
 
 以下实网结果来自用户授权的实际图文制作，覆盖接口提交、必要回读与浏览器展示。
 

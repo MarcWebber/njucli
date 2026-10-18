@@ -47,6 +47,7 @@ import { installSkills } from "../scripts/install-skills.mjs";
 import { registerUpgradeCommand } from "../dist/src/commands/upgrade.js";
 import { registerBoxCommands } from "../dist/skills/njucli-box/scripts/commands.js";
 import { BoxClient } from "../dist/skills/njucli-box/scripts/client.js";
+import { createBoxServices } from "../dist/skills/njucli-box/scripts/services.js";
 import { exchangeSportsAccessToken } from "../dist/src/auth/sports-token.js";
 import { SportsClient } from "../dist/skills/njucli-sports/scripts/client.js";
 import { ItxiaClient } from "../dist/skills/njucli-itxia/scripts/client.js";
@@ -555,6 +556,199 @@ test("云盘：命令、递归传输、分享回读与失败单次提交", async
   assert.equal(invalid.error.code, "INVALID_INPUT");
   assert.equal(sharePosts, 2);
   await assert.rejects(client.list("repo", "/../outside"), { code: "INVALID_INPUT" });
+});
+
+test("云盘图文：创建更新、冲突停止、双重回读与失败单次提交", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "njucli-box-documents-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const doc = { kind: "seadoc", uuid: "00000000-0000-4000-8000-000000000001", path: "/报告.sdoc", created: false,
+    editor: { version: 1, format_version: 4, elements: [{ id: "title", type: "title", children: [{ id: "text", text: "" }] }] } };
+  const board = { kind: "exdraw", uuid: "00000000-0000-4000-8000-000000000002", path: "/白板.exdraw", created: false,
+    editor: { version: 1, elements: [] } };
+  const targets = [doc, board];
+  const input = join(directory, "input.json"), base = join(directory, "base.json");
+  const token = "private-document-access-token";
+  const downloadLink = (target) => `https://box.nju.edu.cn/seafhttp/files/private-download-${target.kind}`;
+  const uploadPath = (target) => `/api/v2.1/${target.kind}/upload-file/${target.uuid}/`;
+  const editorPath = (target) => `/sdoc-server/api/v1/${target.kind === "seadoc" ? "docs" : "exdraw"}/${target.uuid}/`;
+  let mode = "success", sessions = 0;
+  const requests = [];
+  const request = await localHttp(t, async (req, res) => {
+    const url = new URL(req.url, "https://box.nju.edu.cn"), path = url.pathname;
+    requests.push(`${req.method} ${path}`);
+    const chunks = []; for await (const chunk of req) chunks.push(chunk);
+    const raw = Buffer.concat(chunks);
+    const json = (data, status = 200) => { res.writeHead(status, { "content-type": "application/json" }); res.end(JSON.stringify(data)); };
+    if (req.method !== "GET") assert.equal(req.headers["x-csrftoken"], "test-csrf");
+    if (path === "/api2/repos/repo/dir/") {
+      assert.equal(req.method, "GET");
+      return json(targets.filter((target) => target.created).map((target) => ({ id: target.uuid, name: target.path.slice(1), type: "file" })));
+    }
+    if (path === "/api/v2.1/repos/repo/file/" && req.method === "POST") {
+      const form = new URLSearchParams(raw.toString());
+      assert.equal(form.get("operation"), "create");
+      const target = targets.find((target) => target.path === url.searchParams.get("p"));
+      assert.ok(target);
+      target.created = true;
+      return json({ repo_id: "repo", parent_dir: "/", obj_name: target.path.slice(1),
+        [target.kind === "seadoc" ? "doc_uuid" : "file_uuid"]: target.uuid });
+    }
+    if (path === "/api/v2.1/smart-link/") {
+      const target = targets.find((target) => target.path === url.searchParams.get("path"));
+      assert.ok(target?.created);
+      return json({ smart_link: `https://box.nju.edu.cn/smart-link/${target.uuid}/` });
+    }
+    for (const target of targets) {
+      if (decodeURIComponent(path) === `/lib/repo/file${target.path}`) {
+        if (mode === "missing-page-fields") return res.end("<html></html>");
+        return res.end(`docUuid: '${target.uuid}', ${target.kind === "seadoc" ? "seadocServerUrl" : "excalidrawServerUrl"}: 'https://box.nju.edu.cn/sdoc-server'`);
+      }
+      if (path === `/api/v2.1/${target.kind}/access-token/repo/`) {
+        assert.equal(url.searchParams.get("p"), target.path);
+        return json({ access_token: token });
+      }
+      if (path === new URL(downloadLink(target)).pathname) {
+        if (mode === "download-failure") return json({ detail: `${token} ${downloadLink(target)}` }, 503);
+        const stored = structuredClone(target.stored);
+        if (mode === "stored-mismatch") {
+          if (target.kind === "seadoc") stored.elements[0].children[0].text = "其他落盘内容";
+          else stored.elements[0].width++;
+        }
+        return json(stored);
+      }
+      if (![editorPath(target), `${editorPath(target)}replace/`, uploadPath(target),
+        `/api/v2.1/${target.kind}/download-link/${target.uuid}/`].includes(path)) continue;
+      assert.equal(req.headers.authorization, `Token ${token}`);
+      if (path === editorPath(target)) {
+        if (req.method === "GET") return json(target.editor);
+        assert.equal(target.kind, "exdraw");
+        assert.equal(req.method, "POST");
+        const form = await new Request("http://localhost", { method: "POST", headers: req.headers, body: raw }).formData();
+        const content = JSON.parse(form.get("doc_content"));
+        assert.equal(content.version, target.editor.version);
+        if (mode === "board-conflict") return json({ success: true, updated: false, version: target.editor.version + 1 });
+        target.editor = { ...content, version: content.version + 1 };
+        if (mode === "editor-mismatch") target.editor.elements = [];
+        return json({ success: true, updated: true, version: target.editor.version });
+      }
+      if (path === uploadPath(target)) {
+        assert.equal(req.method, "POST");
+        const form = await new Request("http://localhost", { method: "POST", headers: req.headers, body: raw }).formData();
+        target.stored = JSON.parse(await form.get("file").text());
+        if (target.kind === "exdraw") assert.deepEqual(target.stored, target.editor);
+        return json({ success: true });
+      }
+      if (path === `${editorPath(target)}replace/`) {
+        assert.equal(req.method, "POST");
+        assert.deepEqual(JSON.parse(raw), { doc_name: target.path.slice(1) });
+        target.editor = structuredClone(target.stored);
+        if (mode === "editor-mismatch") target.editor.elements[0].children[0].text = "其他内容";
+        return json({ success: true });
+      }
+      return json({ download_link: downloadLink(target) });
+    }
+    return json({ detail: "unexpected route" }, 404);
+  });
+  const service = createBoxServices({ withBrowser: async (capability, operation) => {
+    assert.equal(capability, "box");
+    sessions++;
+    return operation({ request, cookie: async (url, name) => {
+      assert.equal(url, "https://box.nju.edu.cn");
+      assert.equal(name, "sfcsrftoken");
+      return "test-csrf";
+    } });
+  } });
+  const run = async (...args) => {
+    requests.length = 0;
+    const before = sessions;
+    const result = await command(registerBoxCommands, service, ["box", ...args]);
+    assert.equal(sessions - before, result.error?.code === "INVALID_INPUT" ? 0 : 1);
+    const output = JSON.stringify(result);
+    for (const secret of [token, downloadLink(doc), downloadLink(board)]) assert.equal(output.includes(secret), false);
+    return result;
+  };
+  const writes = () => requests.filter((request) => request.startsWith("POST "));
+  const snapshot = async (target) => {
+    const result = await run(target.kind === "seadoc" ? "doc-read" : "whiteboard-read", "repo", target.path, "--output", base);
+    assert.equal(result.ok, true);
+    assert.deepEqual(JSON.parse(await readFile(base, "utf8")).elements, target.editor.elements);
+    assert.equal((await stat(base)).mode & 0o777, 0o600);
+  };
+  const update = (target) => run(target.kind === "seadoc" ? "doc-update" : "whiteboard-update", "repo", target.path, "--input", input, "--base", base);
+  const docContent = { format_version: 4, elements: [{ id: "title", type: "title", children: [{ id: "text", text: "课程报告" }] }] };
+  await writeFile(input, JSON.stringify(docContent));
+  const created = await run("doc-create", "repo", doc.path, "--input", input);
+  assert.equal(created.ok, true);
+  assert.equal(created.data.docUuid, doc.uuid);
+  assert.deepEqual(writes(), ["POST /api/v2.1/repos/repo/file/", `POST ${uploadPath(doc)}`, `POST ${editorPath(doc)}replace/`]);
+  assert.deepEqual(doc.editor.elements, docContent.elements);
+  assert.deepEqual(doc.stored.elements, docContent.elements);
+  await snapshot(doc);
+  docContent.elements[0].children[0].text = "更新后的课程报告";
+  await writeFile(input, JSON.stringify(docContent));
+  assert.equal((await update(doc)).ok, true);
+  assert.deepEqual(writes(), [`POST ${uploadPath(doc)}`, `POST ${editorPath(doc)}replace/`]);
+  assert.deepEqual(doc.stored.elements, docContent.elements);
+  for (const conflict of ["version", "elements"]) {
+    await snapshot(doc);
+    if (conflict === "version") doc.editor.version++;
+    else doc.editor.elements[0].children[0].text = "其他人编辑的正文";
+    const result = await update(doc);
+    assert.equal(result.error.code, "USER_ACTION_REQUIRED");
+    assert.deepEqual(writes(), []);
+  }
+  for (const failure of ["download-failure", "stored-mismatch", "editor-mismatch"]) {
+    await snapshot(doc);
+    mode = failure;
+    const result = await update(doc);
+    assert.equal(result.ok, false);
+    assert.equal(result.error.code, "REMOTE_UNAVAILABLE");
+    assert.deepEqual(result.error.details, { repoId: "repo", path: doc.path });
+    assert.deepEqual(writes(), [`POST ${uploadPath(doc)}`, ...(failure === "editor-mismatch" ? [`POST ${editorPath(doc)}replace/`] : [])]);
+    mode = "success";
+  }
+
+  const boardContent = { elements: [{ id: "box", type: "rectangle", x: 0, y: 0, width: 100, height: 50, version: 1 }] };
+  await writeFile(input, JSON.stringify(boardContent));
+  assert.equal((await run("whiteboard-create", "repo", board.path, "--input", input)).ok, true);
+  assert.deepEqual(writes(), ["POST /api/v2.1/repos/repo/file/", `POST ${editorPath(board)}`, `POST ${uploadPath(board)}`]);
+  assert.deepEqual(board.editor.elements, boardContent.elements);
+  assert.deepEqual(board.stored, board.editor);
+  await snapshot(board);
+  boardContent.elements[0].width = 120;
+  boardContent.elements[0].version++;
+  await writeFile(input, JSON.stringify(boardContent));
+  assert.equal((await update(board)).ok, true);
+  assert.deepEqual(writes(), [`POST ${editorPath(board)}`, `POST ${uploadPath(board)}`]);
+  assert.deepEqual(board.stored.elements, boardContent.elements);
+  for (const failure of ["board-conflict", "editor-mismatch", "stored-mismatch", "download-failure"]) {
+    await snapshot(board);
+    boardContent.elements[0].width++;
+    boardContent.elements[0].version++;
+    await writeFile(input, JSON.stringify(boardContent));
+    mode = failure;
+    const result = await update(board);
+    assert.equal(result.ok, false);
+    assert.equal(result.error.code, failure === "board-conflict" ? "USER_ACTION_REQUIRED" : "REMOTE_UNAVAILABLE");
+    assert.deepEqual(result.error.details, { repoId: "repo", path: board.path });
+    assert.deepEqual(writes(), [`POST ${editorPath(board)}`, ...(["stored-mismatch", "download-failure"].includes(failure) ? [`POST ${uploadPath(board)}`] : [])]);
+    mode = "success";
+  }
+  mode = "missing-page-fields";
+  const missing = await run("whiteboard-read", "repo", board.path);
+  assert.equal(missing.error.code, "REMOTE_SCHEMA_CHANGED");
+  assert.match(missing.error.message, /Excalidraw 白板/);
+  assert.deepEqual(writes(), []);
+  await writeFile(input, JSON.stringify({ title: "进度", kind: "bar", labels: ["任务 A", "任务 B"], series: [{ name: "已完成", values: [1] }] }));
+  const invalid = await run("chart-create", "repo", board.path, "--input", input);
+  assert.equal(invalid.error.code, "INVALID_INPUT");
+  assert.match(invalid.error.message, /每组 values 的数量须与 labels 相同/);
+  assert.deepEqual(requests, []);
+  await writeFile(input, JSON.stringify({ title: "进度", kind: "bar", labels: ["任务 A"], series: [{ name: "已完成", values: [token] }] }));
+  const invalidValue = await run("chart-create", "repo", board.path, "--input", input);
+  assert.equal(invalidValue.error.code, "INVALID_INPUT");
+  assert.match(invalidValue.error.message, /series\.0\.values\.0/);
+  assert.deepEqual(requests, []);
 });
 
 test("云盘：浏览器二进制 multipart 与响应异常边界", async () => {

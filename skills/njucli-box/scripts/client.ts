@@ -258,6 +258,7 @@ export class BoxClient {
   }
 
   private async documentSession(repoId: string, path: string, kind: "seadoc" | "exdraw" = "seadoc"): Promise<DocumentSession> {
+    const editorName = kind === "seadoc" ? "SeaDoc 文档" : "Excalidraw 白板";
     const page = await this.fetch(`${BOX_URL}/lib/${id(repoId)}/file${path.split("/").map(encodeURIComponent).join("/")}`, { redirect: "manual" });
     if (page.status === 302 || page.status === 401) throw new AppError("AUTH_EXPIRED", "南大云盘文档会话已过期", { authCommand: "njucli auth login box" });
     if (!page.ok) throw new AppError("REMOTE_UNAVAILABLE", `南大云盘文档页面返回 HTTP ${page.status}`);
@@ -265,10 +266,10 @@ export class BoxClient {
     const docUuid = html.match(/\bdocUuid:\s*['"]([^'"]+)['"]/)?.[1];
     const serverUrl = html.match(kind === "seadoc" ? /\bseadocServerUrl:\s*['"]([^'"]+)['"]/ : /\bexcalidrawServerUrl:\s*['"]([^'"]+)['"]/)?.[1];
     if (!docUuid || !z.string().uuid().safeParse(docUuid).success || !serverUrl) {
-      throw new AppError("REMOTE_SCHEMA_CHANGED", "南大云盘页面缺少 SeaDoc 文档标识或服务地址");
+      throw new AppError("REMOTE_SCHEMA_CHANGED", `南大云盘页面缺少 ${editorName}标识或服务地址`);
     }
     const server = transferUrl(serverUrl);
-    if (server.search || server.hash) throw new AppError("REMOTE_SCHEMA_CHANGED", "SeaDoc 服务地址应为云盘站内路径");
+    if (server.search || server.hash) throw new AppError("REMOTE_SCHEMA_CHANGED", `${editorName}服务地址应为云盘站内路径`);
     const { access_token } = parse(z.object({ access_token: z.string().min(1) }),
       await this.request(`/api/v2.1/${kind}/access-token/${id(repoId)}/?${new URLSearchParams({ p: path })}`));
     return { docUuid, server: server.href.replace(/\/$/, ""), token: access_token };
