@@ -55,7 +55,7 @@ export class DormClient {
     const $ = await this.page("/epay/h5/nju/electric/index");
     const scripts = $("script:not([src])").map((_, script) => $(script).html()).get().join("\n");
     // 官方页面将当前账号的绑定记录作为 JSON 数组注入 initList。
-    const list = scripts.match(/\blet\s+list\s*=\s*(\[[^\r\n]*\])\s*(?:;|\r?\n)/)?.[1];
+    const list = scripts.match(/\blet\s+list\s*=\s*(\[(?:"(?:\\.|[^"\\])*"|[^"\]])*\])\s*(?:;|\r?\n|$)/)?.[1];
     if (!list) throw new AppError("REMOTE_SCHEMA_CHANGED", "电费页面缺少绑定房间列表");
     let value: unknown;
     try { value = JSON.parse(list); }

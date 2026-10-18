@@ -35,7 +35,7 @@ GET `/epay/h5/nju/electric/index` 的内联 `initList` 将当前账号绑定记�
 | `updateRoom.json` | 同新增，增加已有绑定的 `id` | 该绑定 ID 的校区、楼栋及房间 ID 与目标一致 |
 | `delRoom.json` | `id`、`type=elec` | 绑定列表已无该 ID |
 
-参数和回读页面来自[编辑页](https://epay.nju.edu.cn/epay/h5/nju/electric/edit)与电费首页。提交前从官方目录解析名称，校验校区、楼栋和房间的从属关系；`sysName` 与官方前端一致使用校区显示名。苏州西区楼栋提交 `sysId=9`。修改与解绑限定当前账号绑定列表中的 ID。一次调用内完成会话交接、提交和回读，写操作不自动重试。
+参数和回读页面来自[编辑页](https://epay.nju.edu.cn/epay/h5/nju/electric/edit)与电费首页。提交前从官方目录解析名称，校验校区、楼栋和房间的从属关系；`sysName` 按页面显示名提交，写入值及回读结果待实网核对。苏州西区楼栋提交 `sysId=9`。修改与解绑限定当前账号绑定列表中的 ID。一次调用内完成会话交接、提交和回读，写操作不自动重试。
 
 ## 验证范围
 

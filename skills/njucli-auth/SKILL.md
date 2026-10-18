@@ -21,7 +21,7 @@ node scripts/run.mjs auth status sso --format json
 node scripts/run.mjs account use ACCOUNT
 ```
 
-`auth login` 登录南京大学统一身份认证（SSO）。各业务命令复用统一认证会话，站点访问与使用前提见所属 Skill。
+`auth login` 默认使用 `sso`，登录南京大学统一身份认证。各业务所需的登录方式和访问前提见所属 Skill。
 
 `account use` 或环境变量 `NJUCLI_ACCOUNT` 用于选择本地账号。业务命令会按需恢复登录，`auth status` 返回 `valid` 表示会话可用。CLI 使用专用浏览器与账号目录，普通浏览器中的登录由该浏览器独立保存。
 
