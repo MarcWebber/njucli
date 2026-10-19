@@ -24,6 +24,21 @@ const browserScope = new AsyncLocalStorage<{
   session: BrowserSession;
 }>();
 
+function proxyOptions() {
+  const value = process.env.NJUCLI_PROXY_URL?.trim();
+  if (!value) return {};
+  const url = new URL(value);
+  return {
+    proxy: {
+      server: `${url.protocol}//${url.host}`,
+      ...(url.username || url.password ? {
+        username: decodeURIComponent(url.username),
+        password: decodeURIComponent(url.password),
+      } : {}),
+    },
+  };
+}
+
 export async function withBrowserSession<T>(
   account: AccountRecord,
   headless: boolean,
@@ -52,7 +67,7 @@ export async function withBrowserSession<T>(
 async function openBrowserSession(account: AccountRecord, headless: boolean): Promise<BrowserSession> {
   const cookiePath = join(account.configDir, "session-cookies.json");
   const cookies = await readJsonFile<Awaited<ReturnType<BrowserContext["cookies"]>>>(cookiePath) ?? [];
-  const context = await request.newContext({ storageState: { cookies, origins: [] } });
+  const context = await request.newContext({ ...proxyOptions(), storageState: { cookies, origins: [] } });
   return new BrowserSession(context, cookiePath, { directory: account.browserDataDir, headless });
 }
 
@@ -102,7 +117,7 @@ export class BrowserSession {
     if ("pages" in this.context && this.browser && this.browserHeadless !== headless) {
       const cookies = await this.context.cookies();
       await this.context.close();
-      this.context = await request.newContext({ storageState: { cookies, origins: [] } });
+      this.context = await request.newContext({ ...proxyOptions(), storageState: { cookies, origins: [] } });
     }
     if (!("pages" in this.context)) {
       const previous = this.context;
@@ -111,6 +126,7 @@ export class BrowserSession {
       await mkdir(directory, { recursive: true });
       const executablePath = process.env.NJUCLI_BROWSER_EXECUTABLE;
       const context = await chromium.launchPersistentContext(directory, {
+        ...proxyOptions(),
         headless, ...(executablePath ? { executablePath } : { channel: "chrome" }),
       });
       try {
@@ -202,7 +218,7 @@ export class BrowserSession {
     if ("pages" in this.context) await this.context.clearCookies();
     else {
       await this.context.dispose();
-      this.context = await request.newContext();
+      this.context = await request.newContext(proxyOptions());
     }
   }
 

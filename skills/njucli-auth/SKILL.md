@@ -11,6 +11,8 @@ description: 登录南京大学统一身份认证、保存本地凭据、查询�
 
 已保存会话的查询通过 HTTP 执行，网页登录及页面操作按需启动本机浏览器。默认使用 Playwright 的 `chrome` 通道；容器部署可通过 `NJUCLI_BROWSER_EXECUTABLE` 指定 Chromium 可执行文件，例如 `/usr/bin/chromium`。后台保活由 Node.js 启动独立 CLI 进程，在 Unix 系统上使用相同的命令和 XDG 目录规则。Windows 的后台进程行为待验证。
 
+需要通过代理访问校园服务时，设置 `NJUCLI_PROXY_URL`，例如 `http://host.docker.internal:18121`。HTTP 代理认证使用 `http://username:password@host:port`；当前 HTTP 请求的代理认证用户名和密码须不含字面量 `%`，其他特殊字符须进行 URL 编码。该设置同时用于会话 HTTP 请求与浏览器访问，清空 Cookie 或切换浏览器模式后继续生效。代理地址和认证信息保存在本地环境配置中。
+
 ## 登录与状态
 
 通过 JSON 文件导入统一认证账号与密码（内容包含 `username` 和 `password`）：
