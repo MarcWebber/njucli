@@ -42,13 +42,15 @@ curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/inst
 
 ## 现有 Skills
 
-点击名称查看使用方法。
+点击名称查看使用方法。Skill 按完整业务场景组织，相关能力通过组内子命令扩展。
 
 | Skill | 服务 |
 | --- | --- |
 | [njucli-auth](skills/njucli-auth/SKILL.md) | 统一认证与会话维护 |
 | [njucli-campus](skills/njucli-campus/SKILL.md) | 校园信息与今日汇总 |
 | [njucli-ehall](skills/njucli-ehall/SKILL.md) | 课表、选课、成绩、考试、培养方案、个人资料、奖学金草稿与办事大厅 |
+| [njucli-pay](skills/njucli-pay/SKILL.md) | 校园卡余额、消费与充值记录 |
+| [njucli-dorm](skills/njucli-dorm/SKILL.md) | 电费房间绑定与充值记录 |
 | [njucli-self-service](skills/njucli-self-service/SKILL.md) | 证明目录与申请、费用额度、邮件领取、申请撤销、打印机位置与云打印查询 |
 | [njucli-library](skills/njucli-library/SKILL.md) | 图书馆 |
 | [njucli-sports](skills/njucli-sports/SKILL.md) | 体育场馆 |
@@ -66,6 +68,10 @@ curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/inst
 ```bash
 njucli ehall schedule
 njucli ehall grades
+njucli dorm bindings
+njucli dorm bills
+njucli pay balance
+njucli pay bills
 njucli self-service items 成绩单
 njucli se assignments --pending
 njucli lms courses
