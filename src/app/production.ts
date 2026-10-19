@@ -62,6 +62,7 @@ export function createCli(runtime: CommandRuntime): Command {
   const ehall = createEHallServices(context);
   const library = createLibraryServices(context);
   const sports = createSportsServices(context);
+  const youth = createYouthServices(context);
 
   function mount<T>(
     service: T,
@@ -74,9 +75,9 @@ export function createCli(runtime: CommandRuntime): Command {
 
   mount(new InstitutionClient(), registerInstitutionCommands, registerInstitutionTools);
   registerAccountCommands(program, createAccountServices(context), runtime);
-  registerAuthCommands(program, createAuthServices(context), runtime);
+  registerAuthCommands(program, createAuthServices(context, youth.identity), runtime);
   mount(createBoxServices(context), registerBoxCommands, registerBoxTools);
-  mount(createYouthServices(context), registerYouthCommands, registerYouthTools);
+  mount(youth, registerYouthCommands, registerYouthTools);
   mount(new ItxiaClient(), registerItxiaCommands, registerItxiaTools);
   mount(createTableServices(context), registerTableCommands, registerTableTools);
   mount(createCampusServices({ ehall, library, sports }), registerCampusCommands, registerCampusTools);

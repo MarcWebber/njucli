@@ -109,7 +109,10 @@ export class BrowserSession {
       const { cookies } = await previous.storageState();
       const { directory } = this.browser!;
       await mkdir(directory, { recursive: true });
-      const context = await chromium.launchPersistentContext(directory, { headless, channel: "chrome" });
+      const executablePath = process.env.NJUCLI_BROWSER_EXECUTABLE;
+      const context = await chromium.launchPersistentContext(directory, {
+        headless, ...(executablePath ? { executablePath } : { channel: "chrome" }),
+      });
       try {
         // The current HTTP session is authoritative, including logout and account changes.
         await context.clearCookies();

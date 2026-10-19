@@ -2,10 +2,12 @@ import { mkdir, readdir, rename, rm, rmdir, unlink, writeFile } from "node:fs/pr
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
+import { spawn } from "node:child_process";
 
 /** Keep an account's cookie snapshot current across CLI and MCP processes. */
 export async function lockAccount(configDir: string): Promise<() => Promise<void>> {
   await mkdir(configDir, { recursive: true });
+  if (process.platform === "linux") return lockLinuxAccount(configDir);
   const path = join(configDir, "session.lock");
   const owner = `${process.pid}-${randomUUID()}`;
   const candidate = `${path}.${owner}.tmp`;
@@ -40,6 +42,26 @@ export async function lockAccount(configDir: string): Promise<() => Promise<void
   } finally {
     await rm(candidate, { recursive: true, force: true });
   }
+}
+
+async function lockLinuxAccount(configDir: string): Promise<() => Promise<void>> {
+  // Containers share this file, while their PIDs belong to different namespaces.
+  const child = spawn("flock", [
+    "--exclusive", "--no-fork", join(configDir, "session.flock"),
+    process.execPath, "-e", "process.stdout.write('ready\\n'); process.stdin.resume();",
+  ], { stdio: ["pipe", "pipe", "pipe"] });
+  let errors = "";
+  child.stderr.on("data", (chunk: Buffer) => { errors += chunk; });
+  const closed = new Promise<number | null>((resolve) => child.once("close", resolve));
+  await new Promise<void>((resolve, reject) => {
+    child.once("error", reject);
+    child.stdout.once("data", () => resolve());
+    child.once("close", () => reject(new Error(errors.trim() || "账号锁进程已退出")));
+  });
+  return async () => {
+    child.stdin.end();
+    if (await closed !== 0) throw new Error(errors.trim() || "账号锁进程异常退出");
+  };
 }
 
 async function removeOwner(path: string, owner: string): Promise<void> {

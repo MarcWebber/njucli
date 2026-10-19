@@ -9,7 +9,7 @@ description: 登录南京大学统一身份认证、保存本地凭据、查询�
 
 ## 运行前提
 
-已保存会话的查询通过 HTTP 执行，网页登录及页面操作按需启动本机浏览器。当前浏览器入口使用 Playwright 的 `chrome` 通道。后台保活由 Node.js 启动独立 CLI 进程，在 Unix 系统上使用相同的命令和 XDG 目录规则。Windows 的后台进程行为待验证。
+已保存会话的查询通过 HTTP 执行，网页登录及页面操作按需启动本机浏览器。默认使用 Playwright 的 `chrome` 通道；容器部署可通过 `NJUCLI_BROWSER_EXECUTABLE` 指定 Chromium 可执行文件，例如 `/usr/bin/chromium`。后台保活由 Node.js 启动独立 CLI 进程，在 Unix 系统上使用相同的命令和 XDG 目录规则。Windows 的后台进程行为待验证。
 
 ## 登录与状态
 
@@ -22,6 +22,14 @@ node scripts/run.mjs account use ACCOUNT
 ```
 
 `auth login` 默认使用 `sso`，登录南京大学统一身份认证。各业务所需的登录方式和访问前提见所属 Skill。
+
+应用需要核验本次密码及学校身份时，使用非交互入口：
+
+```bash
+node scripts/run.mjs auth authenticate --credentials - --format json < /path/to/auth.json
+```
+
+`authenticate` 在当前账号目录内清空 Cookie，以本次凭据完成 SSO，再通过青年平台读取本人学号，JSON 的 `data.studentId` 来自学校响应。该入口依赖统一认证与青年平台可用；身份回读失败时返回错误。成功后保存凭据和新会话，失败时清理本次 Cookie 并恢复原凭据。`auth login --credentials -` 同样支持从标准输入读取凭据。
 
 `account use` 或环境变量 `NJUCLI_ACCOUNT` 用于选择本地账号。业务命令会按需恢复登录，`auth status` 返回 `valid` 表示会话可用。CLI 使用专用浏览器与账号目录，普通浏览器中的登录由该浏览器独立保存。
 

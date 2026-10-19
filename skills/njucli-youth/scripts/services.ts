@@ -12,6 +12,7 @@ export function createYouthServices({ withBrowser }: SkillRuntime): YouthService
     });
   };
   return {
+    identity: () => withYouth((client) => client.identity()),
     profile: () => withYouth((client) => client.profile()),
     menus: () => withYouth((client) => client.menus()),
     years: () => withYouth((client) => client.years()),

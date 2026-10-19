@@ -2,6 +2,8 @@
 
 入口为 [青年平台](https://youth.nju.edu.cn/tw/)。认证使用共用 `youth` 会话：先访问 `/tw/`，再 POST 空表单至 `ctx`；响应 `data` 为 Base64 JSON，`anonymous=false` 表示本人已登录。
 
+该身份响应的 `userId` 为本人学号，供个人资料、成绩单及 `auth authenticate` 使用；身份回读要求 `anonymous=false` 且 `userId` 为非空字符串。
+
 ## 查询
 
 请求路径相对 `https://youth.nju.edu.cn/tw/`。`.me` 取当前本人菜单中对应 `urlN` 的 PC 菜单 ID，再编码为 Base64。列表使用服务端返回的 `pageIndex/pageSize/count`；社团固定每页 12 条，普通列表最多每页 500 条。

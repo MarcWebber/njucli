@@ -1,6 +1,7 @@
 import { type SkillRuntime } from "../app/runtime.js";
 import { type AuthCapability, type AuthCredentials, type AuthMaintenance, type SessionMetadata } from "./types.js";
 import { join } from "node:path";
+import { rm } from "node:fs/promises";
 import { withBrowserSession } from "./browser-session.js";
 import { readJsonFile, writeJsonFile } from "../core/fs.js";
 import { AppError } from "../core/errors.js";
@@ -14,11 +15,12 @@ export type AuthServices = {
   daemonStop(): Promise<AuthDaemonStatus>;
   daemonRun(intervalSeconds: number, signal: AbortSignal, output: OutputSink): Promise<void>;
   status(capability?: AuthCapability): Promise<SessionMetadata[]>;
+  authenticate(credentials: AuthCredentials): Promise<{ studentId: string }>;
   login(capability?: AuthCapability, credentials?: AuthCredentials): Promise<SessionMetadata>;
   logout(capability?: AuthCapability): Promise<AuthCapability[]>;
 };
 
-export function createAuthServices(runtime: SkillRuntime): AuthServices {
+export function createAuthServices(runtime: SkillRuntime, readIdentity: () => Promise<{ studentId: string }>): AuthServices {
   const { accountStore, auth } = runtime;
   const services: AuthServices = {
     daemonStart: async (intervalSeconds) => startAuthDaemon(await accountStore.current(), intervalSeconds),
@@ -43,6 +45,24 @@ export function createAuthServices(runtime: SkillRuntime): AuthServices {
     status: async (capability) => {
       const account = await accountStore.current();
       return withBrowserSession(account, true, () => auth.status(account, capability));
+    },
+    authenticate: async (credentials) => {
+      const account = await accountStore.current();
+      return withBrowserSession(account, true, async (session) => {
+        const path = join(account.configDir, "auth.json");
+        const previous = await readJsonFile<AuthCredentials>(path);
+        await session.clearCookies();
+        await writeJsonFile(path, credentials);
+        try {
+          await auth.login(account, "sso");
+          return await readIdentity();
+        } catch (error) {
+          await session.clearCookies();
+          if (previous) await writeJsonFile(path, previous);
+          else await rm(path, { force: true });
+          throw error;
+        }
+      });
     },
     login: async (capability, credentials) => {
       const account = await accountStore.current();
