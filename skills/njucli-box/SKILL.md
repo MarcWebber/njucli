@@ -1,6 +1,6 @@
 ---
 name: njucli-box
-description: 操作南京大学云盘 (NJU Box)，查询与扫描资料库、上传下载文件、管理分享链接、收集链接与协作权限。用户涉及南大云盘或 njucli box 时使用。
+description: 操作南京大学云盘 (NJU Box)，创建和更新 SeaDoc 文档、Excalidraw 白板和数据图表，将图形嵌入文档，管理文件、分享链接与协作权限。用户涉及校内文档写作、画图、南大云盘或 njucli box 时使用。
 ---
 
 # 南大云盘
@@ -21,6 +21,41 @@ node scripts/run.mjs box link REPO /课程/资料.pdf --format json
 `REPO` 来自 `repos` 的 `id`，云盘中的绝对路径来自 `list`、`scan` 或 `search`。`scan` 列出文件并统计数量与大小；省略资料库时扫描全盘，跳过加密资料库。
 
 `link` 返回内部链接，访问者需要已有权限。存储用量用 `box info` 查询。
+
+## 在线文档
+
+将报告、方案或总结保存为用户可以继续编辑的 SeaDoc 文档。先复制并填写[正文示例](templates/report.json)，再创建：
+
+```bash
+node scripts/run.mjs box doc-create REPO /课程项目周报.sdoc --input ./report.json --format json
+node scripts/run.mjs box doc-read REPO /课程项目周报.sdoc --output ./original.json --format json
+cp original.json edited.json
+# 编辑 edited.json 中的 elements，保留用户已有内容和节点 id。
+node scripts/run.mjs box doc-update REPO /课程项目周报.sdoc --input ./edited.json --base ./original.json --format json
+```
+
+`original.json` 保持原样，更新前会对比当前文档的标识、版本与正文；变化时重新读取并合并。支持标题、二级标题、段落和白板块，使用原生 SeaDoc JSON；已有其他内容可保持原样。`doc-read --output` 覆盖指定本地文件。
+
+创建和更新成功后给用户返回的 `url`，访问沿用云盘权限。整篇更新后，已打开的网页需要刷新。并发修改、格式要求和失败后的处理见 [SeaDoc 文档说明](references/documents.md)。MCP 提供只读 `box_doc_read`，写入使用 CLI。
+
+从协同表格生成周报时，先用 `table rows` 读取指定视图，再整理正文并创建或更新文档，最后用 `table update` 将返回的链接填写到指定行。具体步骤见[表格到在线报告](references/documents.md#表格到在线报告)。
+
+## 白板与图表
+
+```bash
+node scripts/run.mjs box whiteboard-create REPO /项目架构.exdraw --input ./drawing.excalidraw --format json
+node scripts/run.mjs box chart-create REPO /项目进度.exdraw --input ./chart.json --format json
+node scripts/run.mjs box doc-read REPO /课程项目周报.sdoc --output ./original.json --format json
+node scripts/run.mjs box doc-embed-whiteboard REPO /课程项目周报.sdoc REPO /项目架构.exdraw --base ./original.json --format json
+```
+
+白板输入可由 Agent 或 Excalidraw Skill 生成，参照[原生图形示例](templates/whiteboard.excalidraw)；省略 `--input` 创建空画布。图表参照[数据示例](templates/chart.json)，`kind` 支持 `bar`、`line`，`labels` 对应每组 `series[].values`。图表也是可编辑的白板，可调整文字、颜色、形状和连线。
+
+`doc-embed-whiteboard` 默认追加到文末；`--after 块ID` 指定插入位置。每次插入前重新保存文档快照。文档内可预览、全屏查看，双击进入白板编辑；刷新文档后展示更新后的图形。
+
+继续编辑白板：先 `whiteboard-read REPO /项目架构.exdraw --output board-original.json`，复制修改后执行 `whiteboard-update REPO /项目架构.exdraw --input board-edited.json --base board-original.json`。修改已有元素时递增其 `version`，保留其他元素。MCP 提供 `box_whiteboard_read`。
+
+白板格式、保存契约、开源工具选择和架构见[图文能力说明](references/documents.md#白板与图表接口)。
 
 ## 上传、下载与分享
 

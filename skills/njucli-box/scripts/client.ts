@@ -1,11 +1,15 @@
 import { lstat, mkdir, readFile, readdir } from "node:fs/promises";
 import { basename, dirname, join, posix, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
+import { isDeepStrictEqual } from "node:util";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { AppError } from "../../../src/core/errors.js";
 import { saveFile } from "../../../src/core/fs.js";
 import { requiredText } from "../../../src/core/guards.js";
 import type { FetchLike } from "../../../src/core/types.js";
+import { documentContentSchema, type DocumentContent, type DocumentSnapshot } from "./documents.js";
+import { whiteboardContentSchema, type WhiteboardContent, type WhiteboardSnapshot } from "./whiteboards.js";
 
 export const BOX_URL = "https://box.nju.edu.cn";
 export const BOX_SHARE_TYPES = ["user", "group"] as const;
@@ -34,6 +38,10 @@ interface BoxLink {
   expires: string | null | undefined; expired: boolean | undefined; protected: boolean;
   permissions: z.output<typeof shareSchema>["permissions"];
 }
+const remoteDocumentSchema = documentContentSchema.extend({ version: z.number().int().nonnegative() }).passthrough();
+const remoteWhiteboardSchema = whiteboardContentSchema.extend({ version: z.number().int().nonnegative() }).passthrough();
+type RemoteDocument = z.output<typeof remoteDocumentSchema>;
+interface DocumentSession { docUuid: string; server: string; token: string }
 
 export class BoxClient {
   constructor(private readonly fetch: FetchLike, private readonly csrf?: string) {}
@@ -138,6 +146,188 @@ export class BoxClient {
     const params = new URLSearchParams({ repo_id: repoId, path: target.path, is_dir: String(target.type === "dir") });
     const data = parse(z.object({ smart_link: z.string() }), await this.request(`/api/v2.1/smart-link/?${params}`));
     return { repoId, path: target.path, url: data.smart_link };
+  }
+
+  async docRead(repoId: string, path: string) {
+    path = documentPath(path);
+    const session = await this.documentSession(repoId, path);
+    const document = await this.readDocument(session);
+    return { ...await this.link(repoId, path), docUuid: session.docUuid,
+      version: document.version, format_version: document.format_version, elements: document.elements };
+  }
+
+  async docCreate(repoId: string, path: string, content: DocumentContent) {
+    path = documentPath(path);
+    if ((await this.list(repoId, posix.dirname(path))).some((entry) => entry.path === path)) {
+      throw new AppError("INVALID_INPUT", "目标文档已存在，请用 doc-read 和 doc-update 继续编辑");
+    }
+    try {
+      const created = parse(z.object({ doc_uuid: z.string().uuid(), repo_id: z.string(), parent_dir: z.string(), obj_name: z.string() }),
+        await this.request(`/api/v2.1/repos/${id(repoId)}/file/?${new URLSearchParams({ p: path })}`, "POST", { operation: "create" }));
+      verify(created.repo_id === repoId && created.parent_dir === posix.dirname(path), "文档创建目标回读");
+      const createdPath = posix.join(created.parent_dir, fileName(created.obj_name));
+      if (createdPath !== path) {
+        path = createdPath;
+        throw new AppError("USER_ACTION_REQUIRED", `云盘将本次新建文档改名为 ${path}，请核对后继续编辑`);
+      }
+      const session = await this.documentSession(repoId, path);
+      verify(session.docUuid === created.doc_uuid, "文档创建标识回读");
+      const current = await this.readDocument(session);
+      return await this.writeDocument(repoId, path, session, current, content);
+    } catch (error) {
+      throw documentWriteError(error, repoId, path);
+    }
+  }
+
+  async docUpdate(repoId: string, path: string, content: DocumentContent, base: DocumentSnapshot) {
+    path = documentPath(path);
+    if (base.repoId !== repoId || base.path !== path) throw new AppError("INVALID_INPUT", "原文快照与更新目标不一致");
+    const session = await this.documentSession(repoId, path);
+    const current = await this.readDocument(session);
+    if (base.docUuid !== session.docUuid || base.version !== current.version ||
+      !isDeepStrictEqual(base.elements, current.elements)) {
+      throw new AppError("USER_ACTION_REQUIRED", "文档已在原文读取后发生变化，请重新读取并合并修改", {
+        details: { repoId, path, docUuid: session.docUuid }, hint: "用 doc-read 保存新的原文，保留其他人的内容后重新提交",
+      });
+    }
+    try {
+      return await this.writeDocument(repoId, path, session, current, content);
+    } catch (error) {
+      throw documentWriteError(error, repoId, path);
+    }
+  }
+
+  async whiteboardRead(repoId: string, path: string) {
+    path = whiteboardPath(path);
+    const session = await this.documentSession(repoId, path, "exdraw");
+    const board = await this.readWhiteboard(session);
+    return { ...await this.link(repoId, path), fileUuid: session.docUuid, version: board.version, elements: board.elements };
+  }
+
+  async whiteboardCreate(repoId: string, path: string, content: WhiteboardContent) {
+    path = whiteboardPath(path);
+    if ((await this.list(repoId, posix.dirname(path))).some((entry) => entry.path === path)) {
+      throw new AppError("INVALID_INPUT", "目标白板已存在，请用 whiteboard-read 和 whiteboard-update 继续编辑");
+    }
+    try {
+      const created = parse(z.object({ file_uuid: z.string().uuid(), repo_id: z.string(), parent_dir: z.string(), obj_name: z.string() }),
+        await this.request(`/api/v2.1/repos/${id(repoId)}/file/?${new URLSearchParams({ p: path })}`, "POST", { operation: "create" }));
+      verify(created.repo_id === repoId && created.parent_dir === posix.dirname(path), "白板创建目标回读");
+      const createdPath = posix.join(created.parent_dir, fileName(created.obj_name));
+      if (createdPath !== path) {
+        path = createdPath;
+        throw new AppError("USER_ACTION_REQUIRED", `云盘将本次新建白板改名为 ${path}，请核对后继续编辑`);
+      }
+      const session = await this.documentSession(repoId, path, "exdraw");
+      verify(session.docUuid === created.file_uuid, "白板创建标识回读");
+      const current = await this.readWhiteboard(session);
+      return await this.writeWhiteboard(repoId, path, session, current.version, content);
+    } catch (error) {
+      throw documentWriteError(error, repoId, path, "whiteboard-read");
+    }
+  }
+
+  async whiteboardUpdate(repoId: string, path: string, content: WhiteboardContent, base: WhiteboardSnapshot) {
+    path = whiteboardPath(path);
+    if (base.repoId !== repoId || base.path !== path) throw new AppError("INVALID_INPUT", "原白板快照与更新目标不一致");
+    const session = await this.documentSession(repoId, path, "exdraw");
+    const current = await this.readWhiteboard(session);
+    if (base.fileUuid !== session.docUuid || base.version !== current.version || !isDeepStrictEqual(base.elements, current.elements)) {
+      throw new AppError("USER_ACTION_REQUIRED", "白板已发生变化，请重新读取并合并修改");
+    }
+    try {
+      return await this.writeWhiteboard(repoId, path, session, current.version, content);
+    } catch (error) {
+      throw documentWriteError(error, repoId, path, "whiteboard-read");
+    }
+  }
+
+  async docEmbedWhiteboard(repoId: string, path: string, boardRepo: string, boardPath: string, base: DocumentSnapshot, after?: string) {
+    const board = await this.whiteboardRead(boardRepo, boardPath);
+    const link = new URL(board.url);
+    link.searchParams.set("readonly", "true");
+    link.searchParams.set("filetype", "Excalidraw");
+    const elements = [...base.elements];
+    const index = after ? elements.findIndex((element) => element.id === after) : elements.length - 1;
+    if (index < 0) throw new AppError("INVALID_INPUT", "--after 须是原文中的块 id");
+    elements.splice(index + 1, 0, {
+      id: randomUUID(), type: "whiteboard", repo_id: boardRepo, title: posix.basename(board.path),
+      file_path: board.path, link: link.href, children: [{ id: randomUUID(), text: "" }],
+    });
+    return this.docUpdate(repoId, path, { format_version: 4, elements }, base);
+  }
+
+  private async documentSession(repoId: string, path: string, kind: "seadoc" | "exdraw" = "seadoc"): Promise<DocumentSession> {
+    const editorName = kind === "seadoc" ? "SeaDoc 文档" : "Excalidraw 白板";
+    const page = await this.fetch(`${BOX_URL}/lib/${id(repoId)}/file${path.split("/").map(encodeURIComponent).join("/")}`, { redirect: "manual" });
+    if (page.status === 302 || page.status === 401) throw new AppError("AUTH_EXPIRED", "南大云盘文档会话已过期", { authCommand: "njucli auth login box" });
+    if (!page.ok) throw new AppError("REMOTE_UNAVAILABLE", `南大云盘文档页面返回 HTTP ${page.status}`);
+    const html = await page.text();
+    const docUuid = html.match(/\bdocUuid:\s*['"]([^'"]+)['"]/)?.[1];
+    const serverUrl = html.match(kind === "seadoc" ? /\bseadocServerUrl:\s*['"]([^'"]+)['"]/ : /\bexcalidrawServerUrl:\s*['"]([^'"]+)['"]/)?.[1];
+    if (!docUuid || !z.string().uuid().safeParse(docUuid).success || !serverUrl) {
+      throw new AppError("REMOTE_SCHEMA_CHANGED", `南大云盘页面缺少 ${editorName}标识或服务地址`);
+    }
+    const server = transferUrl(serverUrl);
+    if (server.search || server.hash) throw new AppError("REMOTE_SCHEMA_CHANGED", `${editorName}服务地址应为云盘站内路径`);
+    const { access_token } = parse(z.object({ access_token: z.string().min(1) }),
+      await this.request(`/api/v2.1/${kind}/access-token/${id(repoId)}/?${new URLSearchParams({ p: path })}`));
+    return { docUuid, server: server.href.replace(/\/$/, ""), token: access_token };
+  }
+
+  private async readDocument(session: DocumentSession): Promise<RemoteDocument> {
+    return parse(remoteDocumentSchema, await this.request(`${session.server}/api/v1/docs/${session.docUuid}/`, "GET", undefined, false, session.token));
+  }
+
+  private async readWhiteboard(session: DocumentSession) {
+    return parse(remoteWhiteboardSchema, await this.request(`${session.server}/api/v1/exdraw/${session.docUuid}/`, "GET", undefined, false, session.token));
+  }
+
+  private async writeWhiteboard(repoId: string, path: string, session: DocumentSession, version: number, content: WhiteboardContent) {
+    const form = new FormData();
+    form.set("doc_content", JSON.stringify({ version, elements: content.elements }));
+    const result = parse(z.object({ success: z.literal(true), updated: z.boolean(), version: z.number().int().nonnegative() }),
+      await this.request(`${session.server}/api/v1/exdraw/${session.docUuid}/`, "POST", form, false, session.token));
+    if (!result.updated) throw new AppError("USER_ACTION_REQUIRED", "服务器上的白板版本已变化，请重新读取并合并修改");
+    const current = await this.readWhiteboard(session);
+    verify(current.version === result.version && isDeepStrictEqual(current.elements, content.elements), "白板编辑器回读");
+    // The scene endpoint updates memory; the file endpoint persists the same accepted revision.
+    const file = new FormData();
+    file.set("file", new Blob([JSON.stringify(current)], { type: "application/json" }), "whiteboard.exdraw");
+    if (typeof current.last_modify_user === "string") file.set("last_modify_user", current.last_modify_user);
+    parse(z.object({ success: z.literal(true) }), await this.request(`/api/v2.1/exdraw/upload-file/${session.docUuid}/`, "POST", file, false, session.token));
+    const stored = parse(remoteWhiteboardSchema, await this.storedEditorFile("exdraw", session));
+    verify(stored.version === result.version && isDeepStrictEqual(stored.elements, content.elements), "白板落盘内容回读");
+    const latest = await this.readWhiteboard(session);
+    verify(latest.version === result.version && isDeepStrictEqual(latest.elements, content.elements), "白板保存后版本回读");
+    return { ...await this.link(repoId, path), fileUuid: session.docUuid, version: result.version };
+  }
+
+  private async storedEditorFile(kind: "seadoc" | "exdraw", session: DocumentSession): Promise<unknown> {
+    const { download_link } = parse(z.object({ download_link: z.string() }),
+      await this.request(`/api/v2.1/${kind}/download-link/${session.docUuid}/`, "GET", undefined, false, session.token));
+    const downloadUrl = transferUrl(download_link);
+    try {
+      const response = await this.fetch(downloadUrl, { redirect: "manual" });
+      if (!response.ok) throw new Error();
+      return JSON.parse(await response.text());
+    } catch {
+      // Temporary download URLs contain credentials and must not appear in transport errors.
+      throw new AppError("REMOTE_UNAVAILABLE", "内容已提交，落盘内容读取失败");
+    }
+  }
+
+  private async writeDocument(repoId: string, path: string, session: DocumentSession, current: RemoteDocument, content: DocumentContent) {
+    const document = { ...current, elements: content.elements };
+    const form = new FormData();
+    form.set("file", new Blob([JSON.stringify(document)], { type: "application/json" }), "document.sdoc");
+    parse(z.object({ success: z.literal(true) }), await this.request(`/api/v2.1/seadoc/upload-file/${session.docUuid}/`, "POST", form, false, session.token));
+    const saved = await this.storedEditorFile("seadoc", session);
+    verify(isDeepStrictEqual(parse(remoteDocumentSchema, saved).elements, content.elements), "文档落盘内容回读");
+    parse(z.object({ success: z.literal(true) }), await this.request(`${session.server}/api/v1/docs/${session.docUuid}/replace/`, "POST", { doc_name: posix.basename(path) }, true, session.token));
+    const result = await this.readDocument(session);
+    verify(sameDocumentElements(content.elements, result.elements), "编辑器正文回读");
+    return { ...await this.link(repoId, path), docUuid: session.docUuid, version: result.version };
   }
 
   async download(repoId: string, path: string, output: string) {
@@ -414,8 +604,9 @@ export class BoxClient {
     return saveFile(output, content);
   }
 
-  private async request(path: string, method = "GET", data?: Record<string, unknown> | FormData, json = false): Promise<unknown> {
+  private async request(path: string, method = "GET", data?: Record<string, unknown> | FormData, json = false, token?: string): Promise<unknown> {
     const headers: Record<string, string> = { Accept: "application/json", Referer: `${BOX_URL}/` };
+    if (token) headers.Authorization = `Token ${token}`;
     if (method !== "GET" && this.csrf) headers["X-CSRFToken"] = this.csrf;
     let body: string | FormData | undefined;
     if (data instanceof FormData) body = data;
@@ -425,7 +616,7 @@ export class BoxClient {
     }
     const response = await this.fetch(path.startsWith("https:") ? path : `${BOX_URL}${path}`, {
       method, headers, ...(body === undefined ? {} : { body }), redirect: "manual",
-    });
+    }).catch(() => { throw new AppError("REMOTE_UNAVAILABLE", "南大云盘请求未完成，请读取目标状态后继续处理"); });
     if (response.status === 401 || (response.status === 302 && response.headers.get("location")?.includes("/accounts/login"))) {
       throw new AppError("AUTH_EXPIRED", "南大云盘会话已过期", { authCommand: "njucli auth login box" });
     }
@@ -437,6 +628,35 @@ export class BoxClient {
     try { return JSON.parse(text); }
     catch { throw new AppError("REMOTE_SCHEMA_CHANGED", "南大云盘响应应为 JSON"); }
   }
+}
+
+function documentPath(value: string): string {
+  const path = boxPath(value);
+  if (!path.endsWith(".sdoc")) throw new AppError("INVALID_INPUT", "在线文档路径须以 .sdoc 结尾");
+  return path;
+}
+
+function sameDocumentElements(expected: DocumentContent["elements"], actual: DocumentContent["elements"]): boolean {
+  if (isDeepStrictEqual(expected, actual)) return true;
+  // SeaDoc appends an empty paragraph when the submitted document ends in a nonempty block.
+  const last = actual.at(-1);
+  return actual.length === expected.length + 1 && last?.type === "paragraph" &&
+    last.children.length === 1 && last.children[0]?.text === "" && isDeepStrictEqual(expected, actual.slice(0, -1));
+}
+
+function whiteboardPath(value: string): string {
+  const path = boxPath(value);
+  if (!path.endsWith(".exdraw")) throw new AppError("INVALID_INPUT", "云盘白板路径须以 .exdraw 结尾");
+  return path;
+}
+
+function documentWriteError(error: unknown, repoId: string, path: string, readCommand = "doc-read"): AppError {
+  return new AppError(error instanceof AppError ? error.code : "REMOTE_UNAVAILABLE",
+    error instanceof AppError ? error.message : "南大云盘文档写入未完成", {
+      details: { repoId, path }, cause: error,
+      ...(error instanceof AppError && error.authCommand ? { authCommand: error.authCommand } : {}),
+      hint: `先用 ${readCommand} 核对目标；创建或保存可能已完成，请按现有内容继续处理`,
+    });
 }
 
 function boxPath(value: string): string {

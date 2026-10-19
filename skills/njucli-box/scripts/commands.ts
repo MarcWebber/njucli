@@ -3,16 +3,20 @@ import type { BoxServices } from './services.js';
 import { BOX_SHARE_TYPES, BOX_PERMISSIONS, type BoxShareType, type BoxPermission } from './client.js';
 import { addFormatOption, runCommand, type CommandRuntime, type FormatOptions } from "../../../src/core/command.js";
 import { optionalPositiveInteger } from "../../../src/core/options.js";
+import { saveFile } from "../../../src/core/fs.js";
+import { checkDocumentEdit, documentContentSchema, documentSnapshotSchema, readDocumentInput } from "./documents.js";
+import { chartSchema, chartWhiteboard, checkWhiteboardEdit, whiteboardContentSchema, whiteboardSnapshotSchema } from "./whiteboards.js";
 
 type Options = FormatOptions & {
   path?: string; repo?: string; page?: string; pageSize?: string; cursor?: string;
-  output?: string; parent?: string; replace?: boolean; directory?: boolean;
+  output?: string; parent?: string; replace?: boolean; directory?: boolean; input?: string; base?: string;
   password?: string; expireDays?: string; previewOnly?: boolean;
   type?: BoxShareType; permission?: BoxPermission;
+  after?: string;
 };
 
 export function registerBoxCommands(program: Command, service: BoxServices, runtime: CommandRuntime): Command {
-  const box = program.command("box").alias("njubox").description("使用南大云盘：文件、资料库、分享与协作");
+  const box = program.command("box").alias("njubox").description("使用南大云盘：在线文档、文件、资料库、分享与协作");
   const run = (options: Options, action: () => Promise<unknown>) => runCommand(runtime, options, async () => {
     const data = await action();
     return { data, text: boxText(data) };
@@ -50,6 +54,67 @@ export function registerBoxCommands(program: Command, service: BoxServices, runt
     .action((repo: string, path: string, o: Options) => run(o, () => service.detail(repo, path)));
   addFormatOption(box.command("link <repo-id> <path>").description("获取官方内部链接，用于预览与在线编辑"))
     .action((repo: string, path: string, o: Options) => run(o, () => service.link(repo, path)));
+  addFormatOption(box.command("doc-create <repo-id> <path>").description("创建 .sdoc 在线文档、写入正文并回读")
+    .requiredOption("--input <path>", "SeaDoc 正文 JSON，见 Skill 文档示例"))
+    .action((repo: string, path: string, o: Options) => run(o, async () => {
+      const content = await readDocumentInput(o.input!, documentContentSchema);
+      checkDocumentEdit(content);
+      return service.docCreate(repo, path, content);
+    }));
+  addFormatOption(box.command("doc-read <repo-id> <path>").description("读取在线文档的最新正文、版本与固定链接")
+    .option("--output <path>", "保存原文快照 JSON，供更新时作为 --base"))
+    .action((repo: string, path: string, o: Options) => runCommand(runtime, o, async () => {
+      const data = await service.docRead(repo, path);
+      if (!o.output) return { data, text: JSON.stringify(data, null, 2) };
+      const file = await saveFile(o.output, JSON.stringify(data, null, 2) + "\n");
+      return { data: { ...data, file }, text: `${data.url}\n原文已保存：${file.path}` };
+    }));
+  addFormatOption(box.command("doc-update <repo-id> <path>").description("对比原文后更新正文，保存并回读；已打开的网页需刷新")
+    .requiredOption("--input <path>", "修改后的 SeaDoc 正文 JSON")
+    .requiredOption("--base <path>", "doc-read 导出的原文快照；保留原样"))
+    .action((repo: string, path: string, o: Options) => run(o, async () => {
+      const content = await readDocumentInput(o.input!, documentContentSchema);
+      const base = await readDocumentInput(o.base!, documentSnapshotSchema);
+      checkDocumentEdit(content, base);
+      return service.docUpdate(repo, path, content, base);
+    }));
+  addFormatOption(box.command("whiteboard-create <repo-id> <path>").description("创建可在线编辑的 .exdraw 白板，保存并回读")
+    .option("--input <path>", "Excalidraw JSON；省略时创建空白画布"))
+    .action((repo: string, path: string, o: Options) => run(o, async () => {
+      const content = o.input ? await readDocumentInput(o.input, whiteboardContentSchema) : { elements: [] };
+      checkWhiteboardEdit(content);
+      return service.whiteboardCreate(repo, path, content);
+    }));
+  addFormatOption(box.command("whiteboard-read <repo-id> <path>").description("读取白板的原生元素、版本与在线编辑链接")
+    .option("--output <path>", "保存白板快照 JSON，供更新时作为 --base"))
+    .action((repo: string, path: string, o: Options) => runCommand(runtime, o, async () => {
+      const data = await service.whiteboardRead(repo, path);
+      if (!o.output) return { data, text: JSON.stringify(data, null, 2) };
+      const file = await saveFile(o.output, JSON.stringify(data, null, 2) + "\n");
+      return { data: { ...data, file }, text: `${data.url}\n白板快照已保存：${file.path}` };
+    }));
+  addFormatOption(box.command("whiteboard-update <repo-id> <path>").description("对比原白板后更新，核对编辑器与落盘内容")
+    .requiredOption("--input <path>", "修改后的 Excalidraw JSON")
+    .requiredOption("--base <path>", "whiteboard-read 保存的原白板快照"))
+    .action((repo: string, path: string, o: Options) => run(o, async () => {
+      const content = await readDocumentInput(o.input!, whiteboardContentSchema);
+      const base = await readDocumentInput(o.base!, whiteboardSnapshotSchema);
+      checkWhiteboardEdit(content, base);
+      return service.whiteboardUpdate(repo, path, content, base);
+    }));
+  addFormatOption(box.command("chart-create <repo-id> <path>").description("从数据创建可在线编辑的柱状图或折线图（.exdraw）")
+    .requiredOption("--input <path>", "图表 JSON：title、kind、labels、series，见 Skill 示例"))
+    .action((repo: string, path: string, o: Options) => run(o, async () => {
+      const chart = await readDocumentInput(o.input!, chartSchema);
+      return service.whiteboardCreate(repo, path, chartWhiteboard(chart));
+    }));
+  addFormatOption(box.command("doc-embed-whiteboard <repo-id> <path> <board-repo> <board-path>").description("将云盘白板或图表嵌入在线文档，保存并回读")
+    .requiredOption("--base <path>", "doc-read 保存的原文快照")
+    .option("--after <block-id>", "插入到指定正文块之后；默认追加到末尾"))
+    .action((repo: string, path: string, boardRepo: string, boardPath: string, o: Options) => run(o, async () => {
+      const base = await readDocumentInput(o.base!, documentSnapshotSchema);
+      return service.docEmbedWhiteboard(repo, path, boardRepo, boardPath, base, o.after);
+    }));
   addFormatOption(box.command("download <repo-id> <path>").description("下载文件或递归下载目录，覆盖指定本地文件").requiredOption("--output <path>", "本地文件或目录"))
     .action((repo: string, path: string, o: Options) => run(o, () => service.download(repo, path, o.output!)));
   addFormatOption(box.command("upload <repo-id> <local-path>").description("上传文件或目录并逐文件核对字节").option("--parent <path>", "云盘目标目录，默认 /").option("--replace", "替换同名文件；默认采用学校的同名自动改名"))

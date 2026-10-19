@@ -17,6 +17,12 @@ export function registerBoxTools(read: ReadTool, service: BoxServices): void {
   read("box_search", "搜索云盘文件名与内容。", { query: z.string().min(1), repoId: boxRepo.optional(), ...boxPage }, ({ query, repoId, page, pageSize }) => service.search(query, repoId, page, pageSize));
   read("box_detail", "查看云盘文件或目录详情。", { repoId: boxRepo, path: boxPath }, ({ repoId, path }) => service.detail(repoId, path));
   read("box_link", "返回云盘官方内部链接，供预览和在线编辑。", { repoId: boxRepo, path: boxPath }, ({ repoId, path }) => service.link(repoId, path));
+  read("box_doc_read", "读取 SeaDoc 在线文档的最新结构化正文、版本和固定链接。创建与更新通过 CLI 执行。", {
+    repoId: boxRepo, path: boxPath.endsWith(".sdoc"),
+  }, ({ repoId, path }) => service.docRead(repoId, path));
+  read("box_whiteboard_read", "读取云盘 Excalidraw 白板或图表的原生元素、版本与在线编辑链接。", {
+    repoId: boxRepo, path: boxPath.endsWith(".exdraw"),
+  }, ({ repoId, path }) => service.whiteboardRead(repoId, path));
   read("box_shares", "分页列出已有分享链接，含 url 与用于撤销的 id。", { repoId: boxRepo.optional(), path: boxPath.optional(), ...boxPage }, ({ repoId, path, page, pageSize }) => service.shares(repoId, path, page, pageSize));
   read("box_upload_links", "查询已有收集文件的上传链接。", { repoId: boxRepo.optional(), path: boxPath.optional() }, ({ repoId, path }) => service.uploadLinks(repoId, path));
   read("box_starred", "查询云盘收藏。", {}, () => service.starred());
