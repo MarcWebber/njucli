@@ -17,8 +17,8 @@ interface Workspace {
   shared_table_list?: TableBase[];
   group_shared_dtables?: TableBase[];
 }
-interface TableColumn { key: string; name: string; type: string; data: Cells | null }
-interface TableSheet { _id: string; name: string; columns: TableColumn[]; views: Array<Cells & { _id: string; name: string }> }
+export interface TableColumn { key: string; name: string; type: string; data: Cells | null }
+export interface TableSheet { _id: string; name: string; columns: TableColumn[]; views: Array<Cells & { _id: string; name: string }> }
 interface Metadata { tables: TableSheet[] }
 interface TableTemplate { name: string; display_name: string; description: string; category: string; link: string; card_image_url: string }
 interface TableRowsOptions { page?: number | undefined; size?: number | undefined; view?: string | undefined }

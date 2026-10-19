@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AppError } from "../../../src/core/errors.js";
 
 const text = z.string().trim().min(1);
 const data = z.record(z.string(), z.unknown());
@@ -36,6 +37,25 @@ export const sheetInput = z.strictObject({
 });
 export const baseInput = z.strictObject({ tables: z.array(sheetInput).min(1) }).refine((base) => new Set(base.tables.map((sheet) => sheet.name)).size === base.tables.length, "工作表名称不能重复");
 const rowInput = z.record(text, z.unknown()).refine((row) => Object.keys(row).length > 0, "行不能为空");
+export const formInput = rowInput;
+export const appPageInput = z.string().regex(/^[A-Za-z0-9_-]+$/, "页面 ID 来自 app-show");
+export const appPaginationInput = z.object({ page: z.coerce.number().int().min(1).default(1), size: z.coerce.number().int().min(1).max(1000).default(100) });
+
+export function appId(target: string): string {
+  let id = target.trim();
+  if (id.startsWith("https://")) {
+    let url: URL;
+    try { url = new URL(id); }
+    catch { throw new AppError("INVALID_INPUT", "应用地址需要合法 URL"); }
+    const match = url.pathname.match(/^\/external-apps\/([^/]+)\/?$/);
+    if (url.origin !== "https://table.nju.edu.cn" || url.username || url.password || !match) {
+      throw new AppError("INVALID_INPUT", "应用地址使用 https://table.nju.edu.cn/external-apps/UUID/");
+    }
+    id = match[1]!;
+  }
+  if (!z.uuid().safeParse(id).success) throw new AppError("INVALID_INPUT", "应用标识使用 UUID 或南大表格 external-apps 地址");
+  return id;
+}
 export const rowsInput = z.array(rowInput).min(1).max(1000);
 export const updatesInput = z.array(z.strictObject({ row_id: text, row: rowInput })).min(1).max(1000)
   .refine((rows) => new Set(rows.map((row) => row.row_id)).size === rows.length, "同批次 row_id 不能重复");

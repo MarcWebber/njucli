@@ -6,7 +6,7 @@ import type { TableServices } from "./services.js";
 import { addFormatOption, runCommand, type CommandRuntime, type FormatOptions } from "../../../src/core/command.js";
 import { AppError } from "../../../src/core/errors.js";
 import { saveFile } from "../../../src/core/fs.js";
-import { baseInput, columnInput, rowsInput, sheetInput, updatesInput, viewInput } from "./schema.js";
+import { appId, appPageInput, appPaginationInput, baseInput, columnInput, formInput, rowsInput, sheetInput, updatesInput, viewInput } from "./schema.js";
 
 async function input<T>(path: string | URL, schema: z.ZodType<T>): Promise<T> {
   const text = await readFile(path, "utf8");
@@ -22,6 +22,25 @@ const resultText = (data: unknown) => ({ data, text: JSON.stringify(data, null, 
 
 export function registerTableCommands(program: Command, service: TableServices, runtime: CommandRuntime): Command {
   const table = program.command("table").description("南大协同表格：模板、登分表、字段与数据填写");
+  addFormatOption(table.command("app-show <app>").description("读取外部应用的页面、字段及表单默认值；app 使用 URL 或 UUID"))
+    .action((app: string, options: FormatOptions) => runCommand(runtime, options, async () => resultText(await service.appShow(appId(app)))));
+  addFormatOption(table.command("app-rows <app> <page-id>").description("分页读取外部应用表格页的可见记录")
+    .option("--page <number>", "页码", "1").option("--size <number>", "每页 1–1000 行", "100"))
+    .action((app: string, pageId: string, options: FormatOptions & { page: string; size: string }) => runCommand(runtime, options, async () => {
+      const id = appId(app);
+      const parsed = appPaginationInput.extend({ pageId: appPageInput }).safeParse({ ...options, pageId });
+      if (!parsed.success) throw new AppError("INVALID_INPUT", "页面 ID 来自 app-show；页码须为正整数，每页 1–1000 行");
+      return resultText(await service.appRows(id, parsed.data.pageId, parsed.data.page, parsed.data.size));
+    }));
+  addFormatOption(table.command("form-submit <app> <page-id>").description("通过 API 提交文本和日期表单，回读本次新增记录")
+    .requiredOption("--input <path>", "字段名键值对 JSON")
+    .requiredOption("--readback-page <id>", "同一工作表的表格页 ID，须显示提交字段"))
+    .action((app: string, pageId: string, options: FormatOptions & { input: string; readbackPage: string }) => runCommand(runtime, options, async () => {
+      const id = appId(app);
+      const parsed = z.object({ pageId: appPageInput, readbackPage: appPageInput }).safeParse({ pageId, readbackPage: options.readbackPage });
+      if (!parsed.success) throw new AppError("INVALID_INPUT", "表单页与回读页 ID 来自 app-show");
+      return resultText(await service.formSubmit(id, parsed.data.pageId, await input(options.input, formInput), parsed.data.readbackPage));
+    }));
   addFormatOption(table.command("workspaces").description("列出可访问工作区"))
     .action((options: FormatOptions) => runCommand(runtime, options, async () => resultText(await service.workspaces())));
   addFormatOption(table.command("bases [query]").description("查找表格及稳定 UUID"))

@@ -1,9 +1,18 @@
 import type { SkillRuntime } from "../../../src/app/runtime.js";
+import { join } from "node:path";
+import { withBrowserSession } from "../../../src/auth/browser-session.js";
+import type { AuthCredentials } from "../../../src/auth/types.js";
+import { readJsonFile } from "../../../src/core/fs.js";
+import { TableAppClient } from "./apps.js";
 import { TableClient } from "./client.js";
 
-export type TableServices = Omit<TableClient, "restoreSession">;
+export type TableServices = Omit<TableClient, "restoreSession"> & {
+  appShow(id: string): Promise<ReturnType<TableAppClient["show"]>>;
+  appRows(id: string, ...args: Parameters<TableAppClient["rows"]>): ReturnType<TableAppClient["rows"]>;
+  formSubmit(id: string, ...args: Parameters<TableAppClient["submit"]>): ReturnType<TableAppClient["submit"]>;
+};
 
-export function createTableServices({ withBrowser }: SkillRuntime): TableServices {
+export function createTableServices({ withBrowser, accountStore, auth }: SkillRuntime): TableServices {
   const withTable = <T>(operation: (client: TableClient) => Promise<T>): Promise<T> => {
     let client: TableClient;
     return withBrowser("table", () => operation(client), async (session) => {
@@ -11,7 +20,21 @@ export function createTableServices({ withBrowser }: SkillRuntime): TableService
       return client.restoreSession();
     });
   };
+  const withApp = async <T>(id: string, operation: (client: TableAppClient) => Promise<T> | T): Promise<T> => {
+    const account = await accountStore.current();
+    return withBrowserSession(account, true, async session => {
+      const client = new TableAppClient(session.request, id);
+      await auth.ensureSession(account, "table", async () => {
+        await client.open(await readJsonFile<AuthCredentials>(join(account.configDir, "auth.json")));
+        return true;
+      });
+      return operation(client);
+    });
+  };
   return {
+    appShow: (id: string) => withApp(id, client => client.show()),
+    appRows: (id: string, ...args: Parameters<TableAppClient["rows"]>) => withApp(id, client => client.rows(...args)),
+    formSubmit: (id: string, ...args: Parameters<TableAppClient["submit"]>) => withApp(id, client => client.submit(...args)),
     workspaces: () => withTable((client) => client.workspaces()),
     bases: (query) => withTable((client) => client.bases(query)),
     templates: (query) => withTable((client) => client.templates(query)),

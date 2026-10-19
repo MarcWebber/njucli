@@ -7,6 +7,36 @@ description: 操作南京大学协同表格 (table.nju.edu.cn / SeaTable)，包�
 
 以下命令在本 Skill 目录运行。首次使用需登录：`node scripts/run.mjs auth login table`。
 
+业务读取与填写优先使用 CLI/API。遇到现有命令覆盖范围之外的入口，先按[接口说明](references/interfaces.md)查证 HTTP 契约；浏览器用于需要本人交互的登录验证或用户明确要求的页面操作。
+
+## 外部应用填报
+
+通知中的 `https://table.nju.edu.cn/external-apps/UUID/` 是应用入口。先查看页面 ID、字段、必填要求和默认值：
+
+```bash
+node scripts/run.mjs table app-show "应用 URL 或 UUID" --format json
+node scripts/run.mjs table app-rows "应用 URL 或 UUID" "表格页 ID" --format json
+```
+
+外部应用命令通过 HTTP 复用当前账号会话；会话到期时，使用该账号已保存的统一认证凭据登录。凭据或访问权限需要处理时，命令返回具体原因。
+
+将待填写内容保存为字段名键值对 JSON，例如：
+
+```json
+{"地点":"示例实习单位办公楼","起始日期":"2026-10-19","结束日期":null}
+```
+
+按表单实际字段填写；当前支持文本及 `YYYY-MM-DD` 日期。账号 ID、姓名默认值由应用的 `{creator.id}`、`{creator.name}` 配置填入。必填项使用用户提供的信息，选填项可省略或填 `null`。
+
+```bash
+node scripts/run.mjs table form-submit "应用 URL 或 UUID" "表单页 ID" \
+  --input ./form.json --readback-page "表格页 ID" --format json
+```
+
+`--readback-page` 选择同一工作表、显示全部提交字段的表格页。命令提交一次，并比较提交前后的行 ID 与字段，返回本次新增记录及详情链接。遇到提交或回读错误，先运行 `app-rows` 确认保存状态，再决定后续操作。此流程适用于新增填报记录；附件、关联记录和其他复杂字段需按各自接口契约处理。
+
+`app-rows` 支持 `--page`、`--size`（1–1000），按 `nextPage` 分页。MCP 提供 `table_app_show` 与 `table_app_rows` 只读工具，提交使用 CLI。
+
 ## 查找与读取
 
 ```bash

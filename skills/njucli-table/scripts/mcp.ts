@@ -1,8 +1,13 @@
 import { z } from "zod";
 import type { ReadTool } from "../../../src/mcp/read.js";
 import type { TableServices } from "./services.js";
+import { appId, appPageInput } from "./schema.js";
 
 export function registerTableTools(read: ReadTool, service: TableServices): void {
+  read("table_app_show", "读取南大表格外部应用的页面、字段及表单默认值。", { app: z.string().min(1) }, ({ app }) => service.appShow(appId(app)));
+  read("table_app_rows", "分页读取外部应用表格页的可见记录。", {
+    app: z.string().min(1), pageId: appPageInput, page: z.number().int().min(1).optional(), size: z.number().int().min(1).max(1000).optional(),
+  }, ({ app, pageId, page, size }) => service.appRows(appId(app), pageId, page, size));
   read("table_workspaces", "列出南大协同表格工作区。", {}, () => service.workspaces());
   read("table_bases", "查找协同表格及 UUID。", { query: z.string().optional() }, ({ query }) => service.bases(query));
   read("table_templates", "查找官方协同表格模板及预览链接。", { query: z.string().optional() }, ({ query }) => service.templates(query));
