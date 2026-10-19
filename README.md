@@ -59,7 +59,7 @@ curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/inst
 | [njucli-tex](skills/njucli-tex/SKILL.md) | TeX 写作 |
 | [njucli-mail](skills/njucli-mail/SKILL.md) | 校园邮箱 |
 | [njucli-software](skills/njucli-software/SKILL.md) | 正版软件 |
-| [njucli-box](skills/njucli-box/SKILL.md) | 南大云盘 |
+| [njucli-box](skills/njucli-box/SKILL.md) | 南大云盘、在线文档、白板与可编辑数据图表 |
 | [njucli-youth](skills/njucli-youth/SKILL.md) | 青年平台 |
 | [njucli-table](skills/njucli-table/SKILL.md) | 协同表格 |
 | [njucli-itxia](skills/njucli-itxia/SKILL.md) | IT 侠维修预约、进度查询与取消 |
@@ -81,6 +81,8 @@ njucli campus today
 正式电子成绩单从自助服务的实时目录选择项目，使用 `njucli self-service create ITEM_ID` 申请并默认发送到绑定邮箱；发放后询问是否需要下载，确认后通过邮箱附件保存原 PDF。纸质证明、申请管理、云打印查询与取件指引见[自助服务 Skill](skills/njucli-self-service/SKILL.md)。
 
 完整命令通过 `njucli --help` 和 `njucli <domain> --help` 查看。
+
+在线文档使用 `njucli box doc-create/doc-read/doc-update` 创建、读取与更新；`whiteboard-create` 创建白板，`chart-create` 将数据生成可编辑柱状图或折线图，`doc-embed-whiteboard` 将图形嵌入文档。返回可在线编辑的云盘链接，可把报告链接填回协同表格；输入示例、流程与架构见 [Box 文档说明](skills/njucli-box/references/documents.md)。
 
 查找学院、研究方向或后勤联系方式，无需校园账号：
 

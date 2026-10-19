@@ -17,7 +17,7 @@
 | 校园邮箱 | [绑定、邮件与附件](#校园邮箱) |
 | 青年平台 | [活动、志愿时长与第二课堂](../skills/njucli-youth/references/interfaces.md) |
 | 协同表格 | [表格、记录、公式与视图](../skills/njucli-table/references/interfaces.md) |
-| 南大云盘 | [资料库、文件、分享与协作](../skills/njucli-box/references/interfaces.md) |
+| 南大云盘 | [资料库、文件、分享与协作](../skills/njucli-box/references/interfaces.md)、[在线文档、图表与白板](../skills/njucli-box/references/documents.md) |
 | IT 侠 | [维修预约、打开预约单、进度查询与取消](../skills/njucli-itxia/references/interfaces.md)（取消仅 CLI，须 `--yes`，只读 MCP 不暴露） |
 | 学院与教师知识 | [官方目录、教师基础信息与后勤电话](../skills/njucli-institution/references/interfaces.md) |
 | 校园卡与个人支付 | [余额与交易记录](../skills/njucli-pay/references/interfaces.md) |
