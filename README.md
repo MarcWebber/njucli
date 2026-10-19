@@ -61,7 +61,7 @@ curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/inst
 | [njucli-software](skills/njucli-software/SKILL.md) | 正版软件 |
 | [njucli-box](skills/njucli-box/SKILL.md) | 南大云盘、在线文档、白板与可编辑数据图表 |
 | [njucli-youth](skills/njucli-youth/SKILL.md) | 青年平台 |
-| [njucli-table](skills/njucli-table/SKILL.md) | 协同表格 |
+| [njucli-table](skills/njucli-table/SKILL.md) | 协同表格、外部应用表单 API 填报与回读 |
 | [njucli-itxia](skills/njucli-itxia/SKILL.md) | IT 侠维修预约、进度查询与取消 |
 | [njucli-institution](skills/njucli-institution/SKILL.md) | 教师与院系联系方式、学院简介与后勤电话；本地检索、官网读取与导出 |
 

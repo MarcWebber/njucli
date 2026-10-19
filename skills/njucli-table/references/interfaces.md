@@ -2,6 +2,28 @@
 
 [南大协同表格](https://table.nju.edu.cn/)使用 SeaTable，校内说明见[南大文档](https://doc.nju.edu.cn/books/18d80/page/6f3ef)。接口依据官方前端与实网请求核对，并参考 [SeaTable API Gateway](https://github.com/seatable/seatable-api-python/blob/master/seatable_api/api_gateway.py)。
 
+## 外部应用表单
+
+外部应用使用 `/external-apps/{appUuid}/` 入口及独立的应用权限。入口 HTML 的 `window.shared.pageOptions` 提供 `appUuid`、`accessToken`、`appConfig`、`userIdInOrg`，`window.app.pageOptions` 提供 `csrfToken`、`name`。字符串按页面的 Unicode 转义解码，应用配置再按 JSON 解析。
+
+HTTP 会话缺失时，读取 `/accounts/login/?next=/external-apps/{appUuid}/` 的 `csrfmiddlewaretoken`，向同一 URL 提交表单 `login/password/csrfmiddlewaretoken/next`。成功响应须回到指定应用入口。登录与后续请求使用同一 Cookie 会话；应用请求携带 `Authorization: Token {accessToken}`、`X-CSRFToken` 和应用入口 Referer。
+
+以下路径相对 `/api/v2.1/universal-apps/{appUuid}/`：
+
+| 方法 | 路径 | 参数与结果 |
+| --- | --- | --- |
+| GET | `metadata/` | `tables`，工作表 `_id/name/columns`，列 `key/name/type/data` |
+| GET | `rows/?page_id={id}&start={offset}&limit={size}` | `success/error_message/metadata/results`；结果以列 key 为键，`_id` 标识行 |
+| POST | `form-submit/` | JSON `{app_page_id,row_data,new_linked_rows:[],link_rows:[]}`；`row_data` 以字段名为键；返回 `success/success_message` |
+
+`appConfig.settings.pages` 包含 `id/type/table_id`。表单页 `columns` 提供 `key/is_required/enable_fill_default_value/default_value/enable_not_change_default_value`；表格页 `shown_column_keys` 决定可回读字段。固定的 `{creator.id}`、`{creator.name}` 默认值从当前应用身份解析。日期列使用 `data.format=YYYY-MM-DD`，回读可返回带时区的 ISO 时间，比较其日期部分。
+
+提交响应只包含成功标记。CLI 在提交前记录回读页的全部行 ID，提交后分页读取同一页面，仅接受一条新增且字段匹配的记录；旧记录、零条匹配和多条匹配均返回待确认结果。表单提交、认证和回读复用同一次会话；错误交由调用方处理。
+
+接口证据：一次用户授权的实际填报已通过 HTTP 完成登录、元数据读取、表单提交和新增记录回读。应用内表格编辑权限与表单新增权限分别生效，填报使用 `form-submit/`。
+
+本地集成覆盖 CLI 输入、HTTP 登录与 Cookie 复用、默认身份、必填项及日期、分页、单次提交和回读失败；独立 Skill 用例核对帮助与只读 MCP 契约。新增 CLI 的认证实网执行待后续实际业务任务核对。当前提交支持文本及日期，复杂字段、关联行与附件待确认对应契约。
+
 ## 工作区与模板
 
 以下路径相对 `https://table.nju.edu.cn`。
