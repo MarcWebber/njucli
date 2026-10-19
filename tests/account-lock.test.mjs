@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { lockAccount } from "../dist/src/auth/account-lock.js";
 
-test("账号锁：多个等待进程同时回收崩溃锁，临界区保持互斥", { timeout: 20_000 }, async (t) => {
+test("账号锁：持有进程退出后多个等待进程继续，临界区保持互斥", { timeout: 20_000 }, async (t) => {
   const directory = await mkdtemp(join(tmpdir(), "njucli-lock-race-"));
   const module = new URL("../dist/src/auth/account-lock.js", import.meta.url).href;
   const workers = [];
@@ -50,8 +50,12 @@ test("账号锁：多个等待进程同时回收崩溃锁，临界区保持互�
     await new Promise(() => {});
   `);
   await holder.ready;
-  assert.equal((await stat(join(directory, "session.lock"))).isDirectory(), true);
-  assert.equal((await readdir(join(directory, "session.lock"))).length, 1);
+  if (process.platform === "linux") {
+    assert.equal((await stat(join(directory, "session.flock"))).isFile(), true);
+  } else {
+    assert.equal((await stat(join(directory, "session.lock"))).isDirectory(), true);
+    assert.equal((await readdir(join(directory, "session.lock"))).length, 1);
+  }
 
   const contenders = Array.from({ length: 12 }, () => start(`
     console.log('ready');
@@ -82,6 +86,10 @@ test("账号锁：多个等待进程同时回收崩溃锁，临界区保持互�
     assert.equal(result.code, 0, result.errors);
   }
   assert.equal(await readFile(join(directory, "count"), "utf8"), "36");
+  if (process.platform === "linux") {
+    assert.deepEqual((await readdir(directory)).sort(), ["count", "session.flock"]);
+    return;
+  }
   assert.deepEqual((await readdir(directory)).sort(), ["count"]);
   const legacy = join(directory, "session.lock");
   await writeFile(legacy, `${process.pid}:legacy-owner`);

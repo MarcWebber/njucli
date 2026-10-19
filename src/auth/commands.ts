@@ -1,5 +1,6 @@
 import type { Command } from "commander";
 import { readFile } from "node:fs/promises";
+import { text } from "node:stream/consumers";
 import { AUTH_CAPABILITIES } from "./capabilities.js";
 import type { AuthCapability, AuthCredentials, SessionMetadata } from "./types.js";
 import { requiredText } from "../core/guards.js";
@@ -62,13 +63,20 @@ export function registerAuthCommands(
       return { data, text: sessionsText(data) };
     }));
 
+  addFormatOption(auth.command("authenticate").description("重新验证密码并经青年平台返回本人学号；依赖 SSO 与青年平台")
+    .requiredOption("--credentials <path>", "含 username 和 password 的 JSON 文件；- 从标准输入读取"))
+    .action(async (options: FormatOptions & { credentials: string }) => runCommand(runtime, options, async () => {
+      const data = await service.authenticate(await readCredentials(options.credentials));
+      return { data, text: `已验证学号：${data.studentId}` };
+    }));
+
   addFormatOption(auth.command("login [capability]").description("保存账号密码并登录；后续自动使用本地凭据")
     .option("--username <username>", "统一认证账号")
     .option("--password <password>", "统一认证密码")
-    .option("--credentials <path>", "含 username 和 password 的 JSON 文件"))
+    .option("--credentials <path>", "含 username 和 password 的 JSON 文件；- 从标准输入读取"))
     .action(async (capability: string | undefined, options: FormatOptions & { username?: string; password?: string; credentials?: string }) => runCommand(runtime, options, async () => {
       let credentials: AuthCredentials | undefined;
-      if (options.credentials) credentials = JSON.parse(await readFile(options.credentials, "utf8")) as AuthCredentials;
+      if (options.credentials) credentials = await readCredentials(options.credentials);
       else if (options.username !== undefined || options.password !== undefined) credentials = {
         username: requiredText(options.username ?? "", "--username"),
         password: requiredText(options.password ?? "", "--password"),
@@ -87,6 +95,19 @@ export function registerAuthCommands(
     }));
 
   return auth;
+}
+
+async function readCredentials(path: string): Promise<AuthCredentials> {
+  const input = path === "-" ? await text(process.stdin) : await readFile(path, "utf8");
+  let value: unknown;
+  try { value = JSON.parse(input); }
+  catch { throw new AppError("INVALID_INPUT", "凭据应为包含 username 和 password 的 JSON 对象"); }
+  if (typeof value !== "object" || value === null || !("username" in value) || !("password" in value)
+    || typeof value.username !== "string" || !value.username.trim()
+    || typeof value.password !== "string" || !value.password) {
+    throw new AppError("INVALID_INPUT", "凭据应包含非空字符串 username 和 password");
+  }
+  return { username: value.username.trim(), password: value.password };
 }
 
 function parseInterval(value: string): number {

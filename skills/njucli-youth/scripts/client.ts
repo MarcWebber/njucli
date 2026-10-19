@@ -112,6 +112,9 @@ export class YouthClient {
   async hasSession(): Promise<boolean> {
     const value = await this.json<string>(new URL("ctx", BASE), form({}));
     const context = JSON.parse(Buffer.from(value.data, "base64").toString("utf8")) as Context;
+    if (!context || typeof context.anonymous !== "boolean" || (!context.anonymous && (typeof context.userId !== "string" || !context.userId.trim()))) {
+      throw new AppError("REMOTE_SCHEMA_CHANGED", "青年平台身份响应缺少已确认的本人学号");
+    }
     this.context = context.anonymous ? undefined : context;
     return !context.anonymous;
   }
@@ -131,6 +134,10 @@ export class YouthClient {
       department: context.departmentName,
       volunteer: await this.document("zyz/grzl/create", "/zyz/grzl/create"),
     };
+  }
+
+  async identity(): Promise<{ studentId: string }> {
+    return { studentId: (await this.currentContext()).userId };
   }
 
   async menus(): Promise<Array<{ name: string; path: string; url: string }>> {

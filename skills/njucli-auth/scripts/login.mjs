@@ -1,13 +1,13 @@
 import { createInterface } from 'node:readline';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { withBrowserSession, createAuthServices, createRuntime, saveFile } from './runtime.mjs';
+import { withBrowserSession, createAuthServices, createYouthServices, createRuntime, saveFile } from './runtime.mjs';
 const input = createInterface({ input: process.stdin, output: process.stdout });
 const screenshot = join(tmpdir(), 'njucli-slider.png');
 const runtime = createRuntime();
 await withBrowserSession(await runtime.accountStore.current(), false, async (session) => {
   const page = await session.page();
-  const login = createAuthServices(runtime).login('sso').then(
+  const login = createAuthServices(runtime, createYouthServices(runtime).identity).login('sso').then(
     result => console.log(JSON.stringify(result)),
     error => { console.error(error.message); process.exitCode = 1; },
   ).finally(() => { input.close(); process.stdin.pause(); });

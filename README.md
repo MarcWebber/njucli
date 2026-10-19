@@ -16,7 +16,7 @@
 
 ## 安装
 
-需要 Node.js 20+、Git、curl 和 Bash。网页登录及页面操作使用本机浏览器，运行前提见[认证 Skill](skills/njucli-auth/SKILL.md#运行前提)。
+需要 Node.js 20+、Git、curl 和 Bash。Linux 使用 `util-linux` 提供的 `flock` 管理账号会话锁。网页登录及页面操作使用本机浏览器，运行前提见[认证 Skill](skills/njucli-auth/SKILL.md#运行前提)。
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/install.sh | bash
