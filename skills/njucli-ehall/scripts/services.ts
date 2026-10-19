@@ -14,7 +14,7 @@ import { GraduateCourseSelectionClient } from "./selection-client.js";
 import type { AcademicTerm, CourseOccurrence, CourseSchedule, ScheduledCourse } from "./types.js";
 
 export type EHallServices = Pick<ScholarshipClient, "scholarships" | "scholarship" | "scholarshipForm" | "scholarshipApplications" | "scholarshipApplication" | "saveScholarshipDraft"> &
-  Pick<EHallPortalClient, "tasks" | "applications"> &
+  Pick<EHallPortalClient, "services" | "tasks" | "applications"> &
   Pick<EHallTripClient, "trip" | "submitTrip"> &
   Pick<EHallProfileClient, "profile" | "profileFields" | "addProfile" | "removeProfile"> &
   Pick<GraduateAcademicClient, "grades" | "exams" | "plan"> &
@@ -63,6 +63,7 @@ export function createEHallServices({ withBrowser }: SkillRuntime): EHallService
     scholarshipApplications: (page, pageSize) => withBrowser("ehall", session => new ScholarshipClient(session.request).scholarshipApplications(page, pageSize)),
     scholarshipApplication: (applicationId) => withBrowser("ehall", session => new ScholarshipClient(session.request).scholarshipApplication(applicationId)),
     saveScholarshipDraft: (input, dryRun) => withBrowser("ehall", session => new ScholarshipClient(session.request).saveScholarshipDraft(input, dryRun)),
+    services: (query) => withEHall((client) => client.services(query)),
     tasks: (kind, page, pageSize) => withEHall((client) => client.tasks(kind, page, pageSize)),
     applications: (state, page, pageSize) => withEHall((client) => client.applications(state, page, pageSize)),
     serviceLink,

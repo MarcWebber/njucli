@@ -1,5 +1,6 @@
 import type {
   EHallApplicationPage,
+  EHallService,
   EHallServiceLink,
   EHallTaskPage,
   GraduateExam,
@@ -14,6 +15,12 @@ import type {
 } from "./types.js";
 
 const NONE = "无";
+
+export function ehallServicesText(services: EHallService[]): string {
+  if (services.length === 0)
+    return NONE;
+  return services.map((service) => `${service.available ? "可用" : "无权限"}\t${service.name}\t${service.appId}`).join("\n");
+}
 
 export function ehallTasksText(page: EHallTaskPage): string {
   if (page.items.length === 0)

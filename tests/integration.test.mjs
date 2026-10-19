@@ -22,6 +22,7 @@ import { registerTexCommands } from "../dist/skills/njucli-tex/scripts/commands.
 import { registerMailCommands } from "../dist/skills/njucli-mail/scripts/commands.js";
 import { registerSeCommands } from "../dist/skills/njucli-se/scripts/commands.js";
 import { registerEHallCommands } from "../dist/skills/njucli-ehall/scripts/commands.js";
+import { registerEHallTools } from "../dist/skills/njucli-ehall/scripts/mcp.js";
 import { CampusClient } from "../dist/skills/njucli-campus/scripts/client.js";
 import { createCampusServices } from "../dist/skills/njucli-campus/scripts/services.js";
 import { TexClient } from "../dist/skills/njucli-tex/scripts/client.js";
@@ -85,6 +86,42 @@ async function localHttp(t, handler) {
     return response;
   };
 }
+
+test("办事大厅：CLI 与 MCP 服务搜索返回可打开的应用入口", async (t) => {
+  const requests = [];
+  const request = await localHttp(t, (req, res) => {
+    const url = new URL(req.url, "https://ehall.nju.edu.cn");
+    assert.equal(req.method, "GET");
+    assert.equal(url.pathname, "/jsonp/ywtb/onlineYwtbApps");
+    assert.equal(url.searchParams.get("labels"), "");
+    requests.push(url.searchParams.get("searchKeyword"));
+    res.setHeader("content-type", "application/json");
+    res.end(JSON.stringify({ result: "success", data: [
+      { appId: "test-app", appName: "测试证明服务", hasPermission: true },
+      { appId: "restricted-app", appName: "受限服务", hasPermission: false },
+    ] }));
+  });
+  let sessions = 0;
+  const service = createEHallServices({ withBrowser: async (capability, operation) => {
+    assert.equal(capability, "ehall");
+    sessions++;
+    return operation({ request });
+  } });
+  const result = await command(registerEHallCommands, service, ["ehall", "services", "  证明  "]);
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.data.map(({ appId, name, available }) => ({ appId, name, available })), [
+    { appId: "test-app", name: "测试证明服务", available: true },
+    { appId: "restricted-app", name: "受限服务", available: false },
+  ]);
+  const link = await command(registerEHallCommands, service, ["ehall", "link", result.data[0].appId]);
+  assert.equal(link.ok, true);
+  assert.equal(result.data[0].url, link.data.url);
+  const tools = new Map();
+  registerEHallTools((name, _description, _schema, handler) => tools.set(name, handler), service);
+  assert.deepEqual(await tools.get("ehall_services")({ query: "证明" }), result.data);
+  assert.deepEqual(requests, ["证明", "证明"]);
+  assert.equal(sessions, 2);
+});
 
 test("IT 侠：提交回读、状态与回复、找回预约和失败时单次请求", async (t) => {
   const directory = await mkdtemp(join(tmpdir(), "njucli-itxia-"));

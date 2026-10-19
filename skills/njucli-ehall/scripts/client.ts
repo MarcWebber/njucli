@@ -3,6 +3,7 @@ import type { FetchLike } from "../../../src/core/types.js";
 import type {
   EHallApplicationPage,
   EHallApplicationState,
+  EHallService,
   EHallServiceLink,
   EHallTaskKind,
   EHallTaskPage,
@@ -29,6 +30,22 @@ export class EHallPortalClient {
   async hasSession(): Promise<boolean> {
     const value = await this.json<{ hasLogin: boolean }>(new URL("jsonp/userInfo.json", PORTAL));
     return value.hasLogin;
+  }
+
+  async services(query = ""): Promise<EHallService[]> {
+    const url = new URL("jsonp/ywtb/onlineYwtbApps", PORTAL);
+    url.search = new URLSearchParams({ searchKeyword: query.trim(), labels: "" }).toString();
+    const value = await this.json<{ result: string; data: Row[] }>(url);
+    if (value.result !== "success") throw new Error(`EHall 服务目录请求失败：${value.result}`);
+    return value.data.map((row) => {
+      const appId = required(row, "appId");
+      return {
+        appId,
+        name: required(row, "appName"),
+        available: [true, 1, "1", "true"].includes(row.hasPermission as string | number | boolean),
+        url: serviceLink(appId).url,
+      };
+    });
   }
 
   async tasks(kind: EHallTaskKind, page = 1, pageSize = 20): Promise<EHallTaskPage> {

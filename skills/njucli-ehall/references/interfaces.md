@@ -6,6 +6,7 @@
 
 | 方法 | 路径 | 契约 |
 | --- | --- | --- |
+| GET | `/jsonp/ywtb/onlineYwtbApps?searchKeyword=...&labels=` | `result=success`；`data` 为应用数组，取 `appId/appName/hasPermission` |
 | POST | `/taskcenterapp/sys/taskCenter/taskNew/getTaskRestful.do` | `flag=1/2/3` 分别为待办、已办、我发起 |
 | POST | `/taskcenterapp/sys/taskCenter/taskNew/queryProcessTrack.do` | `state=1/2/3` 分别为进行中、已完成、已撤销 |
 

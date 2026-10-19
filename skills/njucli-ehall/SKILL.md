@@ -61,13 +61,14 @@ node scripts/run.mjs ehall withdraw 教学班ID --format json
 ## 办事服务与假期行程
 
 ```bash
+node scripts/run.mjs ehall services "证明" --format json
 node scripts/run.mjs ehall link 应用ID --format json
 node scripts/run.mjs ehall tasks --kind todo --format json
 node scripts/run.mjs ehall applications --state active --format json
 node scripts/run.mjs ehall trip --format json
 ```
 
-使用已知应用 ID，通过 `link` 获取官网入口。
+应用 ID 来自 `services` 的 `appId`，用 `link` 获取官网入口。
 
 `tasks` 查看任务（`--kind` 支持 `todo/done/started`）；`applications` 查看本人发起的审批（`--state` 支持 `active/completed/cancelled`）。
 

@@ -23,6 +23,7 @@ import {
   termsText,
   ehallApplicationsText,
   ehallServiceLinkText,
+  ehallServicesText,
   ehallTasksText,
 } from './text.js';
 
@@ -223,6 +224,12 @@ export function registerEHallCommands(
           `${data.plan.holiday.name}行程检查通过（预览）：${data.plan.stayOnCampus ? "全程留校" : `${data.plan.trips.length} 段离返校行程`}`,
           ...data.plan.trips.flatMap((t) => t.stops.map((s) => `${s.from} 至 ${s.to}：${s.destination.name}，${s.address}，${s.transport.name}${s.serviceNumber ? ` ${s.serviceNumber}` : ""}`)),
         ].join("\n") };
+    }));
+
+  addFormatOption(ehall.command("services [query]").description("搜索可用服务入口"))
+    .action(async (query: string | undefined, options: FormatOptions) => runCommand(runtime, options, async () => {
+      const data = await service.services(query);
+      return { data, text: ehallServicesText(data) };
     }));
 
   addFormatOption(ehall.command("tasks").description("查询待办、已办或我发起的任务")

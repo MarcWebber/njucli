@@ -1,3 +1,10 @@
+export interface EHallService {
+  appId: string;
+  name: string;
+  available: boolean;
+  url: string;
+}
+
 export const EHALL_TASK_KINDS = ["todo", "done", "started"] as const;
 export type EHallTaskKind = typeof EHALL_TASK_KINDS[number];
 
