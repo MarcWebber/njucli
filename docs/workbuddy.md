@@ -84,13 +84,13 @@ WorkBuddy 支持用户级与项目级两处 MCP 配置文件：
 
 ## 3. 启用 Skills
 
-第 1 步已将一个 `njucli` 套件注册到 `~/.workbuddy/skills/njucli/`。套件入口提供业务索引，AI 按任务读取内部说明并统一调用 `njucli`。执行 `njucli upgrade` 时一起更新。
+第 1 步将完整套件注册到 `~/.workbuddy/skills/njucli/`，各业务保留自己的 `SKILL.md`，统一调用 `njucli` 并随 `njucli upgrade` 一起更新。该布局需要客户端递归发现子目录；WorkBuddy 的递归发现待实机核对，已验证宿主见[安装与维护](installation.md)。
 
-安装完成后，进入 **Experts · Skills · Connectors** → **Skills** → **Installed** → **All skills**，可在 **Custom** 分组中启用 `njucli` 套件。
+安装完成后，进入 **Experts · Skills · Connectors** → **Skills** → **Installed** → **All skills**，检查 **Custom** 分组是否列出 `njucli-*` 各业务 Skill，并按需启用。
 
 ![Skills 已安装列表与 njucli-* Skill 开关](images/workbuddy/03-skills-installed.png)
 
-图 3：图中的 Custom 分组是 Skill 的启用入口；完整套件的说明从 `njucli/SKILL.md` 读取。
+图 3：Custom 分组列出各业务 Skill，可按任务启用；每个 Skill 从自己的 `SKILL.md` 读取说明。
 
 ## 4. 试用
 
@@ -130,7 +130,7 @@ WorkBuddy 未在系统环境变量中找到 `njucli`。请检查系统的 `PATH`
 
 ### Skills 列表中看不到已安装的扩展
 
-1. 检查 `~/.workbuddy/skills` 目录下是否存在 `njucli/SKILL.md`。
+1. 检查 `~/.workbuddy/skills/njucli/` 下各业务目录的 `SKILL.md` 是否可读取。
 2. 确认第 1 步的 `NJUCLI_SKILLS_DIR` 设置正确，注册路径指向已安装的 NjuCLI。
 3. 重启 WorkBuddy 客户端刷新缓存。
 
@@ -139,4 +139,4 @@ WorkBuddy 未在系统环境变量中找到 `njucli`。请检查系统的 `PATH`
 相关文档：
 
 - [AI 客户端接入](ai-plugin.md)
-- [README](../README.md#安装)
+- [README](../README.md#一键安装)

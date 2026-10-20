@@ -1,3 +1,8 @@
+---
+name: njucli-library
+description: 查询南京大学图书馆馆藏、馆藏位置、可借状态与本人借阅。用户涉及南大图书检索或借阅时使用。
+---
+
 # 图书馆
 
 连接校园网或官方 VPN 后，书目和馆藏直接访问 `https://opac.nju.edu.cn`；本人借阅复用统一认证派生的图书馆会话，需要时自动恢复。手动登录使用 `njucli auth login opac`。

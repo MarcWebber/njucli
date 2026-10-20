@@ -1,3 +1,8 @@
+---
+name: njucli-software
+description: 查询并下载南京大学提供的正版软件安装包，包括 Adobe Creative Cloud、WPS、MathType、Origin 等校园授权软件。用户涉及校园正版软件下载时使用。
+---
+
 # 正版软件
 
 校内安装包下载需要连接校园网或官方 VPN；Adobe CC 在线安装器支持公网直连下载。

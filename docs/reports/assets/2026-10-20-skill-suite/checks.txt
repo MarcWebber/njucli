@@ -1,7 +1,5 @@
-
 > njucli@0.1.0 lint <repo>
 > tsc -p tsconfig.json --noEmit
-
 
 > njucli@0.1.0 test <repo>
 > pnpm build && node --test tests/*.test.mjs
@@ -14,9 +12,9 @@
 > njucli@0.1.0 clean <repo>
 > node -e "require('node:fs').rmSync('dist', { recursive: true, force: true })"
 
-✔ 账号锁：持有进程退出后多个等待进程继续，临界区保持互斥 (1412.115125ms)
-✔ 统一安装：njucli、全局套件、目录、模板与 MCP (10830.194375ms)
-ℹ 18 个业务入口与 1 个全局套件、136 个只读 MCP 工具通过实际安装验证
+✔ 账号锁：持有进程退出后多个等待进程继续，临界区保持互斥 (1407.875625ms)
+✔ 统一安装：njucli、全局套件、目录、模板与 MCP (13973.006667ms)
+ℹ 1 个全局套件中的 18 个独立 Skill、136 个只读 MCP 工具通过实际安装验证
 ℹ tests 2
 ℹ suites 0
 ℹ pass 2
@@ -24,4 +22,4 @@
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 11011.355417
+ℹ duration_ms 14155.435125

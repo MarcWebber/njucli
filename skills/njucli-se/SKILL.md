@@ -1,3 +1,8 @@
+---
+name: njucli-se
+description: 查询南京大学软件学院教学平台 (selearning.nju.edu.cn) 的课程、作业、附件与成绩，获取作业提交链接，办理自助选课。用户涉及软院平台或 njucli se 时使用。
+---
+
 # 软件学院教学平台
 
 首次使用需登录：`njucli auth login se`。

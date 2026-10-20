@@ -1,3 +1,8 @@
+---
+name: njucli-sports
+description: 查询南京大学体育场馆场地、可用空闲时段与本人预约，获取官方预约与取消办理链接。用户涉及体育馆预约或 njucli sports 时使用。
+---
+
 # 体育场馆
 
 需要登录时运行：`njucli auth login sports`。

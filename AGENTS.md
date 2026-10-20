@@ -17,11 +17,11 @@ NjuCLI 服务南京大学学生及其 AI 助手，围绕写作、邮件、上课
 | `src/core/` | 文件、输入、日期、输出与脱敏函数 |
 | `src/mcp/` | 只读 MCP 协议与输出处理 |
 | `tests/` | 真实本地进程、文件锁与 CLI 安装产物检查 |
-| `skills/SKILL.md`、`skills/<任务>/guide.md`、`references/` | 使用说明；较长流程和接口资料按需拆入 references |
+| `skills/<任务>/SKILL.md`、`references/` | 各 Skill 的触发说明与任务流程；较长流程和接口资料按需拆入 references |
 | `.codex-plugin/`、`.mcp.json` | 插件清单与本地 MCP 配置 |
 | `docs/` | AI 接入与接口契约、验证范围 |
 
-业务能力与使用入口见 [套件入口](skills/SKILL.md)，源码与说明随所属 Skill 维护。跨业务组合通过已有服务显式传入。
+业务能力与使用入口见 [README](README.md#可以做什么)，源码与说明随所属 Skill 维护。跨业务组合通过已有服务显式传入。
 
 调用关系为：`njucli` CLI / MCP 入口 → Skill 的业务方法 → 远端请求；受保护操作复用同一次调用的认证会话。参数处理归入口，远端请求归 client，展示归 CLI/MCP 输出边界。
 
@@ -33,7 +33,7 @@ NjuCLI 服务南京大学学生及其 AI 助手，围绕写作、邮件、上课
 - 每个动作绑定一个明确业务方法，每份远端契约对应一个 client 和一条请求路径。
 - 直接复用已有函数与 client 方法类型。共享工具以实际重复调用、相同语义为依据；单实现存储直接使用具体类。删除无调用代码、冗余字段、透传包装和重复注册表。
 - Adapter、Provider 及等价中间层的引入以维护者明确要求为前提。
-- 安装、依赖和升级由根包统一维护，全局 Skills 以一个 `njucli` 套件安装，`skills/SKILL.md` 提供业务索引。命令保持 `njucli <domain> <command> [target] [options]`。JSON 使用具体动作的 `--format json` 或 `NJUCLI_FORMAT=json`；账号通过 `account use` 或 `NJUCLI_ACCOUNT` 选择。
+- 各业务保留独立的 `SKILL.md` 与 frontmatter，安装、依赖和升级由根包统一维护；全局 `skills/njucli/` 是套件容器，宿主分别发现其中的业务 Skill。命令保持 `njucli <domain> <command> [target] [options]`。JSON 使用具体动作的 `--format json` 或 `NJUCLI_FORMAT=json`；账号通过 `account use` 或 `NJUCLI_ACCOUNT` 选择。
 - 分页和枚举在 CLI/MCP 入口校验一次；日期在输入或进入日历计算时校验；接口限制以远端契约为准。
 - 按已验证的接口字段解析响应。字段、请求方法或路径有变更时，同步更新所属 Skill 的接口说明；索引见 `docs/interface-evidence.md`。
 - 网络、HTTP 和解析错误交由统一输出层报告，后续处理由调用 Agent 决定。操作完成并通过必要回读后，再返回成功。
@@ -60,7 +60,7 @@ NjuCLI 服务南京大学学生及其 AI 助手，围绕写作、邮件、上课
 2. 新增或修改远端能力时，先用真实请求打通认证、业务接口和结果，再收敛实现；完成后用实际 CLI 或 MCP 执行对应业务验证。仅查看接口说明、扫描前端代码或访问登录页，不构成业务验证。纯重构依据已有真实契约，并验证受影响的调用。
 3. 将确认的请求路径收敛至所属 Skill 的 client，完成命令和 MCP，在 `src/app/production.ts` 注册业务；站点会话交接在所属 Skill 中复用公共 SSO 与浏览器会话。验证完成后移除临时请求代码；长期复用的辅助脚本随对应 Skill 保存。
 4. 执行受影响的本地运行检查，清理重复实现与失效结构。
-5. 将确认的任务流程整理到所属 `guide.md`。简短能力直接写在入口文档；仅将较长流程、参数表和接口资料拆入 `references/`。检查套件 frontmatter、链接和脚本。
+5. 将确认的任务流程整理到所属 `SKILL.md`。简短能力直接写在入口文档；仅将较长流程、参数表和接口资料拆入 `references/`。检查各 Skill 的 frontmatter、链接和脚本。
 6. 同步 README 和所属 Skill 的操作说明、接口契约与验证范围。构建与安装说明见 [贡献指南](CONTRIBUTING.md#实现约定)。
 7. 检查安装产物。涉及远端能力的代码通过真实请求验证后，才可提交、推送和提 PR；待验证或调用失败的能力先开展真实请求排查并修复；只有确认无法实现时才移除。新增或修改的实现完成真实业务验证后提交。每个 PR 必须链接对应验证报告，记录执行入口、参数、实际结果及必要回读，并附可取得的 Agent 命令日志或截图；证据须脱敏。
 

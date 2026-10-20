@@ -1,3 +1,8 @@
+---
+name: njucli-ehall
+description: 查询南京大学教务与网上办事大厅 (e-Hall)，包括空闲教室、课表、成绩、考试、培养方案与日历导出，办理研究生选退课、行程填报、个人资料维护及奖学金草稿填写。
+---
+
 # 教务与网上办事
 
 正式电子成绩单和自助打印证明使用已安装的 `njucli-self-service` Skill，或统一 CLI 的 `njucli self-service items 成绩单`。本 Skill 的成绩查询用于查看课程成绩。

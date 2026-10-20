@@ -20,7 +20,7 @@
 curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/install.sh | bash
 ```
 
-**一次安装一个完整套件。** `njucli` 注册为全局命令，Skills 默认安装到 `~/.codex/skills/njucli/`；设置 `CODEX_HOME` 时使用其 `skills/njucli/`。套件入口是 `SKILL.md`，内部包含各业务说明，AI 按任务读取。后续用 `njucli upgrade` 一起更新。
+**一次安装整个 Skills 套件。** `njucli` 注册为全局命令，18 个业务 Skill 一起安装到 `~/.codex/skills/njucli/`；设置 `CODEX_HOME` 时使用其 `skills/njucli/`。每个 Skill 保留自己的 `SKILL.md` 和任务说明，AI 按任务选择。后续用 `njucli upgrade` 一起更新。
 
 ## 让 AI 帮你安装
 
@@ -31,22 +31,22 @@ curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/inst
 https://github.com/MarcWebber/njucli
 
 先阅读仓库 README，检查安装环境，按一键安装方式全局安装 NjuCLI 和完整的 Skills 套件。
-完成后确认 njucli 命令可用、全局 skills/njucli/SKILL.md 能读取，并做一次公开镜像查询验证。告诉我安装位置和验证结果。
+完成后确认 njucli 命令可用、全局 skills/njucli/ 下各业务的 SKILL.md 可读取，并做一次公开镜像查询验证。告诉我安装位置和验证结果。
 ```
 
-安装后，重新打开 AI 会话即可读取套件。首次使用个人校园服务时，按[认证说明](skills/njucli-auth/guide.md)完成本人登录；公开镜像和机构目录可直接查询。
+安装后，重新打开 AI 会话即可读取套件。首次使用个人校园服务时，按[认证说明](skills/njucli-auth/SKILL.md)完成本人登录；公开镜像和机构目录可直接查询。
 
 ## 可以做什么
 
 | 场景 | 你可以交给 AI 的任务 |
 | --- | --- |
-| 上课与教务 | [查课表、成绩、考试和空闲教室](skills/njucli-ehall/guide.md)，查看[软件学院](skills/njucli-se/guide.md)和[智汇南雍](skills/njucli-lms/guide.md)的课程与作业 |
-| 邮件与文件 | [查看邮件和附件](skills/njucli-mail/guide.md)，[管理云盘、在线文档与白板](skills/njucli-box/guide.md)，[填写协同表格](skills/njucli-table/guide.md) |
-| 学习与写作 | [检索图书和借阅](skills/njucli-library/guide.md)，[撰写与编译 LaTeX](skills/njucli-tex/guide.md)，[查找校园正版软件](skills/njucli-software/guide.md) |
-| 校园生活 | [看通知、食堂信息、查镜像](skills/njucli-campus/guide.md)，[查体育场馆](skills/njucli-sports/guide.md)，查看[校园卡](skills/njucli-pay/guide.md)和[宿舍电费](skills/njucli-dorm/guide.md) |
-| 校园事务 | [查青年平台活动](skills/njucli-youth/guide.md)，[申请成绩单与证明](skills/njucli-self-service/guide.md)，[预约 IT 侠维修](skills/njucli-itxia/guide.md)，[查教师与后勤联系方式](skills/njucli-institution/guide.md) |
+| 上课与教务 | [查课表、成绩、考试和空闲教室](skills/njucli-ehall/SKILL.md)，查看[软件学院](skills/njucli-se/SKILL.md)和[智汇南雍](skills/njucli-lms/SKILL.md)的课程与作业 |
+| 邮件与文件 | [查看邮件和附件](skills/njucli-mail/SKILL.md)，[管理云盘、在线文档与白板](skills/njucli-box/SKILL.md)，[填写协同表格](skills/njucli-table/SKILL.md) |
+| 学习与写作 | [检索图书和借阅](skills/njucli-library/SKILL.md)，[撰写与编译 LaTeX](skills/njucli-tex/SKILL.md)，[查找校园正版软件](skills/njucli-software/SKILL.md) |
+| 校园生活 | [看通知、食堂信息、查镜像](skills/njucli-campus/SKILL.md)，[查体育场馆](skills/njucli-sports/SKILL.md)，查看[校园卡](skills/njucli-pay/SKILL.md)和[宿舍电费](skills/njucli-dorm/SKILL.md) |
+| 校园事务 | [查青年平台活动](skills/njucli-youth/SKILL.md)，[申请成绩单与证明](skills/njucli-self-service/SKILL.md)，[预约 IT 侠维修](skills/njucli-itxia/SKILL.md)，[查教师与后勤联系方式](skills/njucli-institution/SKILL.md) |
 
-完整业务说明见[套件入口](skills/SKILL.md)。使用条件和验证范围随各业务说明维护。
+全部业务见 [Skills 目录](skills/)。使用条件和验证范围随各 Skill 维护。
 
 ## 接入与文档
 
