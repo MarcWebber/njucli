@@ -9,6 +9,7 @@ import { promisify } from "node:util";
 import { setTimeout as delay } from "node:timers/promises";
 import { test } from "node:test";
 import { Command } from "commander";
+import { z } from "zod";
 import { AccountStore } from "../dist/src/account/store.js";
 import { createRuntime } from "../dist/src/app/runtime.js";
 import { createAccountServices } from "../dist/src/account/service.js";
@@ -121,6 +122,79 @@ test("办事大厅：CLI 与 MCP 服务搜索返回可打开的应用入口", as
   assert.deepEqual(await tools.get("ehall_services")({ query: "证明" }), result.data);
   assert.deepEqual(requests, ["证明", "证明"]);
   assert.equal(sessions, 2);
+});
+
+test("空闲教室：CLI/MCP 按日期与节次查询、校区楼宇字典、分页和失败不重试", async (t) => {
+  const root = "/jwapp/sys/kxjas";
+  const requests = [];
+  let mode = "success", opened = false, sessions = 0;
+  const request = await localHttp(t, async (req, res) => {
+    const chunks = []; for await (const chunk of req) chunks.push(chunk);
+    const form = Object.fromEntries(new URLSearchParams(Buffer.concat(chunks).toString()));
+    requests.push({ path: req.url, form });
+    if (req.url === `${root}/*default/index.do`) {
+      assert.equal(req.method, "GET");
+      if (mode === "expired") { res.writeHead(401); return res.end(); }
+      opened = true;
+      return res.end("<html>空闲教室</html>");
+    }
+    assert.equal(opened, true);
+    assert.equal(req.method, "POST");
+    assert.equal(req.headers["content-type"], "application/x-www-form-urlencoded");
+    const send = (key, data) => res.end(JSON.stringify({ code: "0", datas: { [key]: data } }));
+    if (req.url === `${root}/zd/getXxxqdqx.do`) return send("code", { rows: [{ id: "3", name: "仙林校区" }] });
+    if (req.url === `${root}/modules/kxjas/jxlcx.do`) {
+      assert.deepEqual(form, { XXXQDM: "3" });
+      return send("jxlcx", { rows: [{ JXLDM: "11", JXLMC: "仙I区" }] });
+    }
+    assert.equal(req.url, `${root}/modules/kxjscx/cxkxjs.do`);
+    if (mode === "http-error") { res.writeHead(503); return res.end(); }
+    if (mode === "business-error") return res.end(JSON.stringify({ code: "1" }));
+    if (mode === "bad-data") return send("cxkxjs", { totalSize: 0 });
+    if (mode === "empty") return send("cxkxjs", { totalSize: 0, rows: [] });
+    return send("cxkxjs", { totalSize: 51, rows: [{ JASMC: "测试101", JXLDM: "11", JXLDM_DISPLAY: "仙I区",
+      XXXQDM_DISPLAY: "仙林校区", JASLXDM_DISPLAY: "普通多媒体教室", SKZWS: "60", KSZWS: null, KXSJ: "14:00-14:50,15:00-15:50" }] });
+  });
+  const service = createEHallServices({ withBrowser: async (capability, operation) => {
+    assert.equal(capability, "ehall");
+    sessions++; opened = false;
+    return operation({ request });
+  } });
+  const run = args => command(registerEHallCommands, service, ["ehall", ...args]);
+  assert.deepEqual((await run(["classroom-campuses"])).data, [{ id: "3", name: "仙林校区" }]);
+  assert.deepEqual((await run(["classroom-buildings", "3"])).data, [{ id: "11", name: "仙I区" }]);
+  const args = ["classrooms", "2026-10-20", "--campus", "3", "--period", "5-6", "--building", "11", "--page", "2", "--page-size", "50"];
+  const result = await run(args);
+  assert.equal(result.ok, true);
+  assert.deepEqual({ total: result.data.total, page: result.data.page, pageSize: result.data.pageSize }, { total: 51, page: 2, pageSize: 50 });
+  assert.deepEqual(result.data.items, [{ name: "测试101", campus: "仙林校区", buildingId: "11", building: "仙I区",
+    type: "普通多媒体教室", seats: 60, examSeats: null, time: "14:00-14:50,15:00-15:50" }]);
+  assert.deepEqual(requests.at(-1).form, { KXRQ: "2026-10-20", XXXQDM: "3", KSJC: "5", JSJC: "6", JXLDM: "11", pageNumber: "2", pageSize: "50", querySetting: "[]" });
+  assert.equal(sessions, 3);
+  const tools = new Map();
+  registerEHallTools((name, _description, schema, handler) => tools.set(name, input => handler(z.object(schema).parse(input))), service);
+  assert.deepEqual(await tools.get("ehall_classrooms")({ date: "2026-10-20", campus: "3", period: "5-6", building: "11", page: 2 }), result.data);
+  await tools.get("ehall_classrooms")({ campus: "3", period: "5" });
+  assert.equal(requests.at(-1).form.KSJC, "5");
+  assert.equal(requests.at(-1).form.JSJC, "5");
+  assert.equal(requests.at(-1).form.JXLDM, undefined);
+  assert.equal(requests.at(-1).form.pageNumber, "1");
+  for (const invalid of [["--period", "0"], ["--period", "1.5"], ["--period", "6-5"], ["--page", "0"], ["--campus", " "]]) {
+    const before = sessions;
+    assert.equal((await run([...args, ...invalid])).error.code, "INVALID_INPUT");
+    assert.equal(sessions, before);
+  }
+  const before = sessions;
+  assert.equal((await run(["classrooms", "2026-02-30", "--campus", "3", "--period", "1"])).error.code, "INVALID_INPUT");
+  assert.equal(sessions, before);
+  for (const [scenario, error, count] of [["expired", "AUTH_REQUIRED", 1], ["http-error", "REMOTE_UNAVAILABLE", 2], ["business-error", "REMOTE_UNAVAILABLE", 2], ["bad-data", "REMOTE_SCHEMA_CHANGED", 2]]) {
+    mode = scenario;
+    const before = requests.length;
+    assert.equal((await run(args)).error.code, error);
+    assert.equal(requests.length - before, count);
+  }
+  mode = "empty";
+  assert.deepEqual((await run(args)).data.items, []);
 });
 
 test("IT 侠：提交回读、状态与回复、找回预约和失败时单次请求", async (t) => {
@@ -1635,6 +1709,38 @@ test("校园信息：命令、栏目配置、分页与正文解析", async (t) =
   assert.equal(article.code, 0);
   assert.equal(article.data.content, "下周开始选课。");
   assert.deepEqual(requests, ["/ggtz/list2.htm", "/aa/bb/c1a2/page.htm"]);
+});
+
+test("镜像：公开配置合并、关键词筛选与帮助链接", async (t) => {
+  let failed = false;
+  const payloads = {
+    "/configs/tunasync.json": [{ name: "demo", status: "success" }, { name: "parent", status: "syncing" }],
+    "/configs/addition.json": [
+      { name: "demo", path: "/packages/demo/", status: "cache", inherit: null },
+      { name: "demo-alias", inherit: "parent", path: "/parent/alias/" },
+    ],
+    "/configs/documentations/index.json": [{ name: "demo", redirect: "https://help.example/demo" },
+      { name: "parent", path: "parent.md" }],
+  };
+  const request = await localHttp(t, (req, res) => {
+    assert.equal(req.method, "GET");
+    if (failed) { res.statusCode = 503; return res.end(); }
+    assert.ok(Object.hasOwn(payloads, req.url));
+    res.end(JSON.stringify(payloads[req.url]));
+  });
+  const client = new CampusClient(request);
+  const result = await command(registerCampusCommands, client, ["campus", "mirrors", " DeMo "]);
+  assert.equal(result.code, 0);
+  assert.deepEqual(result.data.items, [
+    { name: "demo", url: "https://mirror.nju.edu.cn/packages/demo/", status: "cache", helpUrl: "https://help.example/demo" },
+    { name: "demo-alias", url: "https://mirror.nju.edu.cn/parent/alias/", status: "syncing", helpUrl: null },
+  ]);
+  const all = await client.mirrors();
+  assert.equal(all.items.length, 3);
+  assert.equal(all.items[2].helpUrl, "https://mirror.nju.edu.cn/help/parent");
+  assert.deepEqual((await client.mirrors("missing")).items, []);
+  failed = true;
+  assert.equal((await command(registerCampusCommands, client, ["campus", "mirrors"])).ok, false);
 });
 
 test("软件：官网目录、安装包去重、流式下载与本地覆盖", async (t) => {

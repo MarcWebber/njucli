@@ -1,11 +1,23 @@
 ---
 name: njucli-campus
-description: 查询南京大学公开通知、文章、食堂信息，汇总指定日期的课程、借阅和体育预约。用户涉及南大校园综合信息或 njucli campus 时使用。
+description: 查询南京大学公开通知、文章、食堂信息和 NJU Mirror 开源镜像，汇总指定日期的课程、借阅和体育预约。用户涉及南大校园综合信息、镜像源或 njucli campus 时使用。
 ---
 
 # 校园信息与今日安排
 
 以下命令在本 Skill 目录运行。
+
+## 开源镜像
+
+```bash
+node scripts/run.mjs campus mirrors ubuntu --format json
+node scripts/run.mjs campus mirrors pypi --format json
+node scripts/run.mjs campus mirrors --format json
+```
+
+实时读取 NJU Mirror 的公开 JSON，按名称关键词匹配（忽略大小写），返回镜像地址、同步状态和已有帮助链接。省略关键词列出全部镜像。查询可直接通过 HTTP 完成，无需校园登录。安装包版本和软件源配置按返回的镜像目录及帮助文档选择。
+
+接口与验证范围见[镜像接口](references/mirrors.md)。
 
 ## 今日安排汇总
 

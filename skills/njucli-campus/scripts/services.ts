@@ -14,6 +14,7 @@ export function createCampusServices(services: {
   const client = new CampusClient(fetch);
   return {
     sources: client.sources.bind(client),
+    mirrors: client.mirrors.bind(client),
     canteens: client.canteens.bind(client),
     articles: client.articles.bind(client),
     article: client.article.bind(client),

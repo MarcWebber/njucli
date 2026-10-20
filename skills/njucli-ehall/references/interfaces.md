@@ -12,6 +12,20 @@
 
 服务入口使用 `/appShow?appId=...`，结果中省略含会话参数的内部表单链接。
 
+## 空闲教室
+
+[本科生院使用说明](https://jw.nju.edu.cn/34/39/c24683a603193/page.htm)确认 EHall 提供空闲教室查询。应用入口为 `https://ehallapp.nju.edu.cn/jwapp/sys/kxjas/*default/index.do`，业务请求与入口复用同一 EHall 会话。以下路径相对此应用根目录，均为表单编码的 POST。
+
+| 路径 | 参数与结果 |
+| --- | --- |
+| `zd/getXxxqdqx.do` | 校区字典，读取 `datas.code.rows` 的 `id/name` |
+| `modules/kxjas/jxlcx.do` | `XXXQDM` 为校区；读取 `datas.jxlcx.rows` 的 `JXLDM/JXLMC` |
+| `modules/kxjscx/cxkxjs.do` | `KXRQ/XXXQDM/KSJC/JSJC` 为日期、校区及起止节次；可选 `JXLDM` 限定教学楼；`pageNumber/pageSize/querySetting=[]` 分页 |
+
+成功码为 `code=0`。空闲教室取 `datas.cxkxjs.totalSize/rows`；展示字段为 `JASMC`、`XXXQDM_DISPLAY`、`JXLDM/JXLDM_DISPLAY`、`JASLXDM_DISPLAY`、`KXSJ`、`SKZWS/KSZWS`。座位数字符串转为数值，缺失值保留为 `null`。查询必须带起止节次；省略时接口会返回全部教室。连续节次的含义为整个区间均空闲，分页从 1 开始。
+
+请求、字段和节次语义参考 [NJU_Classroom_Booking 的查询实现](https://github.com/Aalas1111/NJU_Classroom_Booking/blob/6d52fd90dd0587036a31b8cc3b17fa8bdd250b19/src/crb/api.py)、[数据结构](https://github.com/Aalas1111/NJU_Classroom_Booking/blob/6d52fd90dd0587036a31b8cc3b17fa8bdd250b19/src/crb/models.py)。公开实网确认入口要求统一认证；本地模拟覆盖 CLI/MCP、同次会话、字典、过滤参数、分页、空结果及失败不重试。登录后的 NjuCLI 实网查询待核对。
+
 ## 研究生节假日行程登记
 
 [官方入口](https://ehall.nju.edu.cn/appShow?appId=6092355728536569)，业务根路径为 `https://ehallapp.nju.edu.cn/xxfw/sys/yjsjjrlfxappnju/`。以下接口均为 POST，采用表单编码。

@@ -1,6 +1,6 @@
 ---
 name: njucli-ehall
-description: 查询南京大学教务与网上办事大厅 (e-Hall)，包括课表、成绩、考试、培养方案与日历导出，办理研究生选退课、行程填报、个人资料维护及奖学金草稿填写。
+description: 查询南京大学教务与网上办事大厅 (e-Hall)，包括空闲教室、课表、成绩、考试、培养方案与日历导出，办理研究生选退课、行程填报、个人资料维护及奖学金草稿填写。
 ---
 
 # 教务与网上办事
@@ -8,6 +8,21 @@ description: 查询南京大学教务与网上办事大厅 (e-Hall)，包括课�
 以下命令在本 Skill 目录运行。
 
 正式电子成绩单和自助打印证明使用已安装的 `njucli-self-service` Skill，或统一 CLI 的 `njucli self-service items 成绩单`。本 Skill 的成绩查询用于查看课程成绩。
+
+## 空闲教室
+
+使用当前账号的 EHall 会话，按日期、校区和节次直接查询。
+
+```bash
+node scripts/run.mjs ehall classroom-campuses --format json
+node scripts/run.mjs ehall classroom-buildings 3 --format json
+node scripts/run.mjs ehall classrooms tomorrow --campus 3 --period 5-8 --format json
+node scripts/run.mjs ehall classrooms today --campus 3 --period 5 --building 11 --format json
+```
+
+校区代码由 `classroom-campuses` 获取，教学楼代码由 `classroom-buildings` 获取。日期支持 `today`、`tomorrow`、`YYYY-MM-DD`，省略日期使用今天。`--period` 必填，填写单节或连续区间；结果表示整个区间均空闲，包含教室、教学楼、座位数和空闲时间。
+
+默认返回第 1 页、每页 50 间；通过 `--page`、`--page-size` 翻页，`total` 为匹配总数。只读 MCP 对应 `ehall_classroom_campuses`、`ehall_classroom_buildings`、`ehall_classrooms`。接口与验证范围见[空闲教室接口](references/interfaces.md#空闲教室)。
 
 ## 研究生个人资料
 

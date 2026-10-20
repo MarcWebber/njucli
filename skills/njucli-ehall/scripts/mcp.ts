@@ -3,6 +3,7 @@ import type { ReadTool } from '../../../src/mcp/read.js';
 import type { EHallServices } from './services.js';
 import { COURSE_SELECTION_KINDS, EHALL_APPLICATION_STATES, EHALL_TASK_KINDS } from './types.js';
 import { PROFILE_KINDS } from './profile.js';
+import { classroomQuerySchema } from './classrooms.js';
 
 const CAMPUS_DATE = z
   .string()
@@ -16,6 +17,9 @@ const OPTIONAL_TERM = z
   .describe("Academic term ID; omit to use the current term");
 
 export function registerEHallTools(read: ReadTool, service: EHallServices): void {
+  read("ehall_classroom_campuses", "查询空闲教室服务的校区代码。", {}, () => service.classroomCampuses());
+  read("ehall_classroom_buildings", "查询指定校区的教学楼代码。", { campus: classroomQuerySchema.shape.campus }, ({ campus }) => service.classroomBuildings(campus));
+  read("ehall_classrooms", "查询指定日期、校区和连续节次内均空闲的教室，返回教学楼、座位数及空闲时间。", classroomQuerySchema.shape, input => service.classrooms(input));
   read("ehall_scholarships", "List graduate scholarship offerings.", { page: z.number().int().min(1).optional(), pageSize: z.number().int().min(1).optional() }, ({ page, pageSize }) => service.scholarships(page, pageSize));
   read("ehall_scholarship", "Read scholarship details and award levels.", { awardId: z.string().min(1) }, ({ awardId }) => service.scholarship(awardId));
   read("ehall_scholarship_applications", "Read the current account's scholarship application statuses.", { page: z.number().int().min(1).optional(), pageSize: z.number().int().min(1).optional() }, ({ page, pageSize }) => service.scholarshipApplications(page, pageSize));

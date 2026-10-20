@@ -6,13 +6,13 @@
 | --- | --- |
 | 统一认证 | [登录与会话](#统一认证) |
 | 自助服务 | [证明申请、邮件领取、申请管理与云打印](../skills/njucli-self-service/references/interfaces.md) |
-| 教务与办事大厅 | [课表、选课、成绩、考试、培养方案、个人资料、行程登记及奖学金草稿](../skills/njucli-ehall/references/interfaces.md) |
+| 教务与办事大厅 | [空闲教室、课表、选课、成绩、考试、培养方案、个人资料、行程登记及奖学金草稿](../skills/njucli-ehall/references/interfaces.md) |
 | 软件学院课程 | [课程、作业、名单与成绩](#软件学院课程) |
 | 智汇南雍 | [课程、课件、作业、测试与助教作业创建](../skills/njucli-lms/references/interfaces.md) |
 | TeX | [项目、文件、编辑与编译](../skills/njucli-tex/references/interfaces.md) |
 | 图书馆 | [书目、馆藏与借阅](#图书馆) |
 | 体育场馆 | [场馆、时段与预约记录](#体育场馆) |
-| 校园信息 | [新闻、通知与食堂](#校园信息) |
+| 校园信息 | [新闻、通知与食堂](#校园信息)；[NJU Mirror 镜像](../skills/njucli-campus/references/mirrors.md) |
 | 正版软件 | [目录与安装包](#正版软件) |
 | 校园邮箱 | [绑定、邮件与附件](#校园邮箱) |
 | 青年平台 | [活动、志愿时长与第二课堂](../skills/njucli-youth/references/interfaces.md) |
