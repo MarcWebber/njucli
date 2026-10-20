@@ -31,8 +31,13 @@ export class CampusClient {
     const [synced = [], additions = [], docs = []] = await Promise.all(
       ["tunasync.json", "addition.json", "documentations/index.json"].map(async (file) => {
         const response = await this.fetch(new URL(`configs/${file}`, sourceUrl));
-        if (!response.ok) throw new Error(`NJU Mirror ${file} 返回 HTTP ${response.status}`);
-        return z.array(entry).parse(JSON.parse(await response.text()));
+        if (!response.ok) throw new AppError("REMOTE_UNAVAILABLE", `NJU Mirror ${file} 返回 HTTP ${response.status}`);
+        let value: unknown;
+        try { value = JSON.parse(await response.text()); }
+        catch { throw new AppError("REMOTE_SCHEMA_CHANGED", `NJU Mirror ${file} 未返回有效 JSON`); }
+        const parsed = z.array(entry).safeParse(value);
+        if (!parsed.success) throw new AppError("REMOTE_SCHEMA_CHANGED", `NJU Mirror ${file} 响应字段变化`);
+        return parsed.data;
       }),
     );
     const mirrors = new Map(synced.map(item => [item.name, {

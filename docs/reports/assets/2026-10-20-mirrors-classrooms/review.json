@@ -1,0 +1,38 @@
+{
+  "checks": {
+    "command": "pnpm lint && pnpm test",
+    "exitCode": 0,
+    "stdout": "\n> njucli@0.1.0 lint <repo>\n> tsc -p tsconfig.json --noEmit\n\n\n> njucli@0.1.0 test <repo>\n> pnpm build && node --test tests/*.test.mjs\n\n\n> njucli@0.1.0 build <repo>\n> pnpm clean && tsc -p tsconfig.json && node scripts/build.mjs\n\n\n> njucli@0.1.0 clean <repo>\n> node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"\n\n✔ 账号锁：持有进程退出后多个等待进程继续，临界区保持互斥 (1409.013083ms)\n✔ 统一安装：njucli、Skill 注册、目录、模板与 MCP (14223.574542ms)\nℹ 18 个业务入口与 Skill 注册、136 个只读 MCP 工具通过实际安装验证\nℹ tests 2\nℹ suites 0\nℹ pass 2\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 14409.464875\n"
+  },
+  "runs": [
+    {
+      "startedAt": "2026-10-20T08:30:43.180322+00:00",
+      "command": "npm pack --ignore-scripts --json --pack-destination <temp>",
+      "exitCode": 0,
+      "stdout": "{\n  \"id\": \"njucli@0.1.0\",\n  \"name\": \"njucli\",\n  \"version\": \"0.1.0\",\n  \"size\": 2982698,\n  \"unpackedSize\": 6154504,\n  \"shasum\": \"fcfa2e28ece6fe072a996b3065d4d0122dee669c\",\n  \"integrity\": \"sha512-ROigYyoUAfjg/jjiA10lCJTwb4CLCOnjSFHZPzwdeVQGFkEYsRGOcIARGGgc/ylPj6w7ZxEWYg8IkBaqGbuksg==\",\n  \"filename\": \"njucli-0.1.0.tgz\",\n  \"entryCount\": 277,\n  \"bundled\": []\n}\n",
+      "stderr": ""
+    },
+    {
+      "startedAt": "2026-10-20T08:30:44.030222+00:00",
+      "command": "npm install --global --prefix <temp>/install --foreground-scripts --no-audit --no-fund <temp>/njucli-0.1.0.tgz",
+      "exitCode": 0,
+      "stdout": "\n> njucli@0.1.0 postinstall\n> node scripts/install-skills.mjs\n\n已安装 18 个全局 Skill：<temp>/skills\n\nadded 160 packages in 1s\n",
+      "stderr": "npm warn deprecated whatwg-encoding@3.1.1: Use @exodus/bytes instead for a more spec-conformant and faster implementation\nnpm warn install-scripts 1 package has install scripts not yet covered by allowScripts:\nnpm warn install-scripts   njucli@0.1.0 (postinstall: node scripts/install-skills.mjs)\nnpm warn install-scripts\nnpm warn install-scripts Run `npm install -g --allow-scripts=njucli` to allow these scripts once, or `npm config set allow-scripts=njucli --location=user` to allow them for all global installs.\n"
+    },
+    {
+      "startedAt": "2026-10-20T08:30:45.551997+00:00",
+      "command": "njucli campus mirrors ubuntu --format json",
+      "exitCode": 0,
+      "stdout": "{\"ok\":true,\"data\":{\"sourceUrl\":\"https://mirror.nju.edu.cn/\",\"items\":[{\"name\":\"ubuntu\",\"url\":\"https://mirror.nju.edu.cn/ubuntu/\",\"status\":\"success\",\"helpUrl\":\"https://help.mirror.nju.edu.cn/ubuntu/?mirror=NJU\"},{\"name\":\"ubuntu-cdimage\",\"url\":\"https://mirror.nju.edu.cn/ubuntu-cdimage/\",\"status\":\"success\",\"helpUrl\":null},{\"name\":\"ubuntu-cloud-images\",\"url\":\"https://mirror.nju.edu.cn/ubuntu-cloud-images/\",\"status\":\"success\",\"helpUrl\":\"https://help.mirror.nju.edu.cn/ubuntu-cloud-images/?mirror=NJU\"},{\"name\":\"ubuntu-old-releases\",\"url\":\"https://mirror.nju.edu.cn/ubuntu-old-releases/\",\"status\":\"success\",\"helpUrl\":\"https://help.mirror.nju.edu.cn/ubuntu-old-releases/?mirror=NJU\"},{\"name\":\"ubuntu-ports\",\"url\":\"https://mirror.nju.edu.cn/ubuntu-ports/\",\"status\":\"syncing\",\"helpUrl\":\"https://help.mirror.nju.edu.cn/ubuntu-ports/?mirror=NJU\"},{\"name\":\"ubuntu-releases\",\"url\":\"https://mirror.nju.edu.cn/ubuntu-releases/\",\"status\":\"success\",\"helpUrl\":null},{\"name\":\"ubuntukylin\",\"url\":\"https://mirror.nju.edu.cn/ubuntukylin/\",\"status\":\"success\",\"helpUrl\":null},{\"name\":\"ubuntukylin-cdimage\",\"url\":\"https://mirror.nju.edu.cn/ubuntukylin-cdimage/\",\"status\":\"success\",\"helpUrl\":null}]}}\n",
+      "stderr": ""
+    },
+    {
+      "startedAt": "2026-10-20T08:30:46.452846+00:00",
+      "command": "njucli campus mirrors pypi --format json",
+      "exitCode": 0,
+      "stdout": "{\"ok\":true,\"data\":{\"sourceUrl\":\"https://mirror.nju.edu.cn/\",\"items\":[{\"name\":\"jetson-pypi\",\"url\":\"https://mirror.nju.edu.cn/jetson-pypi/\",\"status\":\"success\",\"helpUrl\":null},{\"name\":\"pypi\",\"url\":\"https://mirror.nju.edu.cn/pypi/\",\"status\":\"syncing\",\"helpUrl\":\"https://help.mirror.nju.edu.cn/pypi/?mirror=NJU\"},{\"name\":\"rocm-pypi\",\"url\":\"https://mirror.nju.edu.cn/rocm-pypi/\",\"status\":\"success\",\"helpUrl\":null}]}}\n",
+      "stderr": ""
+    }
+  ],
+  "scope": "真实安装包和公开镜像查询；HTTP 失败及异常 JSON/字段响应的错误分支按源码检查，当前镜像站返回有效响应。"
+}

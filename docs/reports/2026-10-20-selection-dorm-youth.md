@@ -1,11 +1,11 @@
 # 选课、宿舍与青年平台实网验证
 
-验证日期：2026-10-20，Asia/Shanghai。使用当前账号，通过 HTTP 和构建后的真实 CLI、独立 Skill、stdio MCP 执行。宿舍与青年平台的写入验证已获用户授权；选课按用户要求只查询和探测接口。
+验证日期：2026-10-20，Asia/Shanghai。使用当前账号，通过 HTTP 和构建后的统一 CLI、stdio MCP 执行。宿舍与青年平台的写入验证已获用户授权；选课按用户要求只查询和探测接口。
 
 ## 执行证据
 
 - [CLI 日志](assets/2026-10-20-selection-dorm-youth/cli.jsonl)：48 次实际执行的命令、时间、退出码、错误及响应摘要。
-- [MCP 日志](assets/2026-10-20-selection-dorm-youth/mcp.jsonl)：统一和独立入口的 6 次真实课程查询。
+- [MCP 日志](assets/2026-10-20-selection-dorm-youth/mcp.jsonl)：真实课程查询的参数、时间与结果摘要。
 - [选课状态](assets/2026-10-20-selection-dorm-youth/selection-state.json)：API 登录结果、会话检查与学校返回的开放时间。
 - [本地检查](assets/2026-10-20-mirrors-classrooms/checks.log)：类型检查、构建、真实本地运行检查。
 
@@ -22,8 +22,7 @@ API 登录实际返回 `code=1`。登录后的 `loadPublicInfo_course.do` 返回
 | 统一 CLI `ehall available --kind public` | 总计 93 门，第一页返回 20 门 |
 | 统一 CLI `ehall available --kind plan` | 返回 4 门 |
 | 统一 CLI `ehall selected` | 返回 15 门 |
-| 独立 Skill `ehall selected` | 返回相同的 15 门 |
-| 统一与独立 MCP 的 `ehall_available`、`ehall_selected` | 每个入口均确认上述三组数量 |
+| 统一 MCP 的 `ehall_available`、`ehall_selected` | 确认上述三组数量 |
 
 本次未调用选课提交、结果轮询或退课接口。这三个动作保留实现，提交验证状态继续标记为待验证；可选课程目录的非空结果不代表当时能够完成选课。
 

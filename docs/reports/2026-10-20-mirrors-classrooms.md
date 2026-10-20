@@ -1,6 +1,6 @@
 # 空闲教室与镜像实网验证
 
-验证日期：2026-10-20，Asia/Shanghai。Agent 通过终端实际运行构建后的统一 CLI、独立 Skill 和 stdio MCP，使用当前账号的有效 EHall 会话执行只读查询。请求通过 HTTP 完成；验证期间没有启动浏览器或提交业务写入。
+验证日期：2026-10-20，Asia/Shanghai。Agent 通过终端实际运行构建后的统一 CLI、安装产物和 stdio MCP，使用当前账号的有效 EHall 会话执行只读查询。请求通过 HTTP 完成；验证期间没有启动浏览器或提交业务写入。
 
 ## 执行证据
 
@@ -28,7 +28,7 @@
 | `ehall classrooms today --campus 2 --period 5-8` | 浦口返回 10 间 |
 | `ehall classrooms today --campus 4 --period 5-8` | 苏州返回 25 间 |
 
-独立入口 `node skills/njucli-ehall/scripts/run.mjs ehall classrooms 2026-10-20 --campus 3 --period 5-8 --building 111 --format json` 返回相同的 3 间环科楼教室。统一 MCP 的校区、楼栋、教室工具均执行了真实请求；统一与独立 MCP 的环科楼查询均返回 3 间，楼栋代码全部为 `111`。
+统一入口 `node dist/cli.js ehall classrooms 2026-10-20 --campus 3 --period 5-8 --building 111 --format json` 与安装产物均返回 3 间环科楼教室。统一 MCP 的校区、楼栋、教室工具均执行了真实请求；环科楼查询返回 3 间，楼栋代码全部为 `111`。
 
 实网修正：
 
@@ -44,11 +44,9 @@
 | 统一 CLI `ehall services "成绩"` | 返回我的成绩、成绩认定申请 2 项 |
 | 统一 CLI `ehall services "食堂"` | 返回“食堂餐饮”，应用 ID 为 `6940550212445446` |
 | 统一 CLI `ehall services` | 返回当前账号默认目录 11 项 |
-| 独立 Skill `ehall services "空闲教室"` | 返回同样 3 项 |
 | 统一 MCP `ehall_services`，关键词“空闲教室” | 返回同样 3 项 |
-| 独立 MCP `ehall_services`，关键词“食堂” | 返回“食堂餐饮” |
 | 统一 CLI `campus mirrors ubuntu` | 读取真实公开 JSON，返回 8 项 |
-| 独立 Skill `campus mirrors pypi` | 返回 3 项 |
+| 安装后的 `njucli campus mirrors pypi` | 返回 3 项，见[统一安装验证](2026-10-20-unified-cli.md) |
 | 统一 MCP `campus_mirrors`，关键词 `anaconda` | 返回 1 项 |
 
 关键词搜索使用官网 `/jsonp/ywtb/searchAppAndService?searchKey=...` 的 `data.appList`。默认目录继续读取 `/jsonp/ywtb/onlineYwtbApps`。食堂餐饮的应用入口实际跳转到[官方介绍图片](https://ehall.nju.edu.cn/ywtb-portal/stcy.png)，本次验证范围为入口发现与访问。
@@ -57,6 +55,8 @@
 
 ## 本地检查与后续验证
 
-`pnpm lint`、`pnpm test` 通过。后者执行 TypeScript 构建、真实子进程文件锁检查，以及 18 个独立 Skill 的入口、声明依赖和 MCP 契约检查。远端业务结果以上面的实际请求日志为准。`npm pack --dry-run` 通过；实际 tarball 安装到临时目录后，安装产物的空闲教室查询返回环科楼 3 间，服务搜索也执行了真实请求。
+`pnpm lint`、`pnpm test` 通过。当前自动检查执行 TypeScript 构建、真实子进程文件锁检查，以及安装后的统一 CLI、18 个业务入口与 Skill 注册、随包资料、模板和只读 MCP 检查，详见[统一安装验证](2026-10-20-unified-cli.md)。远端业务结果以上面的实际请求日志为准。`npm pack --dry-run` 通过；实际 tarball 安装到临时目录后，安装产物的空闲教室查询返回环科楼 3 间，服务搜索也执行了真实请求。
+
+镜像配置读取统一使用 `AppError`：HTTP 失败返回 `REMOTE_UNAVAILABLE`，JSON 或字段格式变化返回 `REMOTE_SCHEMA_CHANGED`。本次复核通过实际安装后的 `njucli campus mirrors ubuntu --format json` 与 `njucli campus mirrors pypi --format json` 分别取得 8 项和 3 项；[复核日志](assets/2026-10-20-mirrors-classrooms/review.json)包含安装、真实查询及本地检查输出。镜像站本次返回有效响应，异常响应分支按源码核对。
 
 研究生选课、宿舍绑定和青年平台能力的进一步实际请求结果见[选课、宿舍与青年平台验证](2026-10-20-selection-dorm-youth.md)。
