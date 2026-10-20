@@ -3,6 +3,7 @@ import { AppError } from "../../../src/core/errors.js";
 import type { FetchLike, FetchResponse } from "../../../src/core/types.js";
 
 const ROOT = "https://ehallapp.nju.edu.cn/jwapp/sys/kxjas";
+const APP = "https://ehall.nju.edu.cn/appShow?appId=4768402106681759";
 const ENTRY = `${ROOT}/*default/index.do`;
 const id = z.string().trim().min(1);
 export const classroomQuerySchema = z.object({
@@ -15,8 +16,6 @@ export const classroomQuerySchema = z.object({
     }, "节次须为有效整数，结束节次须大于等于开始节次")
     .describe("单节或连续节次，如 5 或 5-8；整个区间均须空闲"),
   building: id.optional().describe("教学楼代码，取自 ehall_classroom_buildings"),
-  page: z.number().int().min(1).default(1),
-  pageSize: z.number().int().min(1).default(50),
 });
 type ClassroomQuery = z.infer<typeof classroomQuerySchema>;
 const count = z.union([z.number().int().nonnegative(), z.string().regex(/^\d+$/).transform(Number)]);
@@ -51,9 +50,11 @@ export class ClassroomClient {
     const data = await this.query("/modules/kxjscx/cxkxjs.do", "cxkxjs", {
       KXRQ: input.date, XXXQDM: input.campus, KSJC: start!, JSJC: end!,
       ...(input.building === undefined ? {} : { JXLDM: input.building }),
-      pageNumber: String(input.page), pageSize: String(input.pageSize), querySetting: "[]",
+      querySetting: "[]",
     }, z.object({ totalSize: count, rows: z.array(roomSchema) }));
-    return { ...input, total: data.totalSize, items: data.rows.map(row => ({
+    // 上游会把楼栋 111 同时匹配到 11，按返回的楼栋代码精确筛选。
+    const rows = input.building === undefined ? data.rows : data.rows.filter(row => row.JXLDM === input.building);
+    return { ...input, total: input.building === undefined ? data.totalSize : rows.length, items: rows.map(row => ({
       name: row.JASMC, campus: row.XXXQDM_DISPLAY ?? null,
       buildingId: row.JXLDM ?? null, building: row.JXLDM_DISPLAY ?? null,
       type: row.JASLXDM_DISPLAY ?? null, time: row.KXSJ ?? null,
@@ -62,7 +63,7 @@ export class ClassroomClient {
   }
 
   private async query<T>(path: string, key: string, params: Record<string, string>, schema: z.ZodType<T>): Promise<T> {
-    await this.request(ENTRY);
+    await this.request(APP);
     const response = await this.request(ROOT + path, {
       method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded", "X-Requested-With": "XMLHttpRequest", Referer: ENTRY },
       body: new URLSearchParams(params).toString(),
@@ -80,7 +81,7 @@ export class ClassroomClient {
 
   private async request(url: string, init?: RequestInit): Promise<FetchResponse> {
     const response = await this.fetch(url, init);
-    if (new URL(response.url).hostname === "authserver.nju.edu.cn" || response.status === 401 || response.status === 403) {
+    if (new URL(response.url).hostname === "authserver.nju.edu.cn" || response.status === 401) {
       throw new AppError("AUTH_REQUIRED", "空闲教室会话未登录或已失效", { authCommand: "njucli auth login ehall" });
     }
     if (!response.ok) throw new AppError("REMOTE_UNAVAILABLE", `空闲教室请求 HTTP ${response.status}`);

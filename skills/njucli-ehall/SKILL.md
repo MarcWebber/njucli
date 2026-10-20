@@ -22,7 +22,7 @@ node scripts/run.mjs ehall classrooms today --campus 3 --period 5 --building 11 
 
 校区代码由 `classroom-campuses` 获取，教学楼代码由 `classroom-buildings` 获取。日期支持 `today`、`tomorrow`、`YYYY-MM-DD`，省略日期使用今天。`--period` 必填，填写单节或连续区间；结果表示整个区间均空闲，包含教室、教学楼、座位数和空闲时间。
 
-默认返回第 1 页、每页 50 间；通过 `--page`、`--page-size` 翻页，`total` 为匹配总数。只读 MCP 对应 `ehall_classroom_campuses`、`ehall_classroom_buildings`、`ehall_classrooms`。接口与验证范围见[空闲教室接口](references/interfaces.md#空闲教室)。
+一次返回全部匹配教室，`total` 为匹配总数。只读 MCP 对应 `ehall_classroom_campuses`、`ehall_classroom_buildings`、`ehall_classrooms`。接口与验证范围见[空闲教室接口](references/interfaces.md#空闲教室)。
 
 ## 研究生个人资料
 

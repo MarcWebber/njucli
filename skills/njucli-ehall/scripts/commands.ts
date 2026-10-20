@@ -84,17 +84,13 @@ export function registerEHallCommands(
   addFormatOption(ehall.command("classrooms [date]").description("查询指定日期、连续节次内均空闲的教室，默认今天")
     .requiredOption("--campus <id>", "校区代码，见 classroom-campuses")
     .requiredOption("--period <range>", "单节或连续节次，如 5 或 5-8")
-    .option("--building <id>", "教学楼代码，见 classroom-buildings")
-    .option("--page <page>", "页码，默认 1")
-    .option("--page-size <size>", "每页条数，默认 50"))
-    .action(async (date: string | undefined, options: PageOptions & { campus: string; period: string; building?: string }) => runCommand(runtime, options, async () => {
-      const parsed = classroomQuerySchema.safeParse({ ...options, date,
-        page: options.page === undefined ? undefined : Number(options.page), pageSize: options.pageSize === undefined ? undefined : Number(options.pageSize),
-      });
+    .option("--building <id>", "教学楼代码，见 classroom-buildings"))
+    .action(async (date: string | undefined, options: FormatOptions & { campus: string; period: string; building?: string }) => runCommand(runtime, options, async () => {
+      const parsed = classroomQuerySchema.safeParse({ ...options, date });
       if (!parsed.success) throw new AppError("INVALID_INPUT", parsed.error.issues.map(issue => issue.message).join("；"));
       const data = await service.classrooms(parsed.data);
       return { data, text: [
-        `${data.date} 第 ${data.period} 节：共 ${data.total} 间空闲教室；第 ${data.page} 页，本页 ${data.items.length} 间`,
+        `${data.date} 第 ${data.period} 节：共 ${data.total} 间空闲教室`,
         ...data.items.map(room => [room.name, room.building, room.type, room.seats === null ? null : `${room.seats} 座`, room.time].filter(Boolean).join(" | ")),
       ].join("\n") };
     }));

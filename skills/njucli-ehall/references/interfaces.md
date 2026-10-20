@@ -6,7 +6,8 @@
 
 | 方法 | 路径 | 契约 |
 | --- | --- | --- |
-| GET | `/jsonp/ywtb/onlineYwtbApps?searchKeyword=...&labels=` | `result=success`；`data` 为应用数组，取 `appId/appName/hasPermission` |
+| GET | `/jsonp/ywtb/onlineYwtbApps` | 默认服务目录；`result=success`，`data` 为应用数组，取 `appId/appName/hasPermission` |
+| GET | `/jsonp/ywtb/searchAppAndService?searchKey=...` | 关键词搜索；`result=success`，读取 `data.appList`，字段同目录；关键词可匹配应用描述 |
 | POST | `/taskcenterapp/sys/taskCenter/taskNew/getTaskRestful.do` | `flag=1/2/3` 分别为待办、已办、我发起 |
 | POST | `/taskcenterapp/sys/taskCenter/taskNew/queryProcessTrack.do` | `state=1/2/3` 分别为进行中、已完成、已撤销 |
 
@@ -14,17 +15,17 @@
 
 ## 空闲教室
 
-[本科生院使用说明](https://jw.nju.edu.cn/34/39/c24683a603193/page.htm)确认 EHall 提供空闲教室查询。应用入口为 `https://ehallapp.nju.edu.cn/jwapp/sys/kxjas/*default/index.do`，业务请求与入口复用同一 EHall 会话。以下路径相对此应用根目录，均为表单编码的 POST。
+[本科生院使用说明](https://jw.nju.edu.cn/34/39/c24683a603193/page.htm)确认 EHall 提供空闲教室查询。每次调用先访问[官方应用入口](https://ehall.nju.edu.cn/appShow?appId=4768402106681759)，由跳转建立应用权限，再复用同一 EHall 会话请求业务接口。应用根目录为 `https://ehallapp.nju.edu.cn/jwapp/sys/kxjas`；以下路径均为表单编码的 POST。
 
 | 路径 | 参数与结果 |
 | --- | --- |
 | `zd/getXxxqdqx.do` | 校区字典，读取 `datas.code.rows` 的 `id/name` |
 | `modules/kxjas/jxlcx.do` | `XXXQDM` 为校区；读取 `datas.jxlcx.rows` 的 `JXLDM/JXLMC` |
-| `modules/kxjscx/cxkxjs.do` | `KXRQ/XXXQDM/KSJC/JSJC` 为日期、校区及起止节次；可选 `JXLDM` 限定教学楼；`pageNumber/pageSize/querySetting=[]` 分页 |
+| `modules/kxjscx/cxkxjs.do` | `KXRQ/XXXQDM/KSJC/JSJC` 为日期、校区及起止节次；可选 `JXLDM` 限定教学楼，`querySetting=[]` |
 
-成功码为 `code=0`。空闲教室取 `datas.cxkxjs.totalSize/rows`；展示字段为 `JASMC`、`XXXQDM_DISPLAY`、`JXLDM/JXLDM_DISPLAY`、`JASLXDM_DISPLAY`、`KXSJ`、`SKZWS/KSZWS`。座位数字符串转为数值，缺失值保留为 `null`。查询必须带起止节次；省略时接口会返回全部教室。连续节次的含义为整个区间均空闲，分页从 1 开始。
+成功码为 `code=0`。空闲教室取 `datas.cxkxjs.totalSize/rows`；展示字段为 `JASMC`、`XXXQDM_DISPLAY`、`JXLDM/JXLDM_DISPLAY`、`JASLXDM_DISPLAY`、`KXSJ`、`SKZWS/KSZWS`。座位数字符串转为数值，缺失值保留为 `null`。查询必须带起止节次，连续节次表示整个区间均空闲。接口一次返回全部匹配结果。指定楼栋时，按返回的 `JXLDM` 精确筛选并计算总数：实测上游将 `111` 同时匹配到 `11` 和 `111`。
 
-请求、字段和节次语义参考 [NJU_Classroom_Booking 的查询实现](https://github.com/Aalas1111/NJU_Classroom_Booking/blob/6d52fd90dd0587036a31b8cc3b17fa8bdd250b19/src/crb/api.py)、[数据结构](https://github.com/Aalas1111/NJU_Classroom_Booking/blob/6d52fd90dd0587036a31b8cc3b17fa8bdd250b19/src/crb/models.py)。公开实网确认入口要求统一认证。登录后的 NjuCLI 实网查询待核对。
+接口与字段已通过认证后的实际请求核对；验证报告和执行日志见[空闲教室与镜像实网验证](../../../docs/reports/2026-10-20-mirrors-classrooms.md)。
 
 ## 研究生节假日行程登记
 
@@ -155,7 +156,9 @@
 | `XF / PKSJDDMS` | 学分 / 时间地点 |
 | `DQRS / KXRS / IS_CONFLICT` | 已选人数 / 容量 / 冲突标记 |
 
-接口来自选课站官方前端。已验证方案内、公选课和已选课程查询；真实选课、退课待验证。
+登录状态以 `loadPublicInfo_course.do` 的非空 `loginUserId` 确认。关闭选课期间，该响应仍包含已登录身份，但缺少 `csrfToken`，并通过 `msg` 返回当前开放状态；此时仍可查询可选和已选课程。提交方法需要令牌，缺少令牌时原样报告业务提示。
+
+统一 CLI 与独立入口已通过真实请求验证方案内、公选课和已选课程查询。本轮按用户要求仅查询与探测选课接口，选课、结果轮询及退课提交保留为待验证。详见[实网验证报告](../../../docs/reports/2026-10-20-selection-dorm-youth.md)。
 
 ## 研究生奖学金
 

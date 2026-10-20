@@ -1,0 +1,201 @@
+{
+  "requests": [
+    {
+      "startedAt": "2026-10-20T06:07:09.291Z",
+      "finishedAt": "2026-10-20T06:07:09.763Z",
+      "method": "GET",
+      "url": "https://ehall.nju.edu.cn/appShow?appId=4768402106681759",
+      "body": null,
+      "status": 200,
+      "finalUrl": "https://ehallapp.nju.edu.cn/jwapp/sys/kxjas/*default/index.do"
+    },
+    {
+      "startedAt": "2026-10-20T06:07:09.763Z",
+      "finishedAt": "2026-10-20T06:07:09.833Z",
+      "method": "POST",
+      "url": "https://ehallapp.nju.edu.cn/jwapp/sys/kxjas/zd/getXxxqdqx.do",
+      "body": "",
+      "status": 200,
+      "finalUrl": "https://ehallapp.nju.edu.cn/jwapp/sys/kxjas/zd/getXxxqdqx.do",
+      "businessCode": "0",
+      "results": {
+        "code": {
+          "total": null,
+          "count": 4
+        }
+      }
+    },
+    {
+      "startedAt": "2026-10-20T06:07:09.836Z",
+      "finishedAt": "2026-10-20T06:07:10.174Z",
+      "method": "GET",
+      "url": "https://ehall.nju.edu.cn/appShow?appId=4768402106681759",
+      "body": null,
+      "status": 200,
+      "finalUrl": "https://ehallapp.nju.edu.cn/jwapp/sys/kxjas/*default/index.do"
+    },
+    {
+      "startedAt": "2026-10-20T06:07:10.174Z",
+      "finishedAt": "2026-10-20T06:07:10.271Z",
+      "method": "POST",
+      "url": "https://ehallapp.nju.edu.cn/jwapp/sys/kxjas/modules/kxjas/jxlcx.do",
+      "body": "XXXQDM=3",
+      "status": 200,
+      "finalUrl": "https://ehallapp.nju.edu.cn/jwapp/sys/kxjas/modules/kxjas/jxlcx.do",
+      "businessCode": "0",
+      "results": {
+        "jxlcx": {
+          "total": 7,
+          "count": 7
+        }
+      }
+    },
+    {
+      "startedAt": "2026-10-20T06:07:10.272Z",
+      "finishedAt": "2026-10-20T06:07:10.600Z",
+      "method": "GET",
+      "url": "https://ehall.nju.edu.cn/appShow?appId=4768402106681759",
+      "body": null,
+      "status": 200,
+      "finalUrl": "https://ehallapp.nju.edu.cn/jwapp/sys/kxjas/*default/index.do"
+    },
+    {
+      "startedAt": "2026-10-20T06:07:10.600Z",
+      "finishedAt": "2026-10-20T06:07:10.858Z",
+      "method": "POST",
+      "url": "https://ehallapp.nju.edu.cn/jwapp/sys/kxjas/modules/kxjscx/cxkxjs.do",
+      "body": "KXRQ=2026-10-20&XXXQDM=3&KSJC=5&JSJC=8&JXLDM=111&querySetting=%5B%5D",
+      "status": 200,
+      "finalUrl": "https://ehallapp.nju.edu.cn/jwapp/sys/kxjas/modules/kxjscx/cxkxjs.do",
+      "businessCode": "0",
+      "results": {
+        "cxkxjs": {
+          "total": 21,
+          "count": 21
+        }
+      }
+    }
+  ],
+  "result": {
+    "campus": "3",
+    "date": "2026-10-20",
+    "period": "5-8",
+    "building": "111",
+    "total": 3,
+    "items": [
+      {
+        "name": "环科楼B-105",
+        "campus": "仙林校区",
+        "buildingId": "111",
+        "building": "环科楼",
+        "type": "普通多媒体教室",
+        "time": "14:00-14:50,15:00-15:50,16:10-17:00,17:10-18:00",
+        "seats": 60,
+        "examSeats": 0
+      },
+      {
+        "name": "环科楼B-106",
+        "campus": "仙林校区",
+        "buildingId": "111",
+        "building": "环科楼",
+        "type": "普通多媒体教室",
+        "time": "14:00-14:50,15:00-15:50,16:10-17:00,17:10-18:00",
+        "seats": 62,
+        "examSeats": 0
+      },
+      {
+        "name": "环科楼B-108",
+        "campus": "仙林校区",
+        "buildingId": "111",
+        "building": "环科楼",
+        "type": "普通多媒体教室",
+        "time": "14:00-14:50,15:00-15:50,16:10-17:00,17:10-18:00",
+        "seats": 62,
+        "examSeats": 0
+      }
+    ]
+  },
+  "parameterProbes": [
+    {
+      "params": {
+        "KXRQ": "2026-10-20",
+        "XXXQDM": "3",
+        "KSJC": "5",
+        "JSJC": "8",
+        "querySetting": "[]",
+        "pageNumber": "1",
+        "pageSize": "3"
+      },
+      "httpStatus": 200,
+      "businessCode": "0",
+      "total": 69,
+      "returnedCount": 69,
+      "buildingIds": [
+        "11",
+        "111",
+        "12",
+        "16",
+        "17",
+        "18"
+      ]
+    },
+    {
+      "params": {
+        "KXRQ": "2026-10-20",
+        "XXXQDM": "3",
+        "KSJC": "5",
+        "JSJC": "8",
+        "querySetting": "[]",
+        "pageNumber": "2",
+        "pageSize": "3"
+      },
+      "httpStatus": 200,
+      "businessCode": "0",
+      "total": 69,
+      "returnedCount": 69,
+      "buildingIds": [
+        "11",
+        "111",
+        "12",
+        "16",
+        "17",
+        "18"
+      ]
+    },
+    {
+      "params": {
+        "KXRQ": "2026-10-20",
+        "XXXQDM": "3",
+        "KSJC": "5",
+        "JSJC": "8",
+        "querySetting": "[]",
+        "JXLDM": "11"
+      },
+      "httpStatus": 200,
+      "businessCode": "0",
+      "total": 18,
+      "returnedCount": 18,
+      "buildingIds": [
+        "11"
+      ]
+    },
+    {
+      "params": {
+        "KXRQ": "2026-10-20",
+        "XXXQDM": "3",
+        "KSJC": "5",
+        "JSJC": "8",
+        "querySetting": "[]",
+        "JXLDM": "111"
+      },
+      "httpStatus": 200,
+      "businessCode": "0",
+      "total": 21,
+      "returnedCount": 21,
+      "buildingIds": [
+        "11",
+        "111"
+      ]
+    }
+  ]
+}

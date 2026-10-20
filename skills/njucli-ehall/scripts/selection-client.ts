@@ -26,6 +26,7 @@ const SELECTION_SCOPES: Record<CourseSelectionKind, { offeringPath: string; lx: 
 interface SelectionSession {
   loginUserId?: string | number | null;
   csrfToken?: string | null;
+  msg?: string | null;
 }
 
 interface CourseRow {
@@ -61,7 +62,7 @@ export class GraduateCourseSelectionClient {
     const body = await response.text();
     if (isLoginPage(body)) return false;
     const session = JSON.parse(body) as SelectionSession;
-    return Boolean(id(session.loginUserId) && session.csrfToken);
+    return Boolean(id(session.loginUserId));
   }
 
   async listAvailable(
@@ -152,9 +153,10 @@ export class GraduateCourseSelectionClient {
   private async sessionToken(): Promise<string> {
     const session = await this.get<SelectionSession>(SESSION_PATH);
     const csrfToken = session.csrfToken?.trim();
-    if (!id(session.loginUserId) || !csrfToken) {
+    if (!id(session.loginUserId)) {
       throw new Error("研究生选课会话无效，请运行 njucli auth login selection");
     }
+    if (!csrfToken) throw new Error(session.msg || "当前选课时段未提供提交令牌");
     return csrfToken;
   }
 
