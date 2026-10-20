@@ -1,6 +1,6 @@
 # AI 客户端接入
 
-NjuCLI 提供统一 CLI、只读 stdio MCP 工具和独立 Skill。安装步骤见 [README](../README.md#安装)。
+NjuCLI 提供统一 CLI、只读 stdio MCP 工具和配套 Skills。安装步骤见 [README](../README.md#安装)。
 
 ## 选择入口
 
@@ -31,17 +31,17 @@ NjuCLI 提供统一 CLI、只读 stdio MCP 工具和独立 Skill。安装步骤�
 
 ## MCP 工具概览
 
-`njucli mcp` 当前提供 130 个只读工具，兼容 MCP 规范的客户端可通过 `tools/list` 协议自动发现。各领域工具数量分布如下：
+`njucli mcp` 当前提供 136 个只读工具，兼容 MCP 规范的客户端可通过 `tools/list` 协议自动发现。各领域工具数量分布如下：
 
 | 领域 | 标识 | 工具数量 |
 | :--- | :--- | :--- |
 | 青年平台 | youth | 31 |
-| 教务与办事大厅 | ehall | 20 |
+| 教务与办事大厅 | ehall | 23 |
 | 云盘 | box | 17 |
 | 自助服务 | self_service | 8 |
 | 软件学院课程 | se | 8 |
 | 智汇南雍课程 | lms | 7 |
-| 协同表格 | table | 6 |
+| 协同表格 | table | 8 |
 | 学院与教师 | institution | 6 |
 | 论文写作 | tex | 5 |
 | 宿舍服务 | dorm | 5 |
@@ -51,26 +51,14 @@ NjuCLI 提供统一 CLI、只读 stdio MCP 工具和独立 Skill。安装步骤�
 | 正版软件 | software | 2 |
 | 图书馆 | library | 2 |
 | IT 侠 | itxia | 2 |
-| 校园信息 | campus | 2 |
-| **总计** | - | **130** |
+| 校园信息 | campus | 3 |
+| **总计** | - | **136** |
 
 部分客户端对一次性启用的工具总数敏感（例如超过 80 个工具可能影响模型响应质量），建议在客户端设置中根据实际需要关闭未使用的工具。
 
 ## 客户端指南
 
 - [WorkBuddy](workbuddy.md)：腾讯推出的桌面端 AI 办公工作台，支持接入 NjuCLI 的 MCP 工具与 18 个 Skill 扩展。
-
-## 独立 Skill
-
-按需[安装单个 Skill](../README.md#只安装一个-skill)，然后让 AI 按该 Skill 完成任务。各业务 Skill 可独立提供对应的只读 MCP 工具；`njucli mcp` 提供全部工具，工具清单由客户端发现。
-
-例如安装软件学院课程 Skill：
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/install.sh | bash -s -- --skill se
-```
-
-独立入口使用 `node "$SKILL_DIR/scripts/run.mjs" mcp`。日常汇总工具名为 `campus_today`。
 
 ## 任务使用
 
@@ -81,7 +69,7 @@ curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/inst
 | [青年平台](../skills/njucli-youth/SKILL.md) | 查询活动、志愿时长与第二课堂，按用户要求报名或取消 |
 | [协同表格](../skills/njucli-table/SKILL.md) | 查找与复制模板，创建表格、公式和视图，按行 ID 填写记录 |
 | [云盘](../skills/njucli-box/SKILL.md) | 查询资料库和路径，上传下载或管理文件；分享后将返回的 `url` 交给用户，保留 `id` 供撤销 |
-| [教务与办事大厅](../skills/njucli-ehall/SKILL.md) | 查询课表、选课、成绩、考试与培养方案；办理行程时一次补齐缺项，提交后回读 |
+| [教务与办事大厅](../skills/njucli-ehall/SKILL.md) | 查询空闲教室、课表、选课、成绩、考试与培养方案；办理行程时一次补齐缺项，提交后回读 |
 | [论文写作](../skills/njucli-tex/SKILL.md) | 按用户材料修改正文、上传素材，编译后读取日志和 PDF |
 | [自助服务](../skills/njucli-self-service/SKILL.md) | 从实时项目目录申请正式电子成绩单或纸质证明，查询费用、管理申请、查找设备和查询云打印；电子文件默认发至绑定邮箱，询问下载后按授权保存邮件附件 |
 | [邮箱](../skills/njucli-mail/SKILL.md) | 绑定和切换邮箱，查询、搜索、读取正文并下载附件；读取保持原有已读状态 |

@@ -1,0 +1,93 @@
+[
+  {
+    "startedAt": "2026-10-20T07:04:33.117120+00:00",
+    "command": "pnpm install --frozen-lockfile",
+    "exitCode": 0,
+    "stdout": "Lockfile is up to date, resolution step is skipped\nAlready up to date\n\n\n> njucli@0.1.0 postinstall <repo>\n> node scripts/install-skills.mjs\n\nDone in 217ms using pnpm v10.27.0\n",
+    "stderr": ""
+  },
+  {
+    "startedAt": "2026-10-20T07:04:33.392075+00:00",
+    "command": "pnpm lint",
+    "exitCode": 0,
+    "stdout": "\n> njucli@0.1.0 lint <repo>\n> tsc -p tsconfig.json --noEmit\n\n",
+    "stderr": ""
+  },
+  {
+    "startedAt": "2026-10-20T07:04:35.908984+00:00",
+    "command": "bash -n scripts/install.sh",
+    "exitCode": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "startedAt": "2026-10-20T07:04:35.914380+00:00",
+    "command": "bash scripts/install.sh --help",
+    "exitCode": 0,
+    "stdout": "用法：install.sh\n安装 njucli 及配套 Skills。\n",
+    "stderr": ""
+  },
+  {
+    "startedAt": "2026-10-20T07:04:35.919380+00:00",
+    "command": "bash scripts/install.sh --skill ehall",
+    "exitCode": 1,
+    "stdout": "",
+    "stderr": "未知参数：--skill；用法：install.sh\n"
+  },
+  {
+    "startedAt": "2026-10-20T07:04:35.925265+00:00",
+    "command": "npm pack --ignore-scripts --json --pack-destination /tmp/njucli-unified-verification",
+    "exitCode": 0,
+    "stdout": "{\n  \"id\": \"njucli@0.1.0\",\n  \"name\": \"njucli\",\n  \"version\": \"0.1.0\",\n  \"size\": 2977618,\n  \"unpackedSize\": 6135678,\n  \"shasum\": \"d650a336296354ff76a6070bc7e7ec11d5760086\",\n  \"integrity\": \"sha512-H7b89y1IbebuxYCs2AevcIORPMctWcXkmtVDJesLC25fENgRc0PAJYqy2cCB6+qkkhdT5tH8Npy7PX84hq0X+g==\",\n  \"filename\": \"njucli-0.1.0.tgz\",\n  \"entryCount\": 272,\n  \"bundled\": []\n}\n",
+    "stderr": ""
+  },
+  {
+    "startedAt": "2026-10-20T07:04:36.611112+00:00",
+    "command": "npm install --global --prefix /tmp/njucli-unified-verification/install --foreground-scripts --no-audit --no-fund /tmp/njucli-unified-verification/njucli-0.1.0.tgz",
+    "exitCode": 0,
+    "stdout": "\n> njucli@0.1.0 postinstall\n> node scripts/install-skills.mjs\n\n已安装 18 个全局 Skill：/tmp/njucli-unified-verification/skills\n\nadded 160 packages in 2s\n",
+    "stderr": "npm warn deprecated whatwg-encoding@3.1.1: Use @exodus/bytes instead for a more spec-conformant and faster implementation\nnpm warn install-scripts 1 package has install scripts not yet covered by allowScripts:\nnpm warn install-scripts   njucli@0.1.0 (postinstall: node scripts/install-skills.mjs)\nnpm warn install-scripts\nnpm warn install-scripts Run `npm install -g --allow-scripts=njucli` to allow these scripts once, or `npm config set allow-scripts=njucli --location=user` to allow them for all global installs.\n"
+  },
+  {
+    "startedAt": "2026-10-20T07:04:38.294281+00:00",
+    "command": "njucli --help",
+    "exitCode": 0,
+    "stdout": "Usage: njucli [options] [command]\n\n南京大学校园服务命令行工具\n\nOptions:\n  -V, --version      output the version number\n  -h, --help         display help for command\n\nCommands:\n  institution        检索学校机构、教师（含联系方式）与后勤电话\n  account            管理本机隔离账号\n  auth               管理统一认证会话\n  box|njubox         使用南大云盘：在线文档、文件、资料库、分享与协作\n  youth              第二课堂、志愿服务、社会实践与社团\n  itxia              IT 侠电脑维修预约、打开预约单与进度查询；取消仅 CLI 且须 --yes，只读 MCP 不提供\n  table              南大协同表格：模板、登分表、字段与数据填写\n  campus             查询校园信息与日程汇总\n  ehall              教务、课表、选课、个人资料与办事大厅\n  dorm               宿舍电费房间绑定与充值记录\n  pay                校园卡余额与消费、充值记录\n  library            查询图书馆馆藏与借阅\n  mail               绑定校园邮箱、查询邮件和下载附件（不修改已读状态）\n  software           查询正版软件与下载官方安装包\n  sports             查询体育场馆与预约记录\n  se                 使用软件学院教学支持系统\n  lms                智汇南雍：课程、课件、作业、测试与助教作业创建\n  tex                使用南京大学 TeXPage 写作平台\n  self-service       证明申请、电子文件领取与云打印查询\n  upgrade [options]  从 GitHub main 升级全局 CLI 和 Skill\n  mcp                启动只读 MCP stdio 服务\n",
+    "stderr": ""
+  },
+  {
+    "startedAt": "2026-10-20T07:04:38.875742+00:00",
+    "command": "njucli itxia cancel --help",
+    "exitCode": 0,
+    "stdout": "Usage: njucli itxia cancel [options] <id>\n\n取消预约（不可撤销，需 --yes 确认）\n\nOptions:\n  --yes              确认取消该预约单\n  --format <format>  输出格式：text 或 json\n  -h, --help         display help for command\n",
+    "stderr": ""
+  },
+  {
+    "startedAt": "2026-10-20T07:04:39.338634+00:00",
+    "command": "njucli campus sources --format json",
+    "exitCode": 0,
+    "stdout": "{\"ok\":true,\"data\":[{\"id\":\"nju\",\"name\":\"南京大学\",\"origin\":\"https://www.nju.edu.cn/\",\"sections\":[{\"id\":\"news\",\"name\":\"南大新闻\",\"url\":\"https://www.nju.edu.cn/xww/zhxw.htm\"}]},{\"id\":\"academic-affairs\",\"name\":\"南京大学本科生院\",\"origin\":\"https://jw.nju.edu.cn/\",\"sections\":[{\"id\":\"notifications\",\"name\":\"公告通知\",\"url\":\"https://jw.nju.edu.cn/ggtz/list.htm\"}]},{\"id\":\"graduate-school\",\"name\":\"南京大学研究生院\",\"origin\":\"https://grawww.nju.edu.cn/\",\"sections\":[{\"id\":\"notifications\",\"name\":\"动态通知\",\"url\":\"https://grawww.nju.edu.cn/905/list.htm\"}]},{\"id\":\"graduate-admission\",\"name\":\"南京大学研究生招生网\",\"origin\":\"https://yzb.nju.edu.cn/\",\"sections\":[{\"id\":\"master\",\"name\":\"硕士最新通知\",\"url\":\"https://yzb.nju.edu.cn/47863/list.htm\"},{\"id\":\"doctoral\",\"name\":\"博士最新通知\",\"url\":\"https://yzb.nju.edu.cn/47865/list.htm\"}]},{\"id\":\"itsc\",\"name\":\"南京大学信息化建设管理服务中心\",\"origin\":\"https://itsc.nju.edu.cn/\",\"sections\":[{\"id\":\"notifications\",\"name\":\"通知公告\",\"url\":\"https://itsc.nju.edu.cn/tzgg/list.htm\"}]},{\"id\":\"youth-league\",\"name\":\"共青团南京大学委员会\",\"origin\":\"https://tuanwei.nju.edu.cn/\",\"sections\":[{\"id\":\"notifications\",\"name\":\"公告通知\",\"url\":\"https://tuanwei.nju.edu.cn/ggtz/list.htm\"}]},{\"id\":\"research\",\"name\":\"南京大学科学技术研究院\",\"origin\":\"https://scit.nju.edu.cn/\",\"sections\":[{\"id\":\"notifications\",\"name\":\"通知公告\",\"url\":\"https://scit.nju.edu.cn/10916/listm.htm\"}]},{\"id\":\"asset-management\",\"name\":\"南京大学资产管理处\",\"origin\":\"https://zcc.nju.edu.cn/\",\"sections\":[{\"id\":\"notifications\",\"name\":\"通知公告\",\"url\":\"https://zcc.nju.edu.cn/sy/tzzhxx/index.html\"}]}]}\n",
+    "stderr": ""
+  },
+  {
+    "startedAt": "2026-10-20T07:04:39.764277+00:00",
+    "command": "njucli campus mirrors ubuntu --format json",
+    "exitCode": 0,
+    "stdout": "{\"ok\":true,\"data\":{\"sourceUrl\":\"https://mirror.nju.edu.cn/\",\"items\":[{\"name\":\"ubuntu\",\"url\":\"https://mirror.nju.edu.cn/ubuntu/\",\"status\":\"success\",\"helpUrl\":\"https://help.mirror.nju.edu.cn/ubuntu/?mirror=NJU\"},{\"name\":\"ubuntu-cdimage\",\"url\":\"https://mirror.nju.edu.cn/ubuntu-cdimage/\",\"status\":\"success\",\"helpUrl\":null},{\"name\":\"ubuntu-cloud-images\",\"url\":\"https://mirror.nju.edu.cn/ubuntu-cloud-images/\",\"status\":\"success\",\"helpUrl\":\"https://help.mirror.nju.edu.cn/ubuntu-cloud-images/?mirror=NJU\"},{\"name\":\"ubuntu-old-releases\",\"url\":\"https://mirror.nju.edu.cn/ubuntu-old-releases/\",\"status\":\"success\",\"helpUrl\":\"https://help.mirror.nju.edu.cn/ubuntu-old-releases/?mirror=NJU\"},{\"name\":\"ubuntu-ports\",\"url\":\"https://mirror.nju.edu.cn/ubuntu-ports/\",\"status\":\"success\",\"helpUrl\":\"https://help.mirror.nju.edu.cn/ubuntu-ports/?mirror=NJU\"},{\"name\":\"ubuntu-releases\",\"url\":\"https://mirror.nju.edu.cn/ubuntu-releases/\",\"status\":\"success\",\"helpUrl\":null},{\"name\":\"ubuntukylin\",\"url\":\"https://mirror.nju.edu.cn/ubuntukylin/\",\"status\":\"success\",\"helpUrl\":null},{\"name\":\"ubuntukylin-cdimage\",\"url\":\"https://mirror.nju.edu.cn/ubuntukylin-cdimage/\",\"status\":\"success\",\"helpUrl\":null}]}}\n",
+    "stderr": ""
+  },
+  {
+    "startedAt": "2026-10-20T07:04:40.679945+00:00",
+    "command": "njucli campus mirrors pypi --format json",
+    "exitCode": 0,
+    "stdout": "{\"ok\":true,\"data\":{\"sourceUrl\":\"https://mirror.nju.edu.cn/\",\"items\":[{\"name\":\"jetson-pypi\",\"url\":\"https://mirror.nju.edu.cn/jetson-pypi/\",\"status\":\"success\",\"helpUrl\":null},{\"name\":\"pypi\",\"url\":\"https://mirror.nju.edu.cn/pypi/\",\"status\":\"syncing\",\"helpUrl\":\"https://help.mirror.nju.edu.cn/pypi/?mirror=NJU\"},{\"name\":\"rocm-pypi\",\"url\":\"https://mirror.nju.edu.cn/rocm-pypi/\",\"status\":\"success\",\"helpUrl\":null}]}}\n",
+    "stderr": ""
+  },
+  {
+    "startedAt": "2026-10-20T07:04:41.458654+00:00",
+    "command": "git diff --check",
+    "exitCode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+]

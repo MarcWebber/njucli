@@ -5,16 +5,15 @@ description: 管理南京大学 TeXPage 项目，撰写与修改 LaTeX 论文、
 
 # TeX 写作
 
-以下命令在本 Skill 目录运行。
-首次使用需登录：`node scripts/run.mjs auth login tex`。同一账号请串行执行写操作命令。
+首次使用需登录：`njucli auth login tex`。同一账号请串行执行写操作命令。
 
 ## 项目与模板
 
 ```bash
-node scripts/run.mjs tex projects --format json
-node scripts/run.mjs tex templates --format json
-node scripts/run.mjs tex create "论文标题" --format json
-node scripts/run.mjs tex from-template TEMPLATE_KEY --format json
+njucli tex projects --format json
+njucli tex templates --format json
+njucli tex create "论文标题" --format json
+njucli tex from-template TEMPLATE_KEY --format json
 ```
 
 `projects` 查看项目列表，取得项目标识 `PROJECT`（对应 `projectKey`）和版本号 `VERSION`（对应 `versionNo`）。
@@ -23,10 +22,10 @@ node scripts/run.mjs tex from-template TEMPLATE_KEY --format json
 ## 查看、修改与上传
 
 ```bash
-node scripts/run.mjs tex files PROJECT --version VERSION --format json
-node scripts/run.mjs tex read PROJECT FILE_KEY --version VERSION --format json
-node scripts/run.mjs tex write PROJECT main.tex --version VERSION --input ./main.tex --format json
-node scripts/run.mjs tex upload PROJECT ./references.bib --version VERSION --format json
+njucli tex files PROJECT --version VERSION --format json
+njucli tex read PROJECT FILE_KEY --version VERSION --format json
+njucli tex write PROJECT main.tex --version VERSION --input ./main.tex --format json
+njucli tex upload PROJECT ./references.bib --version VERSION --format json
 ```
 
 `files` 列出项目文件，返回 `path` 与 `fileKey`。
@@ -39,11 +38,11 @@ node scripts/run.mjs tex upload PROJECT ./references.bib --version VERSION --for
 ## 编译、排错与下载
 
 ```bash
-node scripts/run.mjs tex compile PROJECT main.tex --version VERSION --output ./paper.pdf --format json
-node scripts/run.mjs tex log PROJECT --version VERSION --format json
-node scripts/run.mjs tex pdf PROJECT --version VERSION --output ./latest.pdf --format json
-node scripts/run.mjs tex download PROJECT --version VERSION --output ./source.zip --format json
-node scripts/run.mjs tex rename PROJECT "新论文标题" --format json
+njucli tex compile PROJECT main.tex --version VERSION --output ./paper.pdf --format json
+njucli tex log PROJECT --version VERSION --format json
+njucli tex pdf PROJECT --version VERSION --output ./latest.pdf --format json
+njucli tex download PROJECT --version VERSION --output ./source.zip --format json
+njucli tex rename PROJECT "新论文标题" --format json
 ```
 
 `compile` 触发云端编译，仅在本次编译成功后保存 PDF 到 `--output` 指定路径。

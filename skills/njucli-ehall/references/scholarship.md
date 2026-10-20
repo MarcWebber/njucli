@@ -2,14 +2,14 @@
 
 ## 查询与填写
 
-以下命令在本 Skill 目录运行。通过 `NJUCLI_ACCOUNT` 选择账号；应用从当前会话读取学号。
+通过 `NJUCLI_ACCOUNT` 选择账号；应用从当前会话读取学号。
 
 ```bash
-node scripts/run.mjs ehall scholarship list --format json
-node scripts/run.mjs ehall scholarship show 奖种编号 --format json
-node scripts/run.mjs ehall scholarship form 奖种编号 --category 3 --format json
-node scripts/run.mjs ehall scholarship applications --format json
-node scripts/run.mjs ehall scholarship application 申请编号 --format json
+njucli ehall scholarship list --format json
+njucli ehall scholarship show 奖种编号 --format json
+njucli ehall scholarship form 奖种编号 --category 3 --format json
+njucli ehall scholarship applications --format json
+njucli ehall scholarship application 申请编号 --format json
 ```
 
 `list` 和 `applications` 支持 `--page`、`--page-size`。奖种编号来自 `list` 的 `awardId`，等级编号来自 `show` 的 `levels[].levelId`，申请编号来自 `applications` 的 `applicationId`。`form` 返回指定分类的开放批次、填写模板及长度限制，等级有多个时需选择其中之一。分类代码沿用官网的 1 至 6；学校奖入口使用 3。具体可申请奖种以当前账号查询结果为准。
@@ -38,8 +38,8 @@ node scripts/run.mjs ehall scholarship application 申请编号 --format json
 ```
 
 ```bash
-node scripts/run.mjs ehall scholarship save --input ./draft.json --dry-run --format json
-node scripts/run.mjs ehall scholarship save --input ./draft.json --format json
+njucli ehall scholarship save --input ./draft.json --dry-run --format json
+njucli ehall scholarship save --input ./draft.json --format json
 ```
 
 `--dry-run` 读取账号、奖种及申请数据，检查本地附件并返回预览，不创建草稿编号、不上传附件、不保存。保存完成后回读目标记录、草稿状态、奖种批次和全部保存字段，返回 `reviewUrl` 官网核对链接、申请编号和 `nextStep` 操作提示。打开链接后使用相应账号进入“我的申请”，核对该草稿内容及附件，确认无误后由用户自行提交。写入结果不明时先查询申请，不自动重试。
@@ -84,4 +84,4 @@ CLI 仅提供个人奖学金草稿保存，不提供提交、撤回、删除或�
 
 2026-10-15 已核对官网前端保存/提交区别、参数编码、身份来源、字段及附件组件契约。实网验证覆盖两个账号的申请列表、奖种等级、申请详情、填写模板及只读预览。随后使用已准备好的真实材料完成个人奖学金草稿新建、3 个 PDF 上传及绑定；独立回读确认状态仍为草稿、陈述与实践内容一致、附件文件名及数量一致。没有调用提交、撤回或删除接口。
 
-本地 HTTP 集成覆盖新建/修改草稿、附件上传绑定、预览零写入、本人记录校验、审核中拒绝修改、保留附件、重复申请拒绝、失败不重试、保存后完整字段回读、附件大小不符时停止保存与输入控制字段拒绝。新建草稿与首次附件写入已实网验证；修改已有草稿的写入仅通过本地集成验证。接口未提供原子状态条件，保存时避免同时在网页修改或提交同一申请。
+新建草稿与首次附件写入已实网验证；修改已有草稿的写入待实际业务核对。接口未提供原子状态条件，保存时避免同时在网页修改或提交同一申请。

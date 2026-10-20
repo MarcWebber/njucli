@@ -22,23 +22,13 @@
 curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/install.sh | bash
 ```
 
-同时安装全局 `njucli` 和 Skills。Skill 默认注册到 `${CODEX_HOME:-~/.codex}/skills/`，可通过 `NJUCLI_SKILLS_DIR` 指定其他客户端的目录。使用 `NJUCLI_INSTALL_PREFIX` 指定 CLI 安装前缀时，将其 `bin` 目录加入 PATH。
+一次安装全部业务命令和配套 Skills，所有操作统一使用 `njucli`，可从任意目录运行。Skills 提供 AI 使用说明，随 `njucli upgrade` 一起更新。Skill 默认注册到 `${CODEX_HOME:-~/.codex}/skills/`，可通过 `NJUCLI_SKILLS_DIR` 指定其他客户端的目录。使用 `NJUCLI_INSTALL_PREFIX` 指定 CLI 安装前缀时，将其 `bin` 目录加入 PATH。
 
 升级：
 
 ```bash
 njucli upgrade
 ```
-
-## 只安装一个 Skill
-
-例如，只安装教务与办事大厅：
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/install.sh | bash -s -- --skill ehall
-```
-
-将 `ehall` 换成 `se`、`box`、`mail` 等名称即可安装其他 Skill。再次运行同一命令即可更新。
 
 ## 现有 Skills
 
@@ -47,8 +37,8 @@ curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/inst
 | Skill | 服务 |
 | --- | --- |
 | [njucli-auth](skills/njucli-auth/SKILL.md) | 统一认证与会话维护 |
-| [njucli-campus](skills/njucli-campus/SKILL.md) | 校园信息与今日汇总 |
-| [njucli-ehall](skills/njucli-ehall/SKILL.md) | 课表、选课、成绩、考试、培养方案、个人资料、奖学金草稿与办事大厅 |
+| [njucli-campus](skills/njucli-campus/SKILL.md) | 校园信息、NJU Mirror 镜像查询与今日汇总 |
+| [njucli-ehall](skills/njucli-ehall/SKILL.md) | 空闲教室、课表、选课、成绩、考试、培养方案、个人资料、奖学金草稿与办事大厅 |
 | [njucli-pay](skills/njucli-pay/SKILL.md) | 校园卡余额、消费与充值记录 |
 | [njucli-dorm](skills/njucli-dorm/SKILL.md) | 电费房间绑定与充值记录 |
 | [njucli-self-service](skills/njucli-self-service/SKILL.md) | 证明目录与申请、费用额度、邮件领取、申请撤销、打印机位置与云打印查询 |
@@ -67,6 +57,7 @@ curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/inst
 
 ```bash
 njucli ehall schedule
+njucli ehall classrooms tomorrow --campus 3 --period 5-8
 njucli ehall grades
 njucli dorm bindings
 njucli dorm bills
@@ -76,6 +67,7 @@ njucli self-service items 成绩单
 njucli se assignments --pending
 njucli lms courses
 njucli campus today
+njucli campus mirrors ubuntu
 ```
 
 正式电子成绩单从自助服务的实时目录选择项目，使用 `njucli self-service create ITEM_ID` 申请并默认发送到绑定邮箱；发放后询问是否需要下载，确认后通过邮箱附件保存原 PDF。纸质证明、申请管理、云打印查询与取件指引见[自助服务 Skill](skills/njucli-self-service/SKILL.md)。

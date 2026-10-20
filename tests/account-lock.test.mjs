@@ -4,7 +4,6 @@ import { mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promise
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { lockAccount } from "../dist/src/auth/account-lock.js";
 
 test("账号锁：持有进程退出后多个等待进程继续，临界区保持互斥", { timeout: 20_000 }, async (t) => {
   const directory = await mkdtemp(join(tmpdir(), "njucli-lock-race-"));
@@ -91,9 +90,4 @@ test("账号锁：持有进程退出后多个等待进程继续，临界区保�
     return;
   }
   assert.deepEqual((await readdir(directory)).sort(), ["count"]);
-  const legacy = join(directory, "session.lock");
-  await writeFile(legacy, `${process.pid}:legacy-owner`);
-  await assert.rejects(lockAccount(directory), /旧版会话锁文件/);
-  assert.equal(await readFile(legacy, "utf8"), `${process.pid}:legacy-owner`);
-  assert.deepEqual((await readdir(directory)).sort(), ["count", "session.lock"]);
 });

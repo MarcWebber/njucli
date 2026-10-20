@@ -5,15 +5,15 @@ description: 查询南京大学软件学院教学平台 (selearning.nju.edu.cn) 
 
 # 软件学院教学平台
 
-以下命令在本 Skill 目录运行。首次使用需登录：`node scripts/run.mjs auth login se`。
+首次使用需登录：`njucli auth login se`。
 
 ## 课程与人员
 
 ```bash
-node scripts/run.mjs se catalog --format json
-node scripts/run.mjs se courses --format json
-node scripts/run.mjs se course COURSE_ID --format json
-node scripts/run.mjs se participants COURSE_ID --page 1 --format json
+njucli se catalog --format json
+njucli se courses --format json
+njucli se course COURSE_ID --format json
+njucli se participants COURSE_ID --page 1 --format json
 ```
 
 `catalog` 返回全部可见课程，`courses` 返回我的已选课程。
@@ -23,10 +23,10 @@ node scripts/run.mjs se participants COURSE_ID --page 1 --format json
 ## 作业与附件
 
 ```bash
-node scripts/run.mjs se assignments --pending --format json
-node scripts/run.mjs se assignment ACTIVITY_ID --format json
-node scripts/run.mjs se download ACTIVITY_ID FILE_NAME --output ./附件.pdf
-node scripts/run.mjs se submission-link ACTIVITY_ID --format json
+njucli se assignments --pending --format json
+njucli se assignment ACTIVITY_ID --format json
+njucli se download ACTIVITY_ID FILE_NAME --output ./附件.pdf
+njucli se submission-link ACTIVITY_ID --format json
 ```
 
 `assignments --pending` 筛选待完成作业；`assignment` 查看作业要求及附件。
@@ -38,8 +38,8 @@ node scripts/run.mjs se submission-link ACTIVITY_ID --format json
 ## 成绩与选课
 
 ```bash
-node scripts/run.mjs se grades COURSE_ID --format json
-node scripts/run.mjs se enroll COURSE_ID --format json
+njucli se grades COURSE_ID --format json
+njucli se enroll COURSE_ID --format json
 ```
 
 `grades` 查询课程提供的成绩项。

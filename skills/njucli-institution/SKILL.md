@@ -5,16 +5,16 @@ description: 查询南京大学机构目录、学院简介、教师姓名、职�
 
 # 学校机构与教师
 
-公开资料查询无需校园账号。主要用于查询教师的办公电话和邮箱。以下命令在本 Skill 目录运行；统一 CLI 使用 `njucli institution` 代替 `node scripts/run.mjs institution`。
+公开资料查询无需校园账号。主要用于查询教师的办公电话和邮箱。使用 `njucli institution` 查询。
 
 ## 查询联系方式与基础信息
 
 优先返回已有公开电话或邮箱的结果；检索和详情文本会将联系方式置于履历前。
 
 ```bash
-node scripts/run.mjs institution teachers 曹帅 --institution public --format json
-node scripts/run.mjs institution show im --format json
-node scripts/run.mjs institution search 人工智能 --kind teacher --format json
+njucli institution teachers 曹帅 --institution public --format json
+njucli institution show im --format json
+njucli institution search 人工智能 --kind teacher --format json
 ```
 
 **查询说明：**
@@ -31,10 +31,10 @@ node scripts/run.mjs institution search 人工智能 --kind teacher --format jso
 若本地快照缺少个人联系方式，可使用 `--live` 实时核对教师个人页。
 
 ```bash
-node scripts/run.mjs institution teacher public/曹帅 --live --format json
-node scripts/run.mjs institution teacher cs/周志华 --live --format json
-node scripts/run.mjs institution list --live --format json
-node scripts/run.mjs institution services 水电 --live --format json
+njucli institution teacher public/曹帅 --live --format json
+njucli institution teacher cs/周志华 --live --format json
+njucli institution list --live --format json
+njucli institution services 水电 --live --format json
 ```
 
 - `teacher --live`：实时提取最新研究方向与实际联系方式。如个人页有明确链接的官方个人主页，必要时也可进一步检查。
@@ -43,7 +43,7 @@ node scripts/run.mjs institution services 水电 --live --format json
 ## 导出与本地检索
 
 ```bash
-node scripts/run.mjs institution dump --output ./nju-knowledge --format json
+njucli institution dump --output ./nju-knowledge --format json
 ```
 
 - `dump` 始终导出整个本地资料库，包含 `机构资料.json`（不复制到 dist）及各学院中文 Markdown 文件。

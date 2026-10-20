@@ -7,12 +7,10 @@ description: 查询南京大学校园卡余额及消费、充值记录。涉及�
 
 查询本人校园卡余额和交易记录，复用当前账号的统一认证会话。
 
-在本 Skill 目录运行以下命令，统一 CLI 将 `node scripts/run.mjs` 换成 `njucli`。
-
 ```bash
-node scripts/run.mjs pay balance --format json
-node scripts/run.mjs pay bills --format json
-node scripts/run.mjs pay bills --from 2026-10-01 --to 2026-10-15 --page 1 --format json
+njucli pay balance --format json
+njucli pay bills --format json
+njucli pay bills --from 2026-10-01 --to 2026-10-15 --page 1 --format json
 ```
 
 `balance` 返回校园卡余额及币种 `CNY`，金额单位为元。

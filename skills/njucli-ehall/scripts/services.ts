@@ -1,4 +1,5 @@
 import { ScholarshipClient } from "./scholarship.js";
+import { ClassroomClient } from "./classrooms.js";
 import type { SkillRuntime } from "../../../src/app/runtime.js";
 import { addDays, parseCampusDate, weekRange } from "../../../src/core/dates.js";
 import { AppError } from "../../../src/core/errors.js";
@@ -14,6 +15,7 @@ import { GraduateCourseSelectionClient } from "./selection-client.js";
 import type { AcademicTerm, CourseOccurrence, CourseSchedule, ScheduledCourse } from "./types.js";
 
 export type EHallServices = Pick<ScholarshipClient, "scholarships" | "scholarship" | "scholarshipForm" | "scholarshipApplications" | "scholarshipApplication" | "saveScholarshipDraft"> &
+  Pick<ClassroomClient, "classroomCampuses" | "classroomBuildings" | "classrooms"> &
   Pick<EHallPortalClient, "services" | "tasks" | "applications"> &
   Pick<EHallTripClient, "trip" | "submitTrip"> &
   Pick<EHallProfileClient, "profile" | "profileFields" | "addProfile" | "removeProfile"> &
@@ -57,6 +59,12 @@ export function createEHallServices({ withBrowser }: SkillRuntime): EHallService
     return { term, courses: (await client.listSchedule(term.id)).map(mapCourse) };
   });
   return {
+    classroomCampuses: () => withBrowser("ehall", session => new ClassroomClient(session.request).classroomCampuses()),
+    classroomBuildings: campus => withBrowser("ehall", session => new ClassroomClient(session.request).classroomBuildings(campus)),
+    classrooms: input => {
+      const date = parseCampusDate(input.date);
+      return withBrowser("ehall", session => new ClassroomClient(session.request).classrooms({ ...input, date }));
+    },
     scholarships: (page, pageSize) => withBrowser("ehall", session => new ScholarshipClient(session.request).scholarships(page, pageSize)),
     scholarshipForm: (awardId, category) => withBrowser("ehall", session => new ScholarshipClient(session.request).scholarshipForm(awardId, category)),
     scholarship: (awardId) => withBrowser("ehall", session => new ScholarshipClient(session.request).scholarship(awardId)),

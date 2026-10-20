@@ -1,4 +1,5 @@
 import { load } from "cheerio";
+import { z } from "zod";
 import { AppError } from "../../../src/core/errors.js";
 import type { FetchLike } from "../../../src/core/types.js";
 import type { CampusSectionContract, CampusSourceContract } from "./contracts.js";
@@ -16,6 +17,51 @@ export class CampusClient {
 
   sources(): CampusSource[] {
     return listCampusSources();
+  }
+
+  async mirrors(query = "") {
+    const sourceUrl = "https://mirror.nju.edu.cn/";
+    const entry = z.object({
+      name: z.string(),
+      path: z.string().optional(),
+      inherit: z.string().nullish(),
+      status: z.string().optional(),
+      redirect: z.string().optional(),
+    });
+    const [synced = [], additions = [], docs = []] = await Promise.all(
+      ["tunasync.json", "addition.json", "documentations/index.json"].map(async (file) => {
+        const response = await this.fetch(new URL(`configs/${file}`, sourceUrl));
+        if (!response.ok) throw new AppError("REMOTE_UNAVAILABLE", `NJU Mirror ${file} 返回 HTTP ${response.status}`);
+        let value: unknown;
+        try { value = JSON.parse(await response.text()); }
+        catch { throw new AppError("REMOTE_SCHEMA_CHANGED", `NJU Mirror ${file} 未返回有效 JSON`); }
+        const parsed = z.array(entry).safeParse(value);
+        if (!parsed.success) throw new AppError("REMOTE_SCHEMA_CHANGED", `NJU Mirror ${file} 响应字段变化`);
+        return parsed.data;
+      }),
+    );
+    const mirrors = new Map(synced.map(item => [item.name, {
+      name: item.name, path: `/${item.name}/`, status: item.status ?? "unknown",
+    }]));
+    for (const item of additions) {
+      const previous = mirrors.get(item.name);
+      const parent = item.inherit ? mirrors.get(item.inherit) : undefined;
+      mirrors.set(item.name, {
+        name: item.name,
+        path: item.path ?? previous?.path ?? `/${item.name}/`,
+        status: item.status ?? previous?.status ?? parent?.status ?? "unknown",
+      });
+    }
+    const help = new Map(docs.map(item => [item.name,
+      new URL(item.redirect ?? `help/${item.name}`, sourceUrl).href,
+    ]));
+    const keyword = query.trim().toLowerCase();
+    const items = [...mirrors.values()]
+      .filter(item => item.name.toLowerCase().includes(keyword))
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map(item => ({ name: item.name, url: new URL(item.path, sourceUrl).href,
+        status: item.status, helpUrl: help.get(item.name) ?? null }));
+    return { sourceUrl, items };
   }
 
   async canteens(query = ""): Promise<CampusCanteenDirectory> {
