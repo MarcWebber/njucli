@@ -92,7 +92,7 @@ NjuCLI 提供南京大学机构与教师公开资料的快速检索，重点支�
 
 IT 侠支持 `njucli itxia create --input order.json --agree-terms` 提交维修预约，`njucli itxia status ORDER_ID` 查询状态与回复、`njucli itxia open ORDER_ID` 获取预约单页面打开方法，以及 `njucli itxia cancel ORDER_ID --yes` 取消预约。也可通过 `status --name "预约姓名" --phone "预约手机号"` 找回当前预约；字段和服务条款见 [IT 侠 Skill](skills/njucli-itxia/SKILL.md)。
 
-业务命令按需恢复校园登录。`njucli auth maintain` 执行一次统一认证与 EHall 会话维护；周期维护和登录状态核对见[认证 Skill](skills/njucli-auth/SKILL.md#会话维护)。
+业务命令按需恢复校园登录。`njucli auth maintain` 执行一次统一认证会话维护；周期维护和登录状态核对见[认证 Skill](skills/njucli-auth/SKILL.md#会话维护)。
 
 保存统一认证凭据后，可启动 CLI 后台保活进程：
 
@@ -100,9 +100,13 @@ IT 侠支持 `njucli itxia create --input order.json --agree-terms` 提交维修
 njucli auth daemon start
 njucli auth daemon status --format json
 njucli auth daemon stop
+# 登录系统后自动启动当前账号保活
+njucli auto start
+njucli auto status --format json
+njucli auto stop
 ```
 
-常驻 CLI 进程默认每轮结束后等待 10 分钟，`start --interval 300` 可设为五分钟。退出终端后继续运行，状态返回进程 PID；运行前提、启动与停止方式见[后台保活](skills/njucli-auth/SKILL.md#后台保活)。
+自启动支持 macOS LaunchAgent、Linux systemd 用户服务和 Windows 登录触发任务。通过 `account use` 选择账号后分别执行 `auto start`；重启后登录系统即启动保活。常驻 CLI 进程默认每轮结束后等待 10 分钟，`start --interval 300` 可设为五分钟。退出终端后继续运行，状态返回进程 PID；运行前提、启动与停止方式见[后台保活](skills/njucli-auth/SKILL.md#后台保活)。
 
 ## 文档
 
