@@ -24,7 +24,7 @@
 
 成功码为 `code=0`。空闲教室取 `datas.cxkxjs.totalSize/rows`；展示字段为 `JASMC`、`XXXQDM_DISPLAY`、`JXLDM/JXLDM_DISPLAY`、`JASLXDM_DISPLAY`、`KXSJ`、`SKZWS/KSZWS`。座位数字符串转为数值，缺失值保留为 `null`。查询必须带起止节次；省略时接口会返回全部教室。连续节次的含义为整个区间均空闲，分页从 1 开始。
 
-请求、字段和节次语义参考 [NJU_Classroom_Booking 的查询实现](https://github.com/Aalas1111/NJU_Classroom_Booking/blob/6d52fd90dd0587036a31b8cc3b17fa8bdd250b19/src/crb/api.py)、[数据结构](https://github.com/Aalas1111/NJU_Classroom_Booking/blob/6d52fd90dd0587036a31b8cc3b17fa8bdd250b19/src/crb/models.py)。公开实网确认入口要求统一认证；本地模拟覆盖 CLI/MCP、同次会话、字典、过滤参数、分页、空结果及失败不重试。登录后的 NjuCLI 实网查询待核对。
+请求、字段和节次语义参考 [NJU_Classroom_Booking 的查询实现](https://github.com/Aalas1111/NJU_Classroom_Booking/blob/6d52fd90dd0587036a31b8cc3b17fa8bdd250b19/src/crb/api.py)、[数据结构](https://github.com/Aalas1111/NJU_Classroom_Booking/blob/6d52fd90dd0587036a31b8cc3b17fa8bdd250b19/src/crb/models.py)。公开实网确认入口要求统一认证。登录后的 NjuCLI 实网查询待核对。
 
 ## 研究生节假日行程登记
 
@@ -66,7 +66,7 @@
 
 ### 验证范围
 
-公开目录、登录后查询和预览已验证；2026-10-03 通过 CLI 完成单次离返校、单站行程正式提交及逐项回读。留校、多次离返校、多站行程和失败不重试由本地集成覆盖，对应实网提交待验收。
+公开目录、登录后查询和预览已验证；2026-10-03 通过 CLI 完成单次离返校、单站行程正式提交及逐项回读。留校、多次离返校、多站行程的实网提交待验收。
 
 ## 研究生教务
 

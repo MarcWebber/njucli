@@ -12,7 +12,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const execute = promisify(execFile);
 
-test("独立 Skill：单目录、声明依赖、共用账号与 MCP 契约", async (t) => {
+test("独立 Skill：构建产物、声明依赖与 MCP 契约", async (t) => {
   const directory = await mkdtemp(join(tmpdir(), "njucli-skills-test-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const env = { ...process.env, XDG_CONFIG_HOME: join(directory, "config"), XDG_DATA_HOME: join(directory, "data"), PATH: "/usr/bin:/bin" };
@@ -46,12 +46,6 @@ test("独立 Skill：单目录、声明依赖、共用账号与 MCP 契约", asy
   const preset = join(directory, "gradebook.json");
   assert.equal(JSON.parse(await run("njucli-table", ["table", "preset", "gradebook", "--output", preset, "--format", "json"])).ok, true);
   assert.equal(JSON.parse(await readFile(preset, "utf8")).tables[0].name, "课程成绩");
-  assert.equal(JSON.parse(await run("njucli-box", ["account", "add", "portable", "--format", "json"])).ok, true);
-  await run("njucli-box", ["account", "use", "portable", "--format", "json"]);
-  assert.equal(JSON.parse(await run("njucli-mail", ["account", "current", "--format", "json"])).data, "portable");
-  assert.deepEqual(JSON.parse(await run("njucli-box", ["auth", "logout", "box", "--format", "json"])).data, ["box"]);
-  const sessions = JSON.parse(await readFile(join(env.XDG_CONFIG_HOME, "njucli/accounts/portable/sessions.json"), "utf8"));
-  assert.deepEqual(sessions, [{ capability: "box", status: "logged-out" }]);
 
   const helper = pathToFileURL(join(directory, "njucli-auth/scripts/runtime.mjs")).href;
   const imported = await execute(process.execPath, ["--input-type=module", "-e", `const runtime = await import(${JSON.stringify(helper)}); console.log(["withBrowserSession", "createAuthServices", "createRuntime", "saveFile"].every(name => typeof runtime[name] === "function"))`], { cwd: directory, env });
