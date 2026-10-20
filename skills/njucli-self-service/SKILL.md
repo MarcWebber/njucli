@@ -5,16 +5,16 @@ description: 使用南京大学自助服务查询与申请正式成绩单、在�
 
 # 自助服务
 
-在当前目录运行以下命令（统一 CLI 将 `node scripts/run.mjs` 换成 `njucli`）。CLI 会自动恢复会话。[官方入口](https://zzfwx.nju.edu.cn/wec-self-print-app-console/mobile.html#/mobile/itemList)。
+在当前目录运行以下命令（统一 CLI 将 `njucli` 换成 `njucli`）。CLI 会自动恢复会话。[官方入口](https://zzfwx.nju.edu.cn/wec-self-print-app-console/mobile.html#/mobile/itemList)。
 
 ## 发现可用服务
 
 ```bash
-node scripts/run.mjs self-service profile --format json
-node scripts/run.mjs self-service items --format json
-node scripts/run.mjs self-service items 成绩单 --format json
-node scripts/run.mjs self-service items --parent CATEGORY_ID --format json
-node scripts/run.mjs self-service show ITEM_ID --format json
+njucli self-service profile --format json
+njucli self-service items --format json
+njucli self-service items 成绩单 --format json
+njucli self-service items --parent CATEGORY_ID --format json
+njucli self-service show ITEM_ID --format json
 ```
 
 服务项目随账号权限动态变化。必须从实时目录取 `ITEM_ID`；若 `hasChildren=true` 则用 `--parent` 展开子类。`pickupType` 标识类型（1 纸质、2 电子、3 两者）。`orderDetail?id` 为项目编号，`ORDER_ID` 为创建后返回的申请号。所有 ID、账号和申请号均取自当前响应，勿复用分享链接的微信 appId 与临时 ticket。
@@ -22,8 +22,8 @@ node scripts/run.mjs self-service show ITEM_ID --format json
 ## 申请并领取电子文件
 
 ```bash
-node scripts/run.mjs self-service quote ITEM_ID --format json
-node scripts/run.mjs self-service create ITEM_ID --format json
+njucli self-service quote ITEM_ID --format json
+njucli self-service create ITEM_ID --format json
 # 领取邮件相关命令（通过 njucli-mail 或统一 CLI）
 njucli mail search 成绩单 --format json
 njucli mail read MESSAGE_ID --format json
@@ -37,14 +37,14 @@ njucli mail download MESSAGE_ID ATTACHMENT_ID --output /path/to/transcript.pdf -
 ## 纸质证明与申请管理
 
 ```bash
-node scripts/run.mjs self-service quote ITEM_ID --delivery paper --copies 1 --format json
-node scripts/run.mjs self-service create ITEM_ID --delivery paper --copies 1 --format json
-node scripts/run.mjs self-service terminals --format json
-node scripts/run.mjs self-service orders --state pending --format json
-node scripts/run.mjs self-service orders --state completed --format json
-node scripts/run.mjs self-service order ORDER_ID --format json
-node scripts/run.mjs self-service send ORDER_ID --format json
-node scripts/run.mjs self-service cancel ORDER_ID --format json
+njucli self-service quote ITEM_ID --delivery paper --copies 1 --format json
+njucli self-service create ITEM_ID --delivery paper --copies 1 --format json
+njucli self-service terminals --format json
+njucli self-service orders --state pending --format json
+njucli self-service orders --state completed --format json
+njucli self-service order ORDER_ID --format json
+njucli self-service send ORDER_ID --format json
+njucli self-service cancel ORDER_ID --format json
 ```
 
 纸质申请返回取件码与有效期，凭码至终端机领取（终端机联网不代表耗材充足）。`send` 用于重发电子申请邮件；用户要求撤销时，`cancel` 撤销本人的未完成免费申请，命令会回读列表验证。
@@ -54,7 +54,7 @@ node scripts/run.mjs self-service cancel ORDER_ID --format json
 ## 云打印
 
 ```bash
-node scripts/run.mjs self-service cloud --format json
+njucli self-service cloud --format json
 ```
 
 查询平台当前收费/免费份数配置、文件页数上限及待打印文件。`initFreeCopies` 是平台规则，非个人剩余额度。云打印支持 PDF、Word 和图片：文件上限 5 MB，图片宽高不超过 14400 像素，文档页数上限取 `config.filePageLimit`。

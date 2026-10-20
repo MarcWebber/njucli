@@ -22,23 +22,13 @@
 curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/install.sh | bash
 ```
 
-同时安装全局 `njucli` 和 Skills。Skill 默认注册到 `${CODEX_HOME:-~/.codex}/skills/`，可通过 `NJUCLI_SKILLS_DIR` 指定其他客户端的目录。使用 `NJUCLI_INSTALL_PREFIX` 指定 CLI 安装前缀时，将其 `bin` 目录加入 PATH。
+一次安装全部业务命令和配套 Skills，所有操作统一使用 `njucli`，可从任意目录运行。Skills 提供 AI 使用说明，随 `njucli upgrade` 一起更新。Skill 默认注册到 `${CODEX_HOME:-~/.codex}/skills/`，可通过 `NJUCLI_SKILLS_DIR` 指定其他客户端的目录。使用 `NJUCLI_INSTALL_PREFIX` 指定 CLI 安装前缀时，将其 `bin` 目录加入 PATH。
 
 升级：
 
 ```bash
 njucli upgrade
 ```
-
-## 只安装一个 Skill
-
-例如，只安装教务与办事大厅：
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/install.sh | bash -s -- --skill ehall
-```
-
-将 `ehall` 换成 `se`、`box`、`mail` 等名称即可安装其他 Skill。再次运行同一命令即可更新。
 
 ## 现有 Skills
 

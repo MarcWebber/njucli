@@ -129,7 +129,7 @@
 | `SKZC` | 教学周位图，`1` 表示该周有课 |
 | `JASMC / XXXQDM_DISPLAY` | 地点 / 校区 |
 
-接口与响应键参考 `nju-cli/nju-cli`，当前定义见 [课表请求契约](../scripts/timetable-contract.ts)。节次钟点参考 [nju-schedule-ics](https://github.com/SuperKenVery/nju-schedule-ics)。课表查询与钟点仍待南大实网逐项核对。
+接口与响应键参考 `nju-cli/nju-cli`，当前定义见 [课表请求契约](https://github.com/MarcWebber/njucli/blob/main/skills/njucli-ehall/scripts/timetable-contract.ts)。节次钟点参考 [nju-schedule-ics](https://github.com/SuperKenVery/nju-schedule-ics)。课表查询与钟点仍待南大实网逐项核对。
 
 ## 研究生选课
 
@@ -158,7 +158,7 @@
 
 登录状态以 `loadPublicInfo_course.do` 的非空 `loginUserId` 确认。关闭选课期间，该响应仍包含已登录身份，但缺少 `csrfToken`，并通过 `msg` 返回当前开放状态；此时仍可查询可选和已选课程。提交方法需要令牌，缺少令牌时原样报告业务提示。
 
-统一 CLI 与独立入口已通过真实请求验证方案内、公选课和已选课程查询。本轮按用户要求仅查询与探测选课接口，选课、结果轮询及退课提交保留为待验证。详见[实网验证报告](../../../docs/reports/2026-10-20-selection-dorm-youth.md)。
+统一 CLI 已通过真实请求验证方案内、公选课和已选课程查询。本轮按用户要求仅查询与探测选课接口，选课、结果轮询及退课提交保留为待验证。详见[实网验证报告](../../../docs/reports/2026-10-20-selection-dorm-youth.md)。
 
 ## 研究生奖学金
 

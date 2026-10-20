@@ -5,19 +5,19 @@ description: 查询南京大学智汇南雍（lms.nju.edu.cn）的课程、课�
 
 # 智汇南雍
 
-以下命令在本 Skill 目录运行。首次使用先运行 `node scripts/run.mjs auth login lms`；业务命令也会按需恢复校园登录。
+首次使用先运行 `njucli auth login lms`；业务命令也会按需恢复校园登录。
 
 ## 课程与学习任务
 
 ```bash
-node scripts/run.mjs lms courses --format json
-node scripts/run.mjs lms courses "课程名称" --page 1 --format json
-node scripts/run.mjs lms course COURSE_ID --format json
-node scripts/run.mjs lms activities COURSE_ID --format json
-node scripts/run.mjs lms assignments COURSE_ID --page 1 --format json
-node scripts/run.mjs lms assignment ACTIVITY_ID --format json
-node scripts/run.mjs lms exams COURSE_ID --format json
-node scripts/run.mjs lms todos --format json
+njucli lms courses --format json
+njucli lms courses "课程名称" --page 1 --format json
+njucli lms course COURSE_ID --format json
+njucli lms activities COURSE_ID --format json
+njucli lms assignments COURSE_ID --page 1 --format json
+njucli lms assignment ACTIVITY_ID --format json
+njucli lms exams COURSE_ID --format json
+njucli lms todos --format json
 ```
 
 课程与作业列表每页 20 项，使用返回的 `nextPage` 翻页。课程的 `is_instructor` 表示教学侧权限，包含教师与助教；`instructor_assistants` 列出课程助教。课程详情提供学年、学期和课程起止日期。
@@ -44,10 +44,10 @@ node scripts/run.mjs lms todos --format json
 
 ```bash
 # 保存未发布草稿
-node scripts/run.mjs lms create-assignment COURSE_ID --input assignment.json --format json
+njucli lms create-assignment COURSE_ID --input assignment.json --format json
 
 # 创建并发布；加 --notify 发送平台邮件及待办通知
-node scripts/run.mjs lms create-assignment COURSE_ID --input assignment.json --publish --format json
+njucli lms create-assignment COURSE_ID --input assignment.json --publish --format json
 ```
 
 创建采用个人作业、教师评分、无限提交次数、最高得分、成绩比例 0、允许撤回、评分后公布成绩。默认保存草稿，通知默认关闭；`--notify` 与 `--publish` 配合使用。发布操作需要用户明确要求发布该作业。

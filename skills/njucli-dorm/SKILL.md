@@ -7,18 +7,18 @@ description: 管理南京大学宿舍电费房间绑定，查询电费充值记�
 
 管理电费房间绑定，查询电费充值记录。
 
-在本 Skill 目录运行以下命令，统一 CLI 将 `node scripts/run.mjs` 换成 `njucli`。命令复用当前账号的统一认证会话，由本 Skill 完成业务站点的会话交接。
+命令复用当前账号的统一认证会话，由本 Skill 完成业务站点的会话交接。
 
 ## 电费房间绑定
 
 ```bash
-node scripts/run.mjs dorm bindings --format json
-node scripts/run.mjs dorm campuses --format json
-node scripts/run.mjs dorm buildings CAMPUS_ID --format json
-node scripts/run.mjs dorm rooms CAMPUS_ID BUILDING_ID --format json
-node scripts/run.mjs dorm bind CAMPUS_ID BUILDING_ID ROOM_ID --format json
-node scripts/run.mjs dorm bind CAMPUS_ID BUILDING_ID ROOM_ID --replace BINDING_ID --format json
-node scripts/run.mjs dorm unbind BINDING_ID --format json
+njucli dorm bindings --format json
+njucli dorm campuses --format json
+njucli dorm buildings CAMPUS_ID --format json
+njucli dorm rooms CAMPUS_ID BUILDING_ID --format json
+njucli dorm bind CAMPUS_ID BUILDING_ID ROOM_ID --format json
+njucli dorm bind CAMPUS_ID BUILDING_ID ROOM_ID --replace BINDING_ID --format json
+njucli dorm unbind BINDING_ID --format json
 ```
 
 `bindings` 返回当前账号在[电费系统](https://epay.nju.edu.cn/epay/h5/nju/electric/index)保存的房间及绑定 ID。电费绑定用于选择缴费目标。
@@ -30,14 +30,14 @@ node scripts/run.mjs dorm unbind BINDING_ID --format json
 ## 电费充值记录
 
 ```bash
-node scripts/run.mjs dorm bills --format json
-node scripts/run.mjs dorm bills --from 2026-08-01 --to 2026-10-16 --format json
+njucli dorm bills --format json
+njucli dorm bills --from 2026-08-01 --to 2026-10-16 --format json
 ```
 
 `bills` 查询当前账号的电费充值记录，默认从本月往前两个自然月的第一天到今天。返回日期范围及记录；记录包含校区、楼栋、房间、支付时间、金额、状态和原始状态码。指定 `--to` 时，默认开始日期按该结束日期所在月份计算。
 
 ## MCP
 
-只读工具为 `dorm_bindings`、`dorm_campuses`、`dorm_buildings`、`dorm_rooms`、`dorm_bills`。统一 CLI 与独立 Skill 使用相同方法和账号会话。绑定、修改与解绑通过 CLI 执行。
+只读工具为 `dorm_bindings`、`dorm_campuses`、`dorm_buildings`、`dorm_rooms`、`dorm_bills`。CLI 与 MCP 复用相同方法和账号会话。绑定、修改与解绑通过 CLI 执行。
 
 接口和实网范围见[接口记录](references/interfaces.md)。

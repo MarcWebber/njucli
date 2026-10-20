@@ -1,0 +1,35 @@
+{
+  "node": "v26.10.0",
+  "pnpm": "10.27.0",
+  "npm": "11.19.1",
+  "packedSize": 2977618,
+  "unpackedSize": 6135678,
+  "files": 272,
+  "packageManifests": [
+    "package.json"
+  ],
+  "skillGuides": [
+    "skills/njucli-auth/SKILL.md",
+    "skills/njucli-box/SKILL.md",
+    "skills/njucli-campus/SKILL.md",
+    "skills/njucli-dorm/SKILL.md",
+    "skills/njucli-ehall/SKILL.md",
+    "skills/njucli-institution/SKILL.md",
+    "skills/njucli-itxia/SKILL.md",
+    "skills/njucli-library/SKILL.md",
+    "skills/njucli-lms/SKILL.md",
+    "skills/njucli-mail/SKILL.md",
+    "skills/njucli-pay/SKILL.md",
+    "skills/njucli-se/SKILL.md",
+    "skills/njucli-self-service/SKILL.md",
+    "skills/njucli-software/SKILL.md",
+    "skills/njucli-sports/SKILL.md",
+    "skills/njucli-table/SKILL.md",
+    "skills/njucli-tex/SKILL.md",
+    "skills/njucli-youth/SKILL.md"
+  ],
+  "publicQueries": {
+    "ubuntu": 8,
+    "pypi": 3
+  }
+}

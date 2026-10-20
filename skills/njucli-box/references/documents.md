@@ -4,7 +4,7 @@ NjuCLI 将报告、图表与白板保存在 NJU Box，提供固定链接供学�
 
 ## 命令与正文输入
 
-统一入口使用 `njucli box`；独立 Skill 在自身目录使用 `node scripts/run.mjs box`。
+使用 `njucli box` 执行云盘命令。
 
 | 动作 | 命令 | 结果 |
 | --- | --- | --- |
@@ -55,7 +55,7 @@ NJU Table（数据） → Agent 整理正文与图形 → NjuCLI Box 命令
                                链接按需填回 NJU Table
 ```
 
-能力归属 `njucli-box`，复用 BoxClient、账号隔离和当前调用的认证会话。`documents.ts` 校验正文，`whiteboards.ts` 校验原生元素并将图表数据转换为元素，`client.ts` 保存及回读；统一 CLI、独立 Skill 和只读 MCP 共享这份实现。Table 通过已有读写命令组合。
+能力归属 `njucli-box`，复用 BoxClient、账号隔离和当前调用的认证会话。`documents.ts` 校验正文，`whiteboards.ts` 校验原生元素并将图表数据转换为元素，`client.ts` 保存及回读；CLI 和只读 MCP 共享这份实现。Table 通过已有读写命令组合。
 
 ### 开源工具选择
 
@@ -156,7 +156,7 @@ Skill 是给 Agent 的操作指导；npm 依赖是程序运行时加载的代码
 
 ## 验证范围
 
-源码与构建：`pnpm lint`、`pnpm build`、`git diff --check` 通过，统一 CLI 与独立 Box Skill 的命令帮助可用。`npm pack --dry-run --json --ignore-scripts` 确认文档、白板与图表示例及独立入口均进入安装包。
+源码与构建：`pnpm lint`、`pnpm build`、`git diff --check` 通过，统一 CLI 的命令帮助可用。`npm pack --dry-run --json --ignore-scripts` 确认文档、白板与图表示例均进入安装包。
 
 以下实网结果来自用户授权的实际图文制作，覆盖接口提交、必要回读与浏览器展示。
 

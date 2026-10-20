@@ -1,6 +1,6 @@
 # AI 客户端接入
 
-NjuCLI 提供统一 CLI、只读 stdio MCP 工具和独立 Skill。安装步骤见 [README](../README.md#安装)。
+NjuCLI 提供统一 CLI、只读 stdio MCP 工具和配套 Skills。安装步骤见 [README](../README.md#安装)。
 
 ## 选择入口
 
@@ -59,18 +59,6 @@ NjuCLI 提供统一 CLI、只读 stdio MCP 工具和独立 Skill。安装步骤�
 ## 客户端指南
 
 - [WorkBuddy](workbuddy.md)：腾讯推出的桌面端 AI 办公工作台，支持接入 NjuCLI 的 MCP 工具与 18 个 Skill 扩展。
-
-## 独立 Skill
-
-按需[安装单个 Skill](../README.md#只安装一个-skill)，然后让 AI 按该 Skill 完成任务。各业务 Skill 可独立提供对应的只读 MCP 工具；`njucli mcp` 提供全部工具，工具清单由客户端发现。
-
-例如安装软件学院课程 Skill：
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/install.sh | bash -s -- --skill se
-```
-
-独立入口使用 `node "$SKILL_DIR/scripts/run.mjs" mcp`。日常汇总工具名为 `campus_today`。
 
 ## 任务使用
 

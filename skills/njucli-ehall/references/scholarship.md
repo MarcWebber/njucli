@@ -2,14 +2,14 @@
 
 ## 查询与填写
 
-以下命令在本 Skill 目录运行。通过 `NJUCLI_ACCOUNT` 选择账号；应用从当前会话读取学号。
+通过 `NJUCLI_ACCOUNT` 选择账号；应用从当前会话读取学号。
 
 ```bash
-node scripts/run.mjs ehall scholarship list --format json
-node scripts/run.mjs ehall scholarship show 奖种编号 --format json
-node scripts/run.mjs ehall scholarship form 奖种编号 --category 3 --format json
-node scripts/run.mjs ehall scholarship applications --format json
-node scripts/run.mjs ehall scholarship application 申请编号 --format json
+njucli ehall scholarship list --format json
+njucli ehall scholarship show 奖种编号 --format json
+njucli ehall scholarship form 奖种编号 --category 3 --format json
+njucli ehall scholarship applications --format json
+njucli ehall scholarship application 申请编号 --format json
 ```
 
 `list` 和 `applications` 支持 `--page`、`--page-size`。奖种编号来自 `list` 的 `awardId`，等级编号来自 `show` 的 `levels[].levelId`，申请编号来自 `applications` 的 `applicationId`。`form` 返回指定分类的开放批次、填写模板及长度限制，等级有多个时需选择其中之一。分类代码沿用官网的 1 至 6；学校奖入口使用 3。具体可申请奖种以当前账号查询结果为准。
@@ -38,8 +38,8 @@ node scripts/run.mjs ehall scholarship application 申请编号 --format json
 ```
 
 ```bash
-node scripts/run.mjs ehall scholarship save --input ./draft.json --dry-run --format json
-node scripts/run.mjs ehall scholarship save --input ./draft.json --format json
+njucli ehall scholarship save --input ./draft.json --dry-run --format json
+njucli ehall scholarship save --input ./draft.json --format json
 ```
 
 `--dry-run` 读取账号、奖种及申请数据，检查本地附件并返回预览，不创建草稿编号、不上传附件、不保存。保存完成后回读目标记录、草稿状态、奖种批次和全部保存字段，返回 `reviewUrl` 官网核对链接、申请编号和 `nextStep` 操作提示。打开链接后使用相应账号进入“我的申请”，核对该草稿内容及附件，确认无误后由用户自行提交。写入结果不明时先查询申请，不自动重试。

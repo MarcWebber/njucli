@@ -5,7 +5,7 @@ description: 通过南京大学 IT 侠官网提交电脑维修预约，输出打
 
 # IT 侠维修预约
 
-官网入口：[IT 侠预约系统](https://itxia.nju.edu.cn/custom/order)。以下命令在本 Skill 目录运行，统一 CLI 使用 `njucli itxia ...`。预约使用表单信息直接提交，查询使用预约单编号或预约时的姓名、手机号。
+官网入口：[IT 侠预约系统](https://itxia.nju.edu.cn/custom/order)。预约使用表单信息直接提交，查询使用预约单编号或预约时的姓名、手机号。
 
 ## 创建预约
 
@@ -27,7 +27,7 @@ description: 通过南京大学 IT 侠官网提交电脑维修预约，输出打
 以上字段全部必填。`campus` 使用 `XIANLIN`（仙林）、`GULOU`（鼓楼）或 `SUZHOU`（苏州）。可选字段为 `qq`、`warranty`（保修情况文本），以及 `acceptEmailNotification`（邮件提醒，默认 `true`）；QQ 和保修情况可省略或填 `null`。鼓楼用户需在问题描述中补充宿舍楼或办公室位置，尤其是报修台式机的情况。
 
 ```bash
-node scripts/run.mjs itxia create --input /path/to/order.json --agree-terms --format json
+njucli itxia create --input /path/to/order.json --agree-terms --format json
 ```
 
 成功结果包含回读后的预约单 `id`、状态，以及 `url`、`openScript` 和 `retrieveUrl`。`url`（https://itxia.nju.edu.cn/custom/order）不能定位本单：官网按浏览器 `localStorage.requestedOrderId` 展示预约单，CLI 提交不会写入该值。创建成功后，回复用户时必须同时给出预约单编号和打开方法：
@@ -35,14 +35,14 @@ node scripts/run.mjs itxia create --input /path/to/order.json --agree-terms --fo
 - 打开本单应运行 `openScript`：在任一 itxia.nju.edu.cn 页面打开开发者工具控制台，运行后进入本单页面。
 - 或用 `retrieveUrl`（https://itxia.nju.edu.cn/custom/retrieve）按预约时的姓名和手机号找回本单。
 
-`node scripts/run.mjs itxia open ORDER_ID` 离线输出上述链接与方法。保存该编号供后续查询。提交结果不明时，先用姓名和手机号找回；返回编号后回读失败时，按错误中的 `orderId` 查询，核对本单再决定下一步。个人预约信息文件应存放在用户指定的私有目录中，预约单编号须作为个人隐私信息妥善保管。
+`njucli itxia open ORDER_ID` 离线输出上述链接与方法。保存该编号供后续查询。提交结果不明时，先用姓名和手机号找回；返回编号后回读失败时，按错误中的 `orderId` 查询，核对本单再决定下一步。个人预约信息文件应存放在用户指定的私有目录中，预约单编号须作为个人隐私信息妥善保管。
 
 ## 取消预约
 
 取消后无法恢复。仅在用户针对指定预约单明确确认取消后执行，并带上 `--yes`：
 
 ```bash
-node scripts/run.mjs itxia cancel ORDER_ID --yes --format json
+njucli itxia cancel ORDER_ID --yes --format json
 ```
 
 成功后返回回读的预约详情，`status` 为 `CANCELED`。回读状态不是 `CANCELED` 时命令失败，错误信息与 `details` 包含预约单编号和当前状态，此时不输出「预约已取消」。已被接单的预约可能取消失败，此时先查询状态，再告知用户联系 IT 侠。
@@ -52,13 +52,13 @@ node scripts/run.mjs itxia cancel ORDER_ID --yes --format json
 已有预约单编号：
 
 ```bash
-node scripts/run.mjs itxia status ORDER_ID --format json
+njucli itxia status ORDER_ID --format json
 ```
 
 找回官网当前预约：
 
 ```bash
-node scripts/run.mjs itxia status --name "预约时的姓名" --phone "预约时的手机号" --format json
+njucli itxia status --name "预约时的姓名" --phone "预约时的手机号" --format json
 ```
 
 查询返回打开链接（`url`、`openScript`、`retrieveUrl`）、`status`、`statusText`、处理人 `handler`、回复记录 `replies` 和预约详情；回复包含发送者、时间、正文和附件信息。进度以官网当前状态和回复为依据，接单及维修时间以 IT 侠联系结果为准。

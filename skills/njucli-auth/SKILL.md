@@ -5,7 +5,7 @@ description: 登录南京大学统一身份认证、保存本地凭据、查询�
 
 # 统一身份认证
 
-以下命令在本 Skill 目录运行；扫码由本人完成。
+扫码由本人完成。
 
 ## 运行前提
 
@@ -16,9 +16,9 @@ description: 登录南京大学统一身份认证、保存本地凭据、查询�
 通过 JSON 文件导入统一认证账号与密码（内容包含 `username` 和 `password`）：
 
 ```bash
-node scripts/run.mjs auth login --credentials /path/to/auth.json
-node scripts/run.mjs auth status sso --format json
-node scripts/run.mjs account use ACCOUNT
+njucli auth login --credentials /path/to/auth.json
+njucli auth status sso --format json
+njucli account use ACCOUNT
 ```
 
 `auth login` 默认使用 `sso`，登录南京大学统一身份认证。各业务所需的登录方式和访问前提见所属 Skill。
@@ -26,7 +26,7 @@ node scripts/run.mjs account use ACCOUNT
 应用需要核验本次密码及学校身份时，使用非交互入口：
 
 ```bash
-node scripts/run.mjs auth authenticate --credentials - --format json < /path/to/auth.json
+njucli auth authenticate --credentials - --format json < /path/to/auth.json
 ```
 
 `authenticate` 在当前账号目录内清空 Cookie，以本次凭据完成 SSO，再通过青年平台读取本人学号，JSON 的 `data.studentId` 来自学校响应。该入口依赖统一认证与青年平台可用；身份回读失败时返回错误。成功后保存凭据和新会话，失败时清理本次 Cookie 并恢复原凭据。`auth login --credentials -` 同样支持从标准输入读取凭据。
@@ -38,7 +38,7 @@ node scripts/run.mjs auth authenticate --credentials - --format json < /path/to/
 ## 会话维护
 
 ```bash
-node scripts/run.mjs auth maintain --format json
+njucli auth maintain --format json
 ```
 
 该命令检查统一认证与 EHall 会话，并保存更新的 Cookie。会话有效时返回 `kept-alive`，用已存凭据恢复成功后返回 `restored`。
@@ -50,12 +50,12 @@ node scripts/run.mjs auth maintain --format json
 先保存统一认证凭据，再启动常驻 CLI 进程，持续维护当前账号：
 
 ```bash
-node scripts/run.mjs auth daemon start
-node scripts/run.mjs auth daemon status --format json
-node scripts/run.mjs auth daemon stop
+njucli auth daemon start
+njucli auth daemon status --format json
+njucli auth daemon stop
 ```
 
-启动后立即维护一次，之后每轮结束后等待 600 秒。使用 `start --interval 300` 可设为五分钟；间隔支持 1–2147483 秒的整数。调整间隔时先 `stop` 再 `start`。通过构建后的 CLI 或本 Skill 的 `scripts/run.mjs` 启动。
+启动后立即维护一次，之后每轮结束后等待 600 秒。使用 `start --interval 300` 可设为五分钟；间隔支持 1–2147483 秒的整数。调整间隔时先 `stop` 再 `start`。
 
 进程固定启动时的账号与配置目录，每轮复用账号 Cookie 和进程锁，退出终端后继续运行。系统重启或进程退出后通过 `start` 恢复。普通网络失败后在下个周期再维护；学校拒绝凭据、凭据缺失或要求本人操作时结束进程，处理原因后重新启动。后台保活停止时，业务命令仍会按需检查和恢复会话。
 
@@ -66,16 +66,6 @@ node scripts/run.mjs auth daemon stop
 遇到登录错误时：
 
 - `AUTH_REJECTED`：按学校返回的原因检查账号状态和凭据。
-- `AUTH_CHALLENGE_FAILED`：滑块验证尝试超限，请重新运行或使用下方滑块脚本。
+- `AUTH_CHALLENGE_FAILED`：内置滑块识别尝试超限，请重新运行 `njucli auth login`。
 - `USER_ACTION_REQUIRED`：需要手机扫码或其他人工操作，请在官方页面完成。
 - `AUTH_RESTORE_FAILED`：自动恢复会话失败，请检查网络或重新登录。
-
-## 滑块验证辅助
-
-统一认证已内置滑块识别。若多次验证失败，可在交互式终端运行辅助脚本：
-
-```bash
-node scripts/login.mjs
-```
-
-输入 `shot` 获取截图，再输入 `drag x y dx` 拖动滑块。`x/y` 是滑块按钮中心，`dx` 是向右移动的距离，均按当前截图的 CSS 像素计算。验证成功后保存会话；完成后删除临时截图 `njucli-slider.png`。
