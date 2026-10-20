@@ -12,31 +12,36 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const execute = promisify(execFile);
 
-test("统一安装：njucli、Skill 注册、目录、模板与 MCP", async (t) => {
+test("统一安装：njucli、全局套件、目录、模板与 MCP", async (t) => {
   const directory = await mkdtemp(join(tmpdir(), "njucli-install-test-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const prefix = join(directory, "install");
   const env = {
     ...process.env,
-    NJUCLI_SKILLS_DIR: join(directory, "skills"),
+    CODEX_HOME: join(directory, "codex"),
     XDG_CONFIG_HOME: join(directory, "config"),
     XDG_DATA_HOME: join(directory, "data"),
     PATH: `${join(prefix, "bin")}${delimiter}${process.env.PATH}`,
   };
   delete env.NJUCLI_ACCOUNT;
+  delete env.NJUCLI_SKILLS_DIR;
   const packed = JSON.parse((await execute("npm", ["pack", "--ignore-scripts", "--pack-destination", directory, "--json"], { cwd: root })).stdout)[0];
   assert.equal(packed.files.filter((file) => file.path.endsWith("package.json")).length, 1);
+  assert.deepEqual(packed.files.filter((file) => file.path.endsWith("/SKILL.md")).map((file) => file.path), ["skills/SKILL.md"]);
   assert.ok(packed.files.every((file) => !file.path.startsWith("skills/") || !file.path.includes("/scripts/")));
   await execute("npm", ["install", "--global", "--prefix", prefix, "--foreground-scripts", "--no-audit", "--no-fund", join(directory, packed.filename)], { cwd: directory, env });
   const run = async (args) => (await execute("njucli", args, { cwd: directory, env })).stdout;
   const names = (await readdir(join(root, "skills"))).filter((name) => name.startsWith("njucli-"));
   assert.match(await run(["--help"]), /Usage: njucli/);
+  const skillsRoot = join(env.CODEX_HOME, "skills");
+  assert.deepEqual(await readdir(skillsRoot), ["njucli"]);
+  assert.equal(await readFile(join(skillsRoot, "njucli/SKILL.md"), "utf8"), await readFile(join(root, "skills/SKILL.md"), "utf8"));
   for (const name of names) {
     const domain = name.slice("njucli-".length);
     assert.match(await run([domain, "--help"]), new RegExp(`Usage: njucli ${domain}`));
     const installed = join(prefix, "lib/node_modules/njucli/skills", name);
-    assert.equal(await realpath(join(env.NJUCLI_SKILLS_DIR, name)), await realpath(installed));
-    assert.equal(await readFile(join(installed, "SKILL.md"), "utf8"), await readFile(join(root, "skills", name, "SKILL.md"), "utf8"));
+    assert.equal(await realpath(join(skillsRoot, "njucli", name)), await realpath(installed));
+    assert.equal(await readFile(join(installed, "guide.md"), "utf8"), await readFile(join(root, "skills", name, "guide.md"), "utf8"));
   }
 
   const sources = JSON.parse(await run(["campus", "sources", "--format", "json"]));
@@ -61,7 +66,7 @@ test("统一安装：njucli、Skill 注册、目录、模板与 MCP", async (t) 
     const result = await client.callTool({ name: "institution_list", arguments: {} });
     assert.equal(result.isError, undefined);
     assert.deepEqual(JSON.parse(result.content[0].text), institutions);
-    t.diagnostic(`${names.length} 个业务入口与 Skill 注册、${tools.length} 个只读 MCP 工具通过实际安装验证`);
+    t.diagnostic(`${names.length} 个业务入口与 1 个全局套件、${tools.length} 个只读 MCP 工具通过实际安装验证`);
   } finally {
     await client.close();
   }

@@ -1,8 +1,3 @@
----
-name: njucli-self-service
-description: 使用南京大学自助服务查询与申请正式成绩单、在校证明等文件，邮件领取电子文件，管理申请、查找打印机并查询云打印。涉及正式成绩单导出、自助打印、证明文件或云打印时使用。
----
-
 # 自助服务
 
 在当前目录运行以下命令（统一 CLI 将 `njucli` 换成 `njucli`）。CLI 会自动恢复会话。[官方入口](https://zzfwx.nju.edu.cn/wec-self-print-app-console/mobile.html#/mobile/itemList)。

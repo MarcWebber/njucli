@@ -35,10 +35,10 @@
 
 简单业务将输入校验与 MCP 放在 `commands.ts`，请求与简短会话包装放在 `client.ts`。统一 CLI 在 `src/app/production.ts` 用一次 `mount` 关联业务实例、命令和 MCP。
 
-简短说明直接写入 `SKILL.md`，较长流程和接口表放入 `references/`；接口索引见[校园服务接口](docs/interface-evidence.md)。
+业务说明直接写入所属 `guide.md`，较长流程和接口表放入 `references/`；接口索引见[校园服务接口](docs/interface-evidence.md)。
 
-根包统一维护依赖、构建、安装与升级。源码编译到 `dist/`，模板随构建复制；Skills 的使用说明、参考资料和模板随根包分发，命令统一使用 `njucli`。
+根包统一维护依赖、构建、安装与升级。源码编译到 `dist/`，模板随构建复制；`skills/SKILL.md` 作为套件入口，业务说明、参考资料和模板随根包分发，命令统一使用 `njucli`。
 
-`pnpm test` 先构建，再运行真实文件锁和安装检查。安装用例将实际 tarball 安装到临时全局目录，通过 PATH 中的 `njucli` 核对各业务帮助、公开目录、模板、MCP 查询及 Skill 注册；临时目录在结束后清理。校园请求另按用户授权实测并记录报告。
+`pnpm test` 先构建，再运行真实文件锁和安装检查。安装用例将实际 tarball 安装到临时全局目录，通过 PATH 中的 `njucli` 核对各业务帮助、公开目录、模板、MCP 查询及全局套件注册；临时目录在结束后清理。校园请求另按用户授权实测并记录报告。
 
 所有评审者在每次评审（包括自评审）前须阅读并遵循根目录的 [REVIEW_RULES.md](REVIEW_RULES.md)，人工评审及任何模型、工具使用同一份规则。

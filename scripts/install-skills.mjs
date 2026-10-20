@@ -3,59 +3,35 @@ import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const REPLACED_SKILLS = ["njucli-academic", "njucli-course", "njucli-today", "njucli-softse", "njucli-doctor"];
-
-export async function installSkills(packageRoot, skillsRoot) {
+async function installSuite(packageRoot, skillsRoot) {
   const root = await realpath(packageRoot);
   const source = join(root, "skills");
-  const names = (await readdir(source, { withFileTypes: true }))
-    .filter((entry) => entry.isDirectory() && entry.name.startsWith("njucli-"))
-    .map((entry) => entry.name);
-  const pending = [];
-  for (const name of names) {
-    const target = join(skillsRoot, name);
-    const skillSource = join(source, name);
-    const existing = await lstat(target).catch((error) => {
-      if (error.code !== "ENOENT") throw error;
-      return null;
-    });
-    if (existing) {
-      let managed = false;
-      if (existing.isSymbolicLink()) {
-        const current = resolve(skillsRoot, await readlink(target));
-        if (current === skillSource) continue;
-        const alternate = join(dirname(root), name);
-        managed = current === alternate;
-      }
-      if (!managed) throw new Error(`Skill 路径已被其他内容占用，请先迁移：${target}`);
-    }
-    pending.push({ target, source: skillSource, replace: Boolean(existing) });
+  const target = join(skillsRoot, "njucli");
+  const existing = await lstat(target).catch((error) => {
+    if (error.code !== "ENOENT") throw error;
+    return null;
+  });
+  if (existing && (!existing.isSymbolicLink() || resolve(skillsRoot, await readlink(target)) !== source)) {
+    throw new Error(`Skill 路径已被其他内容占用，请先迁移：${target}`);
   }
   await mkdir(skillsRoot, { recursive: true });
-  for (const item of pending) {
-    if (item.replace) await unlink(item.target);
-    await symlink(item.source, item.target, "dir");
-  }
-  for (const oldName of REPLACED_SKILLS) {
-    const target = join(skillsRoot, oldName);
-    const existing = await lstat(target).catch((error) => {
-      if (error.code !== "ENOENT") throw error;
-      return null;
-    });
-    if (!existing?.isSymbolicLink()) continue;
-    const current = resolve(skillsRoot, await readlink(target));
-    const packages = dirname(root);
-    if (current === join(packages, oldName) || current === join(packages, "njucli", "skills", oldName)) {
-      await unlink(target);
+  if (!existing) await symlink(source, target, "dir");
+
+  for (const entry of await readdir(skillsRoot, { withFileTypes: true })) {
+    if (!entry.name.startsWith("njucli-") || !entry.isSymbolicLink()) continue;
+    const path = join(skillsRoot, entry.name);
+    const current = resolve(skillsRoot, await readlink(path));
+    if (current === join(source, entry.name) || current === join(dirname(root), entry.name)) {
+      await unlink(path);
     }
   }
-  return names;
+  return target;
 }
 
 const isMain = process.argv[1] && await realpath(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain && (process.argv[2] || (process.env.npm_lifecycle_event === "postinstall" && process.env.npm_config_global === "true"))) {
   const packageRoot = process.argv[2] || fileURLToPath(new URL("../", import.meta.url));
   const skillsRoot = resolve(process.env.NJUCLI_SKILLS_DIR || join(process.env.CODEX_HOME || join(homedir(), ".codex"), "skills"));
-  const names = await installSkills(packageRoot, skillsRoot);
-  console.log(`已安装 ${names.length} 个全局 Skill：${skillsRoot}`);
+  const target = await installSuite(packageRoot, skillsRoot);
+  console.log(`已安装 NjuCLI Skills 套件：${target}`);
 }

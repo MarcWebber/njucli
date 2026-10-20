@@ -1,113 +1,72 @@
+<p align="center">
+  <img src="docs/assets/logo.svg" alt="NjuCLI Logo" width="88" />
+</p>
+
 # NjuCLI
+
+**让 AI 帮你处理南大校园日常。**
 
 [![CI](https://github.com/MarcWebber/njucli/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/MarcWebber/njucli/actions/workflows/ci.yml)
 [![Node.js](https://img.shields.io/badge/Node.js-20%2B-5FA04E?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![License: Personal Use](https://img.shields.io/badge/License-Personal_Use-blue)](LICENSE)
-[![GitHub stars](https://img.shields.io/github/stars/MarcWebber/njucli?style=flat)](https://github.com/MarcWebber/njucli/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/MarcWebber/njucli?style=flat)](https://github.com/MarcWebber/njucli/forks)
 
-南京大学校园服务工具，让 AI 帮你查课表、收邮件、管理云盘和处理校园事务。
+南京大学校园服务套件，面向学生及其 AI 助手。查课表、找空闲教室、看邮件、管理云盘、写论文，统一通过 NjuCLI 完成。
 
-## 用户群
+## 一键安装
 
-扫码或[点击链接加入飞书用户群](https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=dc4hab18-9c9e-4ca7-bdf0-dde104e2552c)，交流使用方法、反馈问题与获取项目更新。
-
-<img src="docs/assets/njucli-user-group.png" alt="NjuCLI 飞书用户群二维码" width="320" />
-
-## 安装
-
-需要 Node.js 20+、Git、curl 和 Bash。Linux 使用 `util-linux` 提供的 `flock` 管理账号会话锁。网页登录及页面操作使用本机浏览器，运行前提见[认证 Skill](skills/njucli-auth/SKILL.md#运行前提)。
+准备 Node.js 20+（含 npm）、Git、curl 和 Bash，在终端运行：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/install.sh | bash
 ```
 
-一次安装全部业务命令和配套 Skills，所有操作统一使用 `njucli`，可从任意目录运行。Skills 提供 AI 使用说明，随 `njucli upgrade` 一起更新。Skill 默认注册到 `${CODEX_HOME:-~/.codex}/skills/`，可通过 `NJUCLI_SKILLS_DIR` 指定其他客户端的目录。使用 `NJUCLI_INSTALL_PREFIX` 指定 CLI 安装前缀时，将其 `bin` 目录加入 PATH。
+**一次安装一个完整套件。** `njucli` 注册为全局命令，Skills 默认安装到 `~/.codex/skills/njucli/`；设置 `CODEX_HOME` 时使用其 `skills/njucli/`。套件入口是 `SKILL.md`，内部包含各业务说明，AI 按任务读取。后续用 `njucli upgrade` 一起更新。
 
-升级：
+## 让 AI 帮你安装
 
-```bash
-njucli upgrade
+把下面这段话发给能执行本机终端命令的 AI 助手：
+
+```text
+请帮我安装 NjuCLI，仓库地址：
+https://github.com/MarcWebber/njucli
+
+先阅读仓库 README，检查安装环境，按一键安装方式全局安装 NjuCLI 和完整的 Skills 套件。
+完成后确认 njucli 命令可用、全局 skills/njucli/SKILL.md 能读取，并做一次公开镜像查询验证。告诉我安装位置和验证结果。
 ```
 
-## 现有 Skills
+安装后，重新打开 AI 会话即可读取套件。首次使用个人校园服务时，按[认证说明](skills/njucli-auth/guide.md)完成本人登录；公开镜像和机构目录可直接查询。
 
-点击名称查看使用方法。Skill 按完整业务场景组织，相关能力通过组内子命令扩展。
+## 可以做什么
 
-| Skill | 服务 |
+| 场景 | 你可以交给 AI 的任务 |
 | --- | --- |
-| [njucli-auth](skills/njucli-auth/SKILL.md) | 统一认证与会话维护 |
-| [njucli-campus](skills/njucli-campus/SKILL.md) | 校园信息、NJU Mirror 镜像查询与今日汇总 |
-| [njucli-ehall](skills/njucli-ehall/SKILL.md) | 空闲教室、课表、选课、成绩、考试、培养方案、个人资料、奖学金草稿与办事大厅 |
-| [njucli-pay](skills/njucli-pay/SKILL.md) | 校园卡余额、消费与充值记录 |
-| [njucli-dorm](skills/njucli-dorm/SKILL.md) | 电费房间绑定与充值记录 |
-| [njucli-self-service](skills/njucli-self-service/SKILL.md) | 证明目录与申请、费用额度、邮件领取、申请撤销、打印机位置与云打印查询 |
-| [njucli-library](skills/njucli-library/SKILL.md) | 图书馆 |
-| [njucli-sports](skills/njucli-sports/SKILL.md) | 体育场馆 |
-| [njucli-se](skills/njucli-se/SKILL.md) | 软件学院课程平台 |
-| [njucli-lms](skills/njucli-lms/SKILL.md) | 智汇南雍课程、作业、测试与助教布置作业 |
-| [njucli-tex](skills/njucli-tex/SKILL.md) | TeX 写作 |
-| [njucli-mail](skills/njucli-mail/SKILL.md) | 校园邮箱 |
-| [njucli-software](skills/njucli-software/SKILL.md) | 正版软件 |
-| [njucli-box](skills/njucli-box/SKILL.md) | 南大云盘、在线文档、白板与可编辑数据图表 |
-| [njucli-youth](skills/njucli-youth/SKILL.md) | 青年平台 |
-| [njucli-table](skills/njucli-table/SKILL.md) | 协同表格、外部应用表单 API 填报与回读 |
-| [njucli-itxia](skills/njucli-itxia/SKILL.md) | IT 侠维修预约、进度查询与取消 |
-| [njucli-institution](skills/njucli-institution/SKILL.md) | 教师与院系联系方式、学院简介与后勤电话；本地检索、官网读取与导出 |
+| 上课与教务 | [查课表、成绩、考试和空闲教室](skills/njucli-ehall/guide.md)，查看[软件学院](skills/njucli-se/guide.md)和[智汇南雍](skills/njucli-lms/guide.md)的课程与作业 |
+| 邮件与文件 | [查看邮件和附件](skills/njucli-mail/guide.md)，[管理云盘、在线文档与白板](skills/njucli-box/guide.md)，[填写协同表格](skills/njucli-table/guide.md) |
+| 学习与写作 | [检索图书和借阅](skills/njucli-library/guide.md)，[撰写与编译 LaTeX](skills/njucli-tex/guide.md)，[查找校园正版软件](skills/njucli-software/guide.md) |
+| 校园生活 | [看通知、食堂信息、查镜像](skills/njucli-campus/guide.md)，[查体育场馆](skills/njucli-sports/guide.md)，查看[校园卡](skills/njucli-pay/guide.md)和[宿舍电费](skills/njucli-dorm/guide.md) |
+| 校园事务 | [查青年平台活动](skills/njucli-youth/guide.md)，[申请成绩单与证明](skills/njucli-self-service/guide.md)，[预约 IT 侠维修](skills/njucli-itxia/guide.md)，[查教师与后勤联系方式](skills/njucli-institution/guide.md) |
 
-```bash
-njucli ehall schedule
-njucli ehall classrooms tomorrow --campus 3 --period 5-8
-njucli ehall grades
-njucli dorm bindings
-njucli dorm bills
-njucli pay balance
-njucli pay bills
-njucli self-service items 成绩单
-njucli se assignments --pending
-njucli lms courses
-njucli campus today
-njucli campus mirrors ubuntu
-```
+完整业务说明见[套件入口](skills/SKILL.md)。使用条件和验证范围随各业务说明维护。
 
-正式电子成绩单从自助服务的实时目录选择项目，使用 `njucli self-service create ITEM_ID` 申请并默认发送到绑定邮箱；发放后询问是否需要下载，确认后通过邮箱附件保存原 PDF。纸质证明、申请管理、云打印查询与取件指引见[自助服务 Skill](skills/njucli-self-service/SKILL.md)。
+## 接入与文档
 
-完整命令通过 `njucli --help` 和 `njucli <domain> --help` 查看。
+支持读取本地 Skill 并执行命令的 AI 助手，可使用完整套件；支持本地 stdio MCP 的客户端，可接入只读查询工具。
 
-在线文档使用 `njucli box doc-create/doc-read/doc-update` 创建、读取与更新；`whiteboard-create` 创建白板，`chart-create` 将数据生成可编辑柱状图或折线图，`doc-embed-whiteboard` 将图形嵌入文档。返回可在线编辑的云盘链接，可把报告链接填回协同表格；输入示例、流程与架构见 [Box 文档说明](skills/njucli-box/references/documents.md)。
+[AI 客户端接入](docs/ai-plugin.md) · [WorkBuddy 教程](docs/workbuddy.md) · [安装与维护](docs/installation.md) · [贡献指南](CONTRIBUTING.md) · [问题反馈](https://github.com/MarcWebber/njucli/issues)
 
-查找学院、研究方向或后勤联系方式，无需校园账号：
+## 用户群
 
-```bash
-njucli institution show public
-njucli institution teachers 社会保障 --institution public
-njucli institution search 人工智能 --kind teacher
-njucli institution teacher software/李宣东
-njucli institution services 水电 --live
-njucli institution dump --output ./nju-knowledge
-rg -n '公共政策' ./nju-knowledge/institutions
-```
+[点击加入飞书用户群](https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=dc4hab18-9c9e-4ca7-bdf0-dde104e2552c)，交流用法、反馈问题和获取更新。
 
-NjuCLI 提供南京大学机构与教师公开资料的快速检索，重点支持教师及机构办公联系方式（电话、邮箱）的查询。支持按姓名、学院检索，优先展示已有联系方式的结果；并提供 `--live` 选项实时核对官网个人主页。当个人联系方式缺失时，将展示所在单位已收录的公开办公联系方式。支持整个本地资料库的结构化及 Markdown 导出。
+<img src="docs/assets/njucli-user-group.png" alt="NjuCLI 用户群二维码" width="200" />
 
-IT 侠支持 `njucli itxia create --input order.json --agree-terms` 提交维修预约，`njucli itxia status ORDER_ID` 查询状态与回复、`njucli itxia open ORDER_ID` 获取预约单页面打开方法，以及 `njucli itxia cancel ORDER_ID --yes` 取消预约。也可通过 `status --name "预约姓名" --phone "预约手机号"` 找回当前预约；字段和服务条款见 [IT 侠 Skill](skills/njucli-itxia/SKILL.md)。
-
-业务命令按需恢复校园登录。`njucli auth maintain` 执行一次统一认证与 EHall 会话维护；周期维护和登录状态核对见[认证 Skill](skills/njucli-auth/SKILL.md#会话维护)。
-
-保存统一认证凭据后，可启动 CLI 后台保活进程：
-
-```bash
-njucli auth daemon start
-njucli auth daemon status --format json
-njucli auth daemon stop
-```
-
-常驻 CLI 进程默认每轮结束后等待 10 分钟，`start --interval 300` 可设为五分钟。退出终端后继续运行，状态返回进程 PID；运行前提、启动与停止方式见[后台保活](skills/njucli-auth/SKILL.md#后台保活)。
-
-## 文档
-
-[校园网验证与校医院接入评估](docs/reports/2026-10-10-intranet.md) · [Skills](skills/) · [AI 客户端接入](docs/ai-plugin.md) · [WorkBuddy 接入](docs/workbuddy.md) · [贡献指南](CONTRIBUTING.md) · [问题反馈](https://github.com/MarcWebber/njucli/issues)
+扫码加入 NjuCLI 用户群，也可使用上方链接。
 
 ## 许可证
 
 [个人使用许可证](LICENSE)：允许非商业个人学习和本人校园事务使用；学校、机构及商业用途须另获书面授权。
+
+## 关联项目
+
+- [NJUWeb](https://github.com/MarcWebber/njuweb)：网页入口，提供用户登录、任务管理与成果交付。
+- [NJURunner](https://github.com/MarcWebber/njurunner)：执行节点，在 Docker 沙箱中运行校园任务并返回结果。

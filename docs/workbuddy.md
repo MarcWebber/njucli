@@ -1,6 +1,6 @@
 # 在 WorkBuddy 中使用 NjuCLI
 
-WorkBuddy 是腾讯推出的 AI 办公工作台桌面客户端，支持 MCP（Model Context Protocol）与 Skills 扩展。免费版提供对话功能，实测默认模型为 Fast（Deepseek-V4.1-Flash）。本文介绍如何在 WorkBuddy 中配置 NjuCLI 的 MCP 只读工具与 Skills。
+WorkBuddy 是腾讯推出的 AI 办公工作台桌面客户端，支持 MCP（Model Context Protocol）与 Skills 扩展。免费版提供对话功能，实测默认模型为 Fast（Deepseek-V4.1-Flash）。本文介绍如何在 WorkBuddy 中配置 NjuCLI 的 MCP 只读工具与 Skills 套件。
 
 ## 前提条件
 
@@ -14,7 +14,7 @@ WorkBuddy 是腾讯推出的 AI 办公工作台桌面客户端，支持 MCP（Mo
 
 ## 1. 安装 NjuCLI
 
-在运行 WorkBuddy 的本地计算机上打开终端，执行以下命令，一次安装 NjuCLI 并将配套 Skills 注册到 WorkBuddy：
+在运行 WorkBuddy 的本地计算机上打开终端，执行以下命令，一次安装 NjuCLI 并将 NjuCLI 套件注册到 WorkBuddy：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/MarcWebber/njucli/main/scripts/install.sh | NJUCLI_SKILLS_DIR=~/.workbuddy/skills bash
@@ -84,13 +84,13 @@ WorkBuddy 支持用户级与项目级两处 MCP 配置文件：
 
 ## 3. 启用 Skills
 
-第 1 步已将配套 Skills 注册到 `~/.workbuddy/skills`，它们提供各业务的使用说明，统一调用 `njucli`。注册路径指向同一个安装包，执行 `njucli upgrade` 时一起更新。
+第 1 步已将一个 `njucli` 套件注册到 `~/.workbuddy/skills/njucli/`。套件入口提供业务索引，AI 按任务读取内部说明并统一调用 `njucli`。执行 `njucli upgrade` 时一起更新。
 
-安装完成后，进入 **Experts · Skills · Connectors** → **Skills** → **Installed** → **All skills**，可在 **Custom** 分组中看到安装的 Skill，每个 Skill 均配有独立开关。
+安装完成后，进入 **Experts · Skills · Connectors** → **Skills** → **Installed** → **All skills**，可在 **Custom** 分组中启用 `njucli` 套件。
 
 ![Skills 已安装列表与 njucli-* Skill 开关](images/workbuddy/03-skills-installed.png)
 
-图 3：在 Custom 分组中检查已注册的 njucli Skills，并启用需要的业务说明。
+图 3：图中的 Custom 分组是 Skill 的启用入口；完整套件的说明从 `njucli/SKILL.md` 读取。
 
 ## 4. 试用
 
@@ -104,7 +104,7 @@ WorkBuddy 支持用户级与项目级两处 MCP 配置文件：
 
 图 4：在新任务中输入具体查询需求，开始调用已安装的 NjuCLI。
 
-WorkBuddy 会自动调用 `njucli-institution`，返回软件学院官网 `software.nju.edu.cn`，并提供学院简介入口、师资队伍页及数据来源，调用过程无需额外授权确认。
+WorkBuddy 会按套件中的机构名录说明调用 `njucli`，返回软件学院官网 `software.nju.edu.cn`，并提供学院简介入口、师资队伍页及数据来源，调用过程无需额外授权确认。
 
 ![WorkBuddy 调用 njucli 后的回答](images/workbuddy/05-chat-result.png)
 
@@ -130,7 +130,7 @@ WorkBuddy 未在系统环境变量中找到 `njucli`。请检查系统的 `PATH`
 
 ### Skills 列表中看不到已安装的扩展
 
-1. 检查 `~/.workbuddy/skills` 目录下是否存在对应文件。
+1. 检查 `~/.workbuddy/skills` 目录下是否存在 `njucli/SKILL.md`。
 2. 确认第 1 步的 `NJUCLI_SKILLS_DIR` 设置正确，注册路径指向已安装的 NjuCLI。
 3. 重启 WorkBuddy 客户端刷新缓存。
 

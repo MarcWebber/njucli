@@ -1,8 +1,3 @@
----
-name: njucli-tex
-description: 管理南京大学 TeXPage 项目，撰写与修改 LaTeX 论文、上传插图与参考文献、编译并读取错误日志。用户涉及南大在线 LaTeX 平台 (tex.nju.edu.cn) 时使用。
----
-
 # TeX 写作
 
 首次使用需登录：`njucli auth login tex`。同一账号请串行执行写操作命令。

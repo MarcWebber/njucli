@@ -1,8 +1,3 @@
----
-name: njucli-lms
-description: 查询南京大学智汇南雍（lms.nju.edu.cn）的课程、课件、作业、测试和待办，使用教师或助教权限创建作业。用户提到智慧南雍、智汇南雍、LMS 或 njucli lms 时使用。
----
-
 # 智汇南雍
 
 首次使用先运行 `njucli auth login lms`；业务命令也会按需恢复校园登录。
