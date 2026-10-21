@@ -5,7 +5,7 @@
 ## 环境与执行入口
 
 - Claude Code 2.1.304，macOS，Node.js 26.10.0，pnpm 10.27.0。
-- 候选包基于 PR #24 提交 `8aad9edea8e59c71910b1e6a20b66d5aa015c277`，加入本次 Claude 插件声明与打包清单修改。
+- 候选包基于 PR #24 提交 `8aad9edea8e59c71910b1e6a20b66d5aa015c277`，加入本次 Claude 插件声明与打包清单修改，并同步 `main` 的 `636f88ad53876d0854df279c75db529eb8b82613`。
 - 使用实际 tarball 安装到临时全局前缀；`njucli` 通过该前缀的 PATH 运行。
 - 使用独立 `CLAUDE_CONFIG_DIR` 执行 `plugin marketplace add <已安装包目录> --scope user`、`plugin install njucli@njucli --scope user`，再回读安装状态与组件清单。
 - 实际会话复用本机 Claude 登录，以 `--plugin-dir` 加载上述安装缓存，通过 `--mcp-config` 加载同一安装包的 `.mcp.json`，调用同一候选 CLI。
