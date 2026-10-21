@@ -35,10 +35,26 @@ export function registerAuthCommands(
       return { data, text: `${data.account}\t${data.running ? `运行中（PID ${data.pid}）` : "已停止"}\n日志：${data.logPath}\n最近成功：${data.lastSuccess?.checkedAt ?? "待首次维护"}` };
     }));
 
-  addFormatOption(daemon.command("run", { hidden: true })
+  const autostart = program.command("auto").description("管理当前系统登录后的后台保活自启动");
+  addFormatOption(autostart.command("start").description("启用当前账号自启动并立即启动保活")
     .option("--interval <seconds>", "维护间隔（正整数秒）", "600"))
     .action(async (options: FormatOptions & { interval: string }) => runCommand(runtime, options, async () => {
-      if (!process.send) throw new AppError("INVALID_INPUT", "请使用 auth daemon start 启动后台保活");
+      const data = await service.autostart("enable", parseInterval(options.interval));
+      return { data, text: `已启用 ${data.account} 登录后自动保活` };
+    }));
+  for (const action of ["stop", "status"] as const) {
+    addFormatOption(autostart.command(action).description(action === "stop" ? "关闭自启动并停止当前账号保活" : "查看当前账号自启动配置"))
+      .action(async (options: FormatOptions) => runCommand(runtime, options, async () => {
+        const data = await service.autostart(action === "stop" ? "disable" : "status");
+        return { data, text: `${data.account}\t自启动${data.enabled ? "已启用" : "已关闭"}\n配置：${data.path}` };
+      }));
+  }
+
+  addFormatOption(daemon.command("run", { hidden: true })
+    .option("--foreground", "由系统服务管理前台进程")
+    .option("--interval <seconds>", "维护间隔（正整数秒）", "600"))
+    .action(async (options: FormatOptions & { interval: string; foreground?: boolean }) => runCommand(runtime, options, async () => {
+      if (!process.send && !options.foreground) throw new AppError("INVALID_INPUT", "请使用 auth daemon start 启动后台保活");
       const interval = parseInterval(options.interval);
       const controller = new AbortController();
       const stop = () => controller.abort();
