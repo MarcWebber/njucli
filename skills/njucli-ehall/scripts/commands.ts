@@ -1,4 +1,6 @@
 import { scholarshipDraftSchema } from "./scholarship.js";
+import { classroomQuerySchema } from "./classrooms.js";
+import { requiredText } from "../../../src/core/guards.js";
 import type { Command } from "commander";
 import { readFile } from "node:fs/promises";
 
@@ -68,6 +70,30 @@ export function registerEHallCommands(
   runtime: CommandRuntime,
 ): Command {
   const ehall = program.command("ehall").description("教务、课表、选课、个人资料与办事大厅");
+
+  addFormatOption(ehall.command("classroom-campuses").description("查询空闲教室服务的校区代码"))
+    .action(async (options: FormatOptions) => runCommand(runtime, options, async () => {
+      const data = await service.classroomCampuses();
+      return { data, text: data.map(row => `${row.id} ${row.name}`).join("\n") || "暂无可查询校区" };
+    }));
+  addFormatOption(ehall.command("classroom-buildings <campus>").description("查询指定校区的教学楼代码"))
+    .action(async (campus: string, options: FormatOptions) => runCommand(runtime, options, async () => {
+      const data = await service.classroomBuildings(requiredText(campus, "校区代码"));
+      return { data, text: data.map(row => `${row.id} ${row.name}`).join("\n") || "暂无教学楼" };
+    }));
+  addFormatOption(ehall.command("classrooms [date]").description("查询指定日期、连续节次内均空闲的教室，默认今天")
+    .requiredOption("--campus <id>", "校区代码，见 classroom-campuses")
+    .requiredOption("--period <range>", "单节或连续节次，如 5 或 5-8")
+    .option("--building <id>", "教学楼代码，见 classroom-buildings"))
+    .action(async (date: string | undefined, options: FormatOptions & { campus: string; period: string; building?: string }) => runCommand(runtime, options, async () => {
+      const parsed = classroomQuerySchema.safeParse({ ...options, date });
+      if (!parsed.success) throw new AppError("INVALID_INPUT", parsed.error.issues.map(issue => issue.message).join("；"));
+      const data = await service.classrooms(parsed.data);
+      return { data, text: [
+        `${data.date} 第 ${data.period} 节：共 ${data.total} 间空闲教室`,
+        ...data.items.map(room => [room.name, room.building, room.type, room.seats === null ? null : `${room.seats} 座`, room.time].filter(Boolean).join(" | ")),
+      ].join("\n") };
+    }));
 
   addFormatOption(ehall.command("profile [kind]").description("查询研究生论文、获奖、专利、著作和导师项目"))
     .action(async (kind: string | undefined, options: FormatOptions) => runCommand(runtime, options, async () => {

@@ -6,7 +6,7 @@
 
 使用前需确保已登录 ehall：
 ```bash
-node scripts/run.mjs auth login ehall
+njucli auth login ehall
 ```
 
 查询与维护操作通过统一 CLI 命令完成，异常会传递给统一输出层。写操作无自动重试机制；若状态不明，请先查询资料列表，确认记录及编号（`record.id`）后再决定后续操作，避免重复登记同一成果。
@@ -15,21 +15,21 @@ node scripts/run.mjs auth login ehall
 
 - **查询已有记录：**
   ```bash
-  node scripts/run.mjs ehall profile --format json
-  node scripts/run.mjs ehall profile papers --format json
+  njucli ehall profile --format json
+  njucli ehall profile papers --format json
   ```
   *注：省略 kind（如 papers/awards 等）将返回所有已开放的栏目（包括只读栏目）及其已有记录。*
 
 - **查询表单字段与选项：**
   ```bash
-  node scripts/run.mjs ehall profile-fields papers --format json
+  njucli ehall profile-fields papers --format json
   ```
   *注：返回官网实时表单规则、必填项、字段长度限制及字典选项。填写时可使用准确的中文名或选项代码。*
 
 - **新增一条记录：**
   ```bash
-  node scripts/run.mjs ehall profile-add papers --input ./paper.json --dry-run --format json
-  node scripts/run.mjs ehall profile-add awards --input ./award.json --attachment ./certificate.png --format json
+  njucli ehall profile-add papers --input ./paper.json --dry-run --format json
+  njucli ehall profile-add awards --input ./award.json --attachment ./certificate.png --format json
   ```
   *注：每次保存仅新增一条，原有记录自动保留。CLI 内部在保存后会回读数据，只有实际保存与回读均成功才返回成功，并输出 `record.id`。*
   *`--dry-run` 标志仅读取官网配置并校验输入格式与本地附件，不会向远端写入记录或上传附件。*
@@ -37,7 +37,7 @@ node scripts/run.mjs auth login ehall
 
 - **删除已有记录：**
   ```bash
-  node scripts/run.mjs ehall profile-remove papers RECORD_ID --format json
+  njucli ehall profile-remove papers RECORD_ID --format json
   ```
   *注：仅能删除由本人维护添加的记录。删除后会自动回读以核对其他记录未受影响。通过学校科研系统同步的论文或带有 `KZXXWID` 标记的记录不可删除。*
 
@@ -113,8 +113,6 @@ node scripts/run.mjs auth login ehall
 ## 保存与验证
 
 附件上传后会重新读取栏目记录；期间有新增、删除或修改时，本次停止保存，保留远端当前资料。远端整组保存没有原子版本条件，操作期间请避免同时在网页维护同一栏目。上传与资料保存分步进行，中途失败可能留下未绑定附件。
-
-本地 HTTP 集成覆盖命令和 client 组合、本人归属、只读栏目、附件绑定、原记录保留、上传期间并发变更以及失败单次提交。
 
 ## 实网验证状态
 

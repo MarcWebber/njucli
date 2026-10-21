@@ -21,6 +21,14 @@ export function registerCampusCommands(
 ): Command {
   const campus = program.command("campus").description("查询校园信息与日程汇总");
 
+  addFormatOption(campus.command("mirrors [query]").description("按名称查找 NJU Mirror 镜像地址与使用帮助"))
+    .action(async (query: string | undefined, options: FormatOptions) => runCommand(runtime, options, async () => {
+      const data = await service.mirrors(query);
+      return { data, text: [...data.items.map(item =>
+        [item.name, item.status, item.url, item.helpUrl].filter(Boolean).join("\t")),
+        `来源：${data.sourceUrl}`].join("\n") };
+    }));
+
   addFormatOption(campus.command("today [date]").description("汇总指定日期的课程、借阅与体育预约"))
     .action(async (date: string | undefined, options: FormatOptions) => runCommand(runtime, options, async () => {
       const data = await service.today(date);

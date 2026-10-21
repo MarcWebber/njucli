@@ -21,9 +21,13 @@
     "AGENTS.md",
     "REVIEW_RULES.md",
     ".codex-plugin",
+    ".claude-plugin",
     ".mcp.json",
-    "skills",
-    "scripts",
+    "skills/*/SKILL.md",
+    "skills/*/references/**",
+    "skills/*/templates/**",
+    "scripts/install.sh",
+    "scripts/install-skills.mjs",
     "docs"
   ],
   "engines": {
@@ -31,7 +35,7 @@
   },
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
-    "build": "pnpm clean && tsc -p tsconfig.json && node scripts/build-skills.mjs",
+    "build": "pnpm clean && tsc -p tsconfig.json && node scripts/build.mjs",
     "postinstall": "node scripts/install-skills.mjs",
     "lint": "tsc -p tsconfig.json --noEmit",
     "test": "pnpm build && node --test tests/*.test.mjs",
@@ -49,7 +53,6 @@
   "devDependencies": {
     "@types/mailparser": "^3.4.6",
     "@types/node": "^24.3.0",
-    "esbuild": "0.28.2",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2"
   },

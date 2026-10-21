@@ -5,17 +5,17 @@ description: 操作南京大学云盘 (NJU Box)，创建和更新 SeaDoc 文档�
 
 # 南大云盘
 
-以下命令在本 Skill 目录运行。首次使用需登录云盘：`node scripts/run.mjs auth login box`。
+首次使用需登录云盘：`njucli auth login box`。
 
 ## 查找与浏览
 
 ```bash
-node scripts/run.mjs box repos --format json
-node scripts/run.mjs box list REPO / --format json
-node scripts/run.mjs box scan REPO --path /课程 --format json
-node scripts/run.mjs box search "关键词" --repo REPO --format json
-node scripts/run.mjs box detail REPO /课程/资料.pdf --format json
-node scripts/run.mjs box link REPO /课程/资料.pdf --format json
+njucli box repos --format json
+njucli box list REPO / --format json
+njucli box scan REPO --path /课程 --format json
+njucli box search "关键词" --repo REPO --format json
+njucli box detail REPO /课程/资料.pdf --format json
+njucli box link REPO /课程/资料.pdf --format json
 ```
 
 `REPO` 来自 `repos` 的 `id`，云盘中的绝对路径来自 `list`、`scan` 或 `search`。`scan` 列出文件并统计数量与大小；省略资料库时扫描全盘，跳过加密资料库。
@@ -27,11 +27,11 @@ node scripts/run.mjs box link REPO /课程/资料.pdf --format json
 将报告、方案或总结保存为用户可以继续编辑的 SeaDoc 文档。先复制并填写[正文示例](templates/report.json)，再创建：
 
 ```bash
-node scripts/run.mjs box doc-create REPO /课程项目周报.sdoc --input ./report.json --format json
-node scripts/run.mjs box doc-read REPO /课程项目周报.sdoc --output ./original.json --format json
+njucli box doc-create REPO /课程项目周报.sdoc --input ./report.json --format json
+njucli box doc-read REPO /课程项目周报.sdoc --output ./original.json --format json
 cp original.json edited.json
 # 编辑 edited.json 中的 elements，保留用户已有内容和节点 id。
-node scripts/run.mjs box doc-update REPO /课程项目周报.sdoc --input ./edited.json --base ./original.json --format json
+njucli box doc-update REPO /课程项目周报.sdoc --input ./edited.json --base ./original.json --format json
 ```
 
 `original.json` 保持原样，更新前会对比当前文档的标识、版本与正文；变化时重新读取并合并。支持标题、二级标题、段落和白板块，使用原生 SeaDoc JSON；已有其他内容可保持原样。`doc-read --output` 覆盖指定本地文件。
@@ -43,10 +43,10 @@ node scripts/run.mjs box doc-update REPO /课程项目周报.sdoc --input ./edit
 ## 白板与图表
 
 ```bash
-node scripts/run.mjs box whiteboard-create REPO /项目架构.exdraw --input ./drawing.excalidraw --format json
-node scripts/run.mjs box chart-create REPO /项目进度.exdraw --input ./chart.json --format json
-node scripts/run.mjs box doc-read REPO /课程项目周报.sdoc --output ./original.json --format json
-node scripts/run.mjs box doc-embed-whiteboard REPO /课程项目周报.sdoc REPO /项目架构.exdraw --base ./original.json --format json
+njucli box whiteboard-create REPO /项目架构.exdraw --input ./drawing.excalidraw --format json
+njucli box chart-create REPO /项目进度.exdraw --input ./chart.json --format json
+njucli box doc-read REPO /课程项目周报.sdoc --output ./original.json --format json
+njucli box doc-embed-whiteboard REPO /课程项目周报.sdoc REPO /项目架构.exdraw --base ./original.json --format json
 ```
 
 白板输入可由 Agent 或 Excalidraw Skill 生成，参照[原生图形示例](templates/whiteboard.excalidraw)；省略 `--input` 创建空画布。图表参照[数据示例](templates/chart.json)，`kind` 支持 `bar`、`line`，`labels` 对应每组 `series[].values`。图表也是可编辑的白板，可调整文字、颜色、形状和连线。
@@ -60,29 +60,29 @@ node scripts/run.mjs box doc-embed-whiteboard REPO /课程项目周报.sdoc REPO
 ## 上传、下载与分享
 
 ```bash
-node scripts/run.mjs box upload REPO ./资料.pdf --parent /课程 --format json
-node scripts/run.mjs box upload REPO ./本地目录 --parent / --format json
-node scripts/run.mjs box download REPO /课程/资料.pdf --output ./资料.pdf --format json
-node scripts/run.mjs box share REPO /课程/资料.pdf --expire-days 7 --format json
-node scripts/run.mjs box upload-link REPO /作业收集 --expire-days 7 --format json
+njucli box upload REPO ./资料.pdf --parent /课程 --format json
+njucli box upload REPO ./本地目录 --parent / --format json
+njucli box download REPO /课程/资料.pdf --output ./资料.pdf --format json
+njucli box share REPO /课程/资料.pdf --expire-days 7 --format json
+njucli box upload-link REPO /作业收集 --expire-days 7 --format json
 ```
 
 上传和下载均支持文件或目录，并保留目录层级。上传同名文件默认自动改名，用户要求覆盖时加 `--replace`；下载会覆盖本地指定文件。
 
 分享可加 `--password "密码"` 或 `--preview-only`（仅预览）。把返回的 `url` 作为可点击链接交给用户，并附有效期和设置的密码；省略有效期时采用学校设置。`upload-link` 生成用于收集文件的链接。
 
-用 `shares REPO` 或 `upload-links REPO` 查看已有链接，再用结果的 `id` 执行 `unshare ID` 或 `revoke-upload-link ID`，这些命令都接在 `node scripts/run.mjs box` 后。
+用 `shares REPO` 或 `upload-links REPO` 查看已有链接，再用结果的 `id` 执行 `unshare ID` 或 `revoke-upload-link ID`，这些命令都接在 `njucli box` 后。
 
 ## 文件管理与协作
 
 ```bash
-node scripts/run.mjs box mkdir REPO /课程/新课件 --format json
-node scripts/run.mjs box move REPO /课程/旧资料 REPO /归档 --format json
-node scripts/run.mjs box history REPO --page 1 --format json
-node scripts/run.mjs box restore REPO /课程/资料.pdf COMMIT_ID --format json
+njucli box mkdir REPO /课程/新课件 --format json
+njucli box move REPO /课程/旧资料 REPO /归档 --format json
+njucli box history REPO --page 1 --format json
+njucli box restore REPO /课程/资料.pdf COMMIT_ID --format json
 ```
 
-其他管理命令接在 `node scripts/run.mjs` 后：
+其他管理命令接在 `njucli` 后：
 
 - 创建与改名：`box mkdir REPO 路径`、`box rename REPO 路径 新名称`
 - 复制与移动：`box copy REPO 原路径 目标REPO 目标目录`、`box move REPO 原路径 目标REPO 目标目录`（目标目录须已存在）
@@ -92,4 +92,4 @@ node scripts/run.mjs box restore REPO /课程/资料.pdf COMMIT_ID --format json
 
 `COMMIT_ID` 来自 `history` 或 `trash` 的 `commitId`。回收站用返回的 `cursor` 传给 `--cursor` 翻页；恢复可能替换当前文件。
 
-目录操作部分失败或写入结果不明时，先用 `list` 或 `scan` 核对已完成内容。资料库管理等命令见 `node scripts/run.mjs box --help`，接口字段见[接口说明](references/interfaces.md)。
+目录操作部分失败或写入结果不明时，先用 `list` 或 `scan` 核对已完成内容。资料库管理等命令见 `njucli box --help`，接口字段见[接口说明](references/interfaces.md)。

@@ -1,0 +1,12 @@
+{
+  "name": "njucli",
+  "owner": { "name": "MarcWebber" },
+  "metadata": { "description": "南京大学校园服务 Skills 套件" },
+  "plugins": [
+    {
+      "name": "njucli",
+      "source": "./",
+      "description": "统一安装南京大学校园服务 Skills 与只读 MCP 入口"
+    }
+  ]
+}

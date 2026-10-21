@@ -1,0 +1,95 @@
+{
+  "command": "njucli mcp",
+  "startedAt": "2026-10-20T07:05:28.468Z",
+  "toolCount": 136,
+  "allReadOnly": true,
+  "byDomain": {
+    "box": 17,
+    "campus": 3,
+    "dorm": 5,
+    "ehall": 23,
+    "institution": 6,
+    "itxia": 2,
+    "library": 2,
+    "lms": 7,
+    "mail": 4,
+    "pay": 2,
+    "se": 8,
+    "self_service": 8,
+    "software": 2,
+    "sports": 3,
+    "table": 8,
+    "tex": 5,
+    "youth": 31
+  },
+  "call": {
+    "name": "campus_mirrors",
+    "arguments": {
+      "query": "ubuntu"
+    }
+  },
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\n  \"ok\": true,\n  \"data\": {\n    \"sourceUrl\": \"https://mirror.nju.edu.cn/\",\n    \"items\": [\n      {\n        \"name\": \"ubuntu\",\n        \"url\": \"https://mirror.nju.edu.cn/ubuntu/\",\n        \"status\": \"success\",\n        \"helpUrl\": \"https://help.mirror.nju.edu.cn/ubuntu/?mirror=NJU\"\n      },\n      {\n        \"name\": \"ubuntu-cdimage\",\n        \"url\": \"https://mirror.nju.edu.cn/ubuntu-cdimage/\",\n        \"status\": \"success\",\n        \"helpUrl\": null\n      },\n      {\n        \"name\": \"ubuntu-cloud-images\",\n        \"url\": \"https://mirror.nju.edu.cn/ubuntu-cloud-images/\",\n        \"status\": \"success\",\n        \"helpUrl\": \"https://help.mirror.nju.edu.cn/ubuntu-cloud-images/?mirror=NJU\"\n      },\n      {\n        \"name\": \"ubuntu-old-releases\",\n        \"url\": \"https://mirror.nju.edu.cn/ubuntu-old-releases/\",\n        \"status\": \"success\",\n        \"helpUrl\": \"https://help.mirror.nju.edu.cn/ubuntu-old-releases/?mirror=NJU\"\n      },\n      {\n        \"name\": \"ubuntu-ports\",\n        \"url\": \"https://mirror.nju.edu.cn/ubuntu-ports/\",\n        \"status\": \"success\",\n        \"helpUrl\": \"https://help.mirror.nju.edu.cn/ubuntu-ports/?mirror=NJU\"\n      },\n      {\n        \"name\": \"ubuntu-releases\",\n        \"url\": \"https://mirror.nju.edu.cn/ubuntu-releases/\",\n        \"status\": \"success\",\n        \"helpUrl\": null\n      },\n      {\n        \"name\": \"ubuntukylin\",\n        \"url\": \"https://mirror.nju.edu.cn/ubuntukylin/\",\n        \"status\": \"success\",\n        \"helpUrl\": null\n      },\n      {\n        \"name\": \"ubuntukylin-cdimage\",\n        \"url\": \"https://mirror.nju.edu.cn/ubuntukylin-cdimage/\",\n        \"status\": \"success\",\n        \"helpUrl\": null\n      }\n    ]\n  }\n}"
+      }
+    ],
+    "structuredContent": {
+      "data": {
+        "sourceUrl": "https://mirror.nju.edu.cn/",
+        "items": [
+          {
+            "name": "ubuntu",
+            "url": "https://mirror.nju.edu.cn/ubuntu/",
+            "status": "success",
+            "helpUrl": "https://help.mirror.nju.edu.cn/ubuntu/?mirror=NJU"
+          },
+          {
+            "name": "ubuntu-cdimage",
+            "url": "https://mirror.nju.edu.cn/ubuntu-cdimage/",
+            "status": "success",
+            "helpUrl": null
+          },
+          {
+            "name": "ubuntu-cloud-images",
+            "url": "https://mirror.nju.edu.cn/ubuntu-cloud-images/",
+            "status": "success",
+            "helpUrl": "https://help.mirror.nju.edu.cn/ubuntu-cloud-images/?mirror=NJU"
+          },
+          {
+            "name": "ubuntu-old-releases",
+            "url": "https://mirror.nju.edu.cn/ubuntu-old-releases/",
+            "status": "success",
+            "helpUrl": "https://help.mirror.nju.edu.cn/ubuntu-old-releases/?mirror=NJU"
+          },
+          {
+            "name": "ubuntu-ports",
+            "url": "https://mirror.nju.edu.cn/ubuntu-ports/",
+            "status": "success",
+            "helpUrl": "https://help.mirror.nju.edu.cn/ubuntu-ports/?mirror=NJU"
+          },
+          {
+            "name": "ubuntu-releases",
+            "url": "https://mirror.nju.edu.cn/ubuntu-releases/",
+            "status": "success",
+            "helpUrl": null
+          },
+          {
+            "name": "ubuntukylin",
+            "url": "https://mirror.nju.edu.cn/ubuntukylin/",
+            "status": "success",
+            "helpUrl": null
+          },
+          {
+            "name": "ubuntukylin-cdimage",
+            "url": "https://mirror.nju.edu.cn/ubuntukylin-cdimage/",
+            "status": "success",
+            "helpUrl": null
+          }
+        ]
+      }
+    }
+  },
+  "finishedAt": "2026-10-20T07:05:29.401Z"
+}

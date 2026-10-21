@@ -5,7 +5,7 @@ description: 操作南京大学协同表格 (table.nju.edu.cn / SeaTable)，包�
 
 # 协同表格
 
-以下命令在本 Skill 目录运行。首次使用需登录：`node scripts/run.mjs auth login table`。
+首次使用需登录：`njucli auth login table`。
 
 业务读取与填写优先使用 CLI/API。遇到现有命令覆盖范围之外的入口，先按[接口说明](references/interfaces.md)查证 HTTP 契约；浏览器用于需要本人交互的登录验证或用户明确要求的页面操作。
 
@@ -14,8 +14,8 @@ description: 操作南京大学协同表格 (table.nju.edu.cn / SeaTable)，包�
 通知中的 `https://table.nju.edu.cn/external-apps/UUID/` 是应用入口。先查看页面 ID、字段、必填要求和默认值：
 
 ```bash
-node scripts/run.mjs table app-show "应用 URL 或 UUID" --format json
-node scripts/run.mjs table app-rows "应用 URL 或 UUID" "表格页 ID" --format json
+njucli table app-show "应用 URL 或 UUID" --format json
+njucli table app-rows "应用 URL 或 UUID" "表格页 ID" --format json
 ```
 
 外部应用命令通过 HTTP 复用当前账号会话；会话到期时，使用该账号已保存的统一认证凭据登录。凭据或访问权限需要处理时，命令返回具体原因。
@@ -29,7 +29,7 @@ node scripts/run.mjs table app-rows "应用 URL 或 UUID" "表格页 ID" --forma
 按表单实际字段填写；当前支持文本及 `YYYY-MM-DD` 日期。账号 ID、姓名默认值由应用的 `{creator.id}`、`{creator.name}` 配置填入。必填项使用用户提供的信息，选填项可省略或填 `null`。
 
 ```bash
-node scripts/run.mjs table form-submit "应用 URL 或 UUID" "表单页 ID" \
+njucli table form-submit "应用 URL 或 UUID" "表单页 ID" \
   --input ./form.json --readback-page "表格页 ID" --format json
 ```
 
@@ -40,12 +40,12 @@ node scripts/run.mjs table form-submit "应用 URL 或 UUID" "表单页 ID" \
 ## 查找与读取
 
 ```bash
-node scripts/run.mjs table workspaces --format json
-node scripts/run.mjs table bases --format json
-node scripts/run.mjs table show UUID --format json
-node scripts/run.mjs table rows UUID "工作表名" --page 1 --size 100 --format json
-node scripts/run.mjs table rows UUID "工作表名" --view "待登分" --format json
-node scripts/run.mjs table row UUID "工作表名" ROW_ID --format json
+njucli table workspaces --format json
+njucli table bases --format json
+njucli table show UUID --format json
+njucli table rows UUID "工作表名" --page 1 --size 100 --format json
+njucli table rows UUID "工作表名" --view "待登分" --format json
+njucli table row UUID "工作表名" ROW_ID --format json
 ```
 
 表格 `UUID` 取自 `bases`；工作表名、列名和视图名取自 `show`；行 ID 取自 `rows` 返回的 `_id`。
@@ -54,11 +54,11 @@ node scripts/run.mjs table row UUID "工作表名" ROW_ID --format json
 ## 创建表格与使用模板
 
 ```bash
-node scripts/run.mjs table create "课程登分表" --preset gradebook --format json
-node scripts/run.mjs table templates "作业" --format json
-node scripts/run.mjs table create "作业表" --template homework-upload-new --format json
-node scripts/run.mjs table preset gradebook --output ./gradebook.json --format json
-node scripts/run.mjs table create "自定义表" --input ./gradebook.json --format json
+njucli table create "课程登分表" --preset gradebook --format json
+njucli table templates "作业" --format json
+njucli table create "作业表" --template homework-upload-new --format json
+njucli table preset gradebook --output ./gradebook.json --format json
+njucli table create "自定义表" --input ./gradebook.json --format json
 ```
 
 `--template`、`--preset`、`--input` 任选一种，省略时创建空白表。官方模板 ID 使用 `templates` 返回的 `name`。默认在个人工作区创建，其他工作区 ID 从 `workspaces` 获取，用 `--workspace ID` 指定。
@@ -68,8 +68,8 @@ node scripts/run.mjs table create "自定义表" --input ./gradebook.json --form
 ## 写入与更新记录
 
 ```bash
-node scripts/run.mjs table append UUID "工作表名" --input ./rows.json --format json
-node scripts/run.mjs table update UUID "工作表名" --input ./updates.json --format json
+njucli table append UUID "工作表名" --input ./rows.json --format json
+njucli table update UUID "工作表名" --input ./updates.json --format json
 ```
 
 - 追加新行（append）的输入格式为字段名键值对数组：
@@ -85,10 +85,10 @@ node scripts/run.mjs table update UUID "工作表名" --input ./updates.json --f
 ## 字段与视图维护
 
 ```bash
-node scripts/run.mjs table sheet-add UUID --input sheet.json --format json
-node scripts/run.mjs table column-add UUID "工作表名" --input column.json --format json
-node scripts/run.mjs table view-add UUID "工作表名" --input view.json --format json
-node scripts/run.mjs table view-update UUID "工作表名" --input view.json --format json
+njucli table sheet-add UUID --input sheet.json --format json
+njucli table column-add UUID "工作表名" --input column.json --format json
+njucli table view-add UUID "工作表名" --input view.json --format json
+njucli table view-update UUID "工作表名" --input view.json --format json
 ```
 
 输入格式可以参考[登分模板](templates/gradebook.json)：`sheet.json` 使用 `tables` 中的一个对象，`column.json` 使用 `columns` 中的一个对象，`view.json` 使用 `views` 中的一个对象。字段使用 `column_name/column_type/column_data`；公式用 `{字段名}` 引用，按依赖顺序排列，首列使用原始数据。

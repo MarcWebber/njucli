@@ -6,10 +6,12 @@ import { withBrowserSession } from "./browser-session.js";
 import { readJsonFile, writeJsonFile } from "../core/fs.js";
 import { AppError } from "../core/errors.js";
 import { authDaemonStatus, runAuthDaemon, startAuthDaemon, stopAuthDaemon, type AuthDaemonStatus } from "./daemon.js";
+import { authAutostart, type AutostartAction } from "./autostart.js";
 import type { OutputSink } from "../core/output.js";
 
 export type AuthServices = {
   maintain(): Promise<AuthMaintenance>;
+  autostart(action: AutostartAction, intervalSeconds?: number): ReturnType<typeof authAutostart>;
   daemonStart(intervalSeconds: number): Promise<AuthDaemonStatus>;
   daemonStatus(): Promise<AuthDaemonStatus>;
   daemonStop(): Promise<AuthDaemonStatus>;
@@ -23,6 +25,7 @@ export type AuthServices = {
 export function createAuthServices(runtime: SkillRuntime, readIdentity: () => Promise<{ studentId: string }>): AuthServices {
   const { accountStore, auth } = runtime;
   const services: AuthServices = {
+    autostart: async (action, intervalSeconds) => authAutostart(await accountStore.current(), action, intervalSeconds),
     daemonStart: async (intervalSeconds) => startAuthDaemon(await accountStore.current(), intervalSeconds),
     daemonStatus: async () => authDaemonStatus(await accountStore.current()),
     daemonStop: async () => stopAuthDaemon(await accountStore.current()),

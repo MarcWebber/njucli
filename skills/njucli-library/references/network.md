@@ -15,9 +15,9 @@ openssl x509 -inform DER \
   -in ~/.config/njucli/certs/opac-issuer.crt \
   -out ~/.config/njucli/certs/opac-issuer.pem
 export NODE_EXTRA_CA_CERTS="$HOME/.config/njucli/certs/opac-issuer.pem"
-node scripts/run.mjs library search "算法导论" --field title --format json
+njucli library search "算法导论" --field title --format json
 ```
 
 使用 XDG 配置目录时，将上面的路径替换为实际目录。已有 `NODE_EXTRA_CA_CERTS` 配置时，将两份 PEM 合并成一个证书文件，再指向合并文件。环境变量在启动 Node.js 进程前设置；MCP 客户端也应在服务进程环境中设置相同变量。
 
-中间证书名称来自官网叶子证书的 CA Issuers 字段。本次使用 Node.js 自带根证书核对中间证书签发链，`openssl verify` 返回 `OK`，随后统一 CLI、独立 Skill 和 MCP 的 HTTPS 查询均通过。站点更新证书后，按新证书的官方签发链重新核对配置。
+中间证书名称来自官网叶子证书的 CA Issuers 字段。本次使用 Node.js 自带根证书核对中间证书签发链，`openssl verify` 返回 `OK`，随后CLI 和 MCP 的 HTTPS 查询均通过。站点更新证书后，按新证书的官方签发链重新核对配置。

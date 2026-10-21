@@ -5,15 +5,14 @@ description: 查询并下载南京大学提供的正版软件安装包，包括 
 
 # 正版软件
 
-以下命令在本 Skill 目录运行。
 校内安装包下载需要连接校园网或官方 VPN；Adobe CC 在线安装器支持公网直连下载。
 
 ## 查询与下载
 
 ```bash
-node scripts/run.mjs software list --format json
-node scripts/run.mjs software show adobe-cc --format json
-node scripts/run.mjs software download adobe-cc FILE_ID --output ./CreativeCloud.dmg --format json
+njucli software list --format json
+njucli software show adobe-cc --format json
+njucli software download adobe-cc FILE_ID --output ./CreativeCloud.dmg --format json
 ```
 
 软件 ID 取自 `list`（如 `adobe-cc`、`adobe`、`wps-365`、`mathtype`、`origin`）。

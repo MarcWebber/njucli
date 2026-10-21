@@ -6,13 +6,13 @@
 | --- | --- |
 | 统一认证 | [登录与会话](#统一认证) |
 | 自助服务 | [证明申请、邮件领取、申请管理与云打印](../skills/njucli-self-service/references/interfaces.md) |
-| 教务与办事大厅 | [课表、选课、成绩、考试、培养方案、个人资料、行程登记及奖学金草稿](../skills/njucli-ehall/references/interfaces.md) |
+| 教务与办事大厅 | [空闲教室、课表、选课、成绩、考试、培养方案、个人资料、行程登记及奖学金草稿](../skills/njucli-ehall/references/interfaces.md) |
 | 软件学院课程 | [课程、作业、名单与成绩](#软件学院课程) |
 | 智汇南雍 | [课程、课件、作业、测试与助教作业创建](../skills/njucli-lms/references/interfaces.md) |
 | TeX | [项目、文件、编辑与编译](../skills/njucli-tex/references/interfaces.md) |
 | 图书馆 | [书目、馆藏与借阅](#图书馆) |
 | 体育场馆 | [场馆、时段与预约记录](#体育场馆) |
-| 校园信息 | [新闻、通知与食堂](#校园信息) |
+| 校园信息 | [新闻、通知与食堂](#校园信息)；[NJU Mirror 镜像](../skills/njucli-campus/references/mirrors.md) |
 | 正版软件 | [目录与安装包](#正版软件) |
 | 校园邮箱 | [绑定、邮件与附件](#校园邮箱) |
 | 青年平台 | [活动、志愿时长与第二课堂](../skills/njucli-youth/references/interfaces.md) |
@@ -31,7 +31,7 @@
 
 SSO 的 CAS `service` 使用 EHall `/login?service=https%3A%2F%2Fehall.nju.edu.cn%2Fywtb-portal%2Fofficial%2Findex.html`。CAS 签发本次服务票据后回跳至该入口，由 EHall 建立本站 Cookie，最终到达 `/ywtb-portal/official/index.html`。登录、状态与维护以 `/jsonp/userInfo.json` 的 `hasLogin: true` 回读结果为成功条件。根会话由 `CASTGC` 标识，EHall 使用 `MOD_AUTH_CAS`；Cookie 由当次 HTTP 或浏览器 context 更新并保存。
 
-`auth authenticate` 每次清空当前 Cookie 后校验本次凭据，并复用同一会话访问[青年平台身份接口](../skills/njucli-youth/references/interfaces.md)。返回的 `studentId` 取 `POST /tw/ctx` 响应 `data` 的 Base64 JSON 中 `userId`，要求 `anonymous=false` 且学号为非空字符串。成功结果依赖身份回读完成；失败时清理 Cookie 并恢复原凭据。标准输入、已有有效 Cookie 下的错误密码拒绝及身份缺失由本地模拟覆盖；该组合入口的实网结果待核对。
+`auth authenticate` 每次清空当前 Cookie 后校验本次凭据，并复用同一会话访问[青年平台身份接口](../skills/njucli-youth/references/interfaces.md)。返回的 `studentId` 取 `POST /tw/ctx` 响应 `data` 的 Base64 JSON 中 `userId`，要求 `anonymous=false` 且学号为非空字符串。成功结果依赖身份回读完成；失败时清理 Cookie 并恢复原凭据。该组合入口的实网结果待核对。
 
 已实网核对 CAS 到 EHall 的会话交换、Cookie 跨进程保存，以及同一后台进程的连续维护和停止清理。自然过期后的恢复、休眠恢复、跨学校会话最长有效期的持续运行仍待实网核对。后台命令与配置见[后台保活](../skills/njucli-auth/SKILL.md#后台保活)。
 
@@ -69,7 +69,7 @@ SSO 的 CAS `service` 使用 EHall `/login?service=https%3A%2F%2Fehall.nju.edu.c
 
 书目与馆藏直接访问 OPAC。读者登录依赖 SSO，CAS service 为 `http://opac.nju.edu.cn:8081/CASSSO2/caslogin.jsp`；官网页面完成回跳并写入 `jwt` Cookie 后，以 `jwtOpacAuth` 请求头回读 `/oga/userinfo`。Cookie 经共享 `BrowserSession`、账号锁和原子文件保存，后续借阅调用复用当次会话；令牌字段在输出边界脱敏。
 
-实网通过五种检索字段、检索翻页和空结果、书目详情、8 册及跨页 90 册馆藏、读者登录、跨进程探测和当前借阅空列表。统一 CLI、独立 Skill 与两套 MCP 查询均已核对。正数借阅及逾期映射由本地集成验证。运行前提见[HTTPS 配置](../skills/njucli-library/references/network.md)，原始现象和截图见[校园网验证报告](reports/2026-10-10-intranet.md)。
+实网通过五种检索字段、检索翻页和空结果、书目详情、8 册及跨页 90 册馆藏、读者登录、跨进程探测和当前借阅空列表。CLI 与 MCP 查询均已核对。正数借阅及逾期映射待实际业务核对。运行前提见[HTTPS 配置](../skills/njucli-library/references/network.md)，原始现象和截图见[校园网验证报告](reports/2026-10-10-intranet.md)。
 
 ## 体育场馆
 
