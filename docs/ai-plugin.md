@@ -1,6 +1,6 @@
 # AI 客户端接入
 
-NjuCLI 提供统一 CLI、只读 stdio MCP 工具和配套 Skills。安装步骤见 [README](../README.md#安装)。
+NjuCLI 提供统一 CLI、只读 stdio MCP 工具和 NjuCLI Skills 套件。安装步骤见 [README](../README.md#一键安装)。
 
 ## 选择入口
 
@@ -10,7 +10,9 @@ NjuCLI 提供统一 CLI、只读 stdio MCP 工具和配套 Skills。安装步骤
 | 支持本地 stdio MCP | 调用只读工具查询校园数据 |
 | 只支持远程 HTTP 工具 | 需要宿主另行提供本地执行环境 |
 
-仓库的 `.codex-plugin/plugin.json` 提供插件清单，`.mcp.json` 提供 MCP 配置。全局安装自动将 Skill 注册到 `${CODEX_HOME:-~/.codex}/skills/`；其他宿主可通过 `NJUCLI_SKILLS_DIR` 指定目录。
+仓库的 `.codex-plugin/plugin.json` 提供套件清单，`.mcp.json` 提供 MCP 配置。全局安装将整个套件注册到 `${CODEX_HOME:-~/.codex}/skills/njucli/`，其中 18 个业务子目录各有自己的 `SKILL.md`，宿主按任务选择对应 Skill。其他支持递归发现的宿主可通过 `NJUCLI_SKILLS_DIR` 指定全局 Skills 目录，套件注册到其中的 `njucli/`。目录与验证范围见[安装与维护](installation.md)。
+
+Claude Code 使用 `.claude-plugin/` 中的原生插件与 marketplace 声明，按[Claude Code 安装步骤](installation.md#claude-code)一次安装全部业务 Skill 和只读 MCP 入口。
 
 ## MCP 配置
 
@@ -58,7 +60,8 @@ NjuCLI 提供统一 CLI、只读 stdio MCP 工具和配套 Skills。安装步骤
 
 ## 客户端指南
 
-- [WorkBuddy](workbuddy.md)：腾讯推出的桌面端 AI 办公工作台，支持接入 NjuCLI 的 MCP 工具与 18 个 Skill 扩展。
+- [Claude Code](installation.md#claude-code)：用户级插件安装、组件检查和更新。
+- [WorkBuddy](workbuddy.md)：MCP 配置、Skills 安装与客户端发现检查。
 
 ## 任务使用
 
