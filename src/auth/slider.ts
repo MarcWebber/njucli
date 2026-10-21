@@ -1,5 +1,5 @@
 import { setTimeout as delay } from "node:timers/promises";
-import type { Page } from "playwright-core";
+import type { Page, Route } from "playwright-core";
 
 /** Align the visible puzzle outline, then let the official page validate the drag. */
 export async function dragLoginSlider(page: Page): Promise<boolean> {
@@ -49,23 +49,38 @@ export async function dragLoginSlider(page: Page): Promise<boolean> {
   const box = (await page.locator("#sliderDiv .slider").boundingBox())!;
   const x = box.x + box.width / 2, y = box.y + box.height / 2;
   await delay(1_000);
-  const [response] = await Promise.all([page.waitForResponse((response) => {
-    const url = new URL(response.url());
-    return url.hostname === "authserver.nju.edu.cn"
-      && url.pathname === "/authserver/common/verifySliderCaptcha.htl"
-      && response.request().method() === "POST";
-  }, { timeout: 15_000 }), (async () => {
-    await page.mouse.move(x, y);
-    await page.mouse.down();
-    for (let step = 1; step <= 30; step++) {
-      const progress = step / 30;
-      await page.mouse.move(x + distance * (1 - Math.cos(Math.PI * progress)) / 2, y + Math.sin(Math.PI * progress) * 4);
-      await delay(30);
+  const endpoint = "https://authserver.nju.edu.cn/authserver/common/verifySliderCaptcha.htl";
+  let resolveResult!: (value: boolean) => void;
+  let rejectResult!: (error: unknown) => void;
+  const verified = new Promise<boolean>((resolve, reject) => { resolveResult = resolve; rejectResult = reject; });
+  const capture = async (route: Route) => {
+    try {
+      const response = await route.fetch({ timeout: 15_000 });
+      // Read the real response before the login page receives it and navigates.
+      if (!response.ok()) throw new Error(`学校滑块验证返回 HTTP ${response.status()}`);
+      const result = await response.json() as { errorCode: number };
+      await route.fulfill({ response });
+      resolveResult(result.errorCode === 1);
+    } catch (error) {
+      rejectResult(error);
+      await route.abort();
     }
-    await delay(100);
-    await page.mouse.up();
-  })()]);
-  if (!response.ok()) throw new Error(`学校滑块验证返回 HTTP ${response.status()}`);
-  const result = await response.json() as { errorCode: number };
-  return result.errorCode === 1;
+  };
+  await page.route(endpoint, capture);
+  try {
+    const [result] = await Promise.all([verified, page.waitForResponse(endpoint, { timeout: 15_000 }), (async () => {
+      await page.mouse.move(x, y);
+      await page.mouse.down();
+      for (let step = 1; step <= 30; step++) {
+        const progress = step / 30;
+        await page.mouse.move(x + distance * (1 - Math.cos(Math.PI * progress)) / 2, y + Math.sin(Math.PI * progress) * 4);
+        await delay(30);
+      }
+      await delay(100);
+      await page.mouse.up();
+    })()]);
+    return result;
+  } finally {
+    await page.unroute(endpoint, capture);
+  }
 }
