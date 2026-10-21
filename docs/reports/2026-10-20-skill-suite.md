@@ -26,3 +26,9 @@
 本轮一键命令获取合入前的 `main`，候选版本随后通过实际 tarball 安装验证。安装脚本沿用同一流程；套件目录布局随本次改动合入后由一键命令提供。Skill 发现检查使用本地 API 与加载器，安装提示词的步骤由本轮 Agent 执行。WorkBuddy 的套件目录递归发现待实机核对。
 
 Logo 复用 NJUWeb 的 `public/nanyong.svg`，复制到本仓库并保留来源。Web 与 Runner 仓库链接已通过 GitHub API 核对。
+
+## Agent Skills 规范核对
+
+18 个业务 Skill 均通过 [Agent Skills 官方参考工具](https://agentskills.io/specification#validation)的 `skills-ref validate` 检查，[逐项执行结果](assets/2026-10-20-skill-suite/agent-skills.txt)已保存。各业务的目录名、`name`、`description` 与 `SKILL.md` 格式符合该开放规范；参考资料继续按相对路径引用。
+
+suite 统一分发这些标准 Skill，共用根包的 CLI 与依赖。全局安装位置和宿主发现方式由客户端决定：当前注册与发现已验证 Codex、Pi；Claude Code 的原生插件入口与个人 Skills 路径见[官方接入说明](https://code.claude.com/docs/en/skills#choose-where-skills-load)。本次格式核对的结论限于 Skill 规范，Claude Code 宿主发现另行验证。
