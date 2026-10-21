@@ -1,0 +1,320 @@
+{
+  "date": "2026-10-21",
+  "timezone": "Asia/Shanghai",
+  "claudeVersion": "2.1.304",
+  "nodeVersion": "26.10.0",
+  "pnpmVersion": "10.27.0",
+  "baseHead": "8aad9edea8e59c71910b1e6a20b66d5aa015c277",
+  "candidateChanges": [
+    ".claude-plugin/plugin.json",
+    ".claude-plugin/marketplace.json",
+    "package.json files list",
+    "Claude Code installation docs"
+  ],
+  "localChecks": {
+    "command": "pnpm install --frozen-lockfile --ignore-scripts && pnpm lint && pnpm test",
+    "exitCode": 0,
+    "testsPassed": 2,
+    "mcpToolsChecked": 136
+  },
+  "pack": {
+    "filename": "njucli-0.1.0.tgz",
+    "size": 2991097,
+    "entryCount": 286,
+    "claudeManifests": [
+      ".claude-plugin/marketplace.json",
+      ".claude-plugin/plugin.json"
+    ]
+  },
+  "installation": [
+    {
+      "name": "validate-plugin.json",
+      "command": [
+        "claude",
+        "plugin",
+        "validate",
+        "<verification-root>/repository/.claude-plugin/plugin.json",
+        "--json"
+      ],
+      "exitCode": 0,
+      "stdout": "{\n  \"success\": true,\n  \"strict\": false,\n  \"target\": \"<verification-root>/repository/.claude-plugin/plugin.json\",\n  \"manifest\": {\n    \"file\": \"<verification-root>/repository/.claude-plugin/plugin.json\",\n    \"type\": \"plugin\",\n    \"errors\": [],\n    \"warnings\": [],\n    \"notes\": [],\n    \"gatingHooks\": []\n  },\n  \"contents\": [],\n  \"advice\": [\n    {\n      \"file\": \"<verification-root>/repository/README.md\",\n      \"message\": \"This README has no line that installs \\\"njucli\\\" from a marketplace. Add the install line, which works in one step on Claude Code 2.1.275 or later. Validate the folder that holds its marketplace.json to have <owner>/<repo> filled in, and the name its marketplace lists it under.\",\n      \"installLine\": \"/plugin install njucli --marketplace <owner>/<repo>\"\n    }\n  ]\n}\n",
+      "stderr": ""
+    },
+    {
+      "name": "validate-marketplace.json",
+      "command": [
+        "claude",
+        "plugin",
+        "validate",
+        "<verification-root>/repository/.claude-plugin/marketplace.json",
+        "--json"
+      ],
+      "exitCode": 0,
+      "stdout": "{\n  \"success\": true,\n  \"strict\": false,\n  \"target\": \"<verification-root>/repository/.claude-plugin/marketplace.json\",\n  \"manifest\": {\n    \"file\": \"<verification-root>/repository/.claude-plugin/marketplace.json\",\n    \"type\": \"marketplace\",\n    \"errors\": [],\n    \"warnings\": [],\n    \"notes\": [],\n    \"gatingHooks\": []\n  },\n  \"contents\": [],\n  \"advice\": []\n}\n",
+      "stderr": ""
+    },
+    {
+      "name": "pack",
+      "command": [
+        "npm",
+        "pack",
+        "--ignore-scripts",
+        "--json",
+        "--pack-destination",
+        "<verification-root>/candidate-pack"
+      ],
+      "exitCode": 0,
+      "stdout": "[\n  {\n    \"id\": \"njucli@0.1.0\",\n    \"name\": \"njucli\",\n    \"version\": \"0.1.0\",\n    \"size\": 2991097,\n    \"unpackedSize\": 6191520,\n    \"shasum\": \"e796266ed20cce53fb31c895d9a7abd9606e97ed\",\n    \"integrity\": \"sha512-JIhDZWFfArBbsGDWkJxJPMZUmgZNCObjhqEyXHZ1kPQm/aTp+4aezR/y8DerWkgyhhyfzJpo8dg5+2mIrKBD/Q==\",\n    \"filename\": \"njucli-0.1.0.tgz\",\n    \"files\": [\n      {\n        \"path\": \".claude-plugin/marketplace.json\",\n        \"size\": 301,\n        \"mode\": 420\n      },\n      {\n        \"path\": \".claude-plugin/plugin.json\",\n        \"size\": 295,\n        \"mode\": 420\n      },\n      {\n        \"path\": \".codex-plugin/plugin.json\",\n        \"size\": 674,\n        \"mode\": 420\n      },\n      {\n        \"path\": \".mcp.json\",\n        \"size\": 97,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"AGENTS.md\",\n        \"size\": 8754,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"CONTRIBUTING.md\",\n        \"size\": 4226,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"LICENSE\",\n        \"size\": 3886,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"README.md\",\n        \"size\": 4313,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"REVIEW_RULES.md\",\n        \"size\": 5179,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/cli.js\",\n        \"size\": 43,\n        \"mode\": 493\n      },\n      {\n        \"path\": \"dist/skills/njucli-box/scripts/client.js\",\n        \"size\": 41462,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-box/scripts/commands.js\",\n        \"size\": 15189,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-box/scripts/documents.js\",\n        \"size\": 3524,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-box/scripts/mcp.js\",\n        \"size\": 3371,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-box/scripts/services.js\",\n        \"size\": 4457,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-box/scripts/whiteboards.js\",\n        \"size\": 7439,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-box/templates/chart.json\",\n        \"size\": 286,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-box/templates/report.json\",\n        \"size\": 655,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-box/templates/whiteboard.excalidraw\",\n        \"size\": 12611,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-campus/scripts/client.js\",\n        \"size\": 6735,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-campus/scripts/commands.js\",\n        \"size\": 3169,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-campus/scripts/contracts.js\",\n        \"size\": 11,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-campus/scripts/mcp.js\",\n        \"size\": 1016,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-campus/scripts/parser-utils.js\",\n        \"size\": 7549,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-campus/scripts/services.js\",\n        \"size\": 961,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-campus/scripts/source-definition.js\",\n        \"size\": 853,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-campus/scripts/sources/academic-affairs.js\",\n        \"size\": 409,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-campus/scripts/sources/asset-management.js\",\n        \"size\": 2548,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-campus/scripts/sources/graduate-admission.js\",\n        \"size\": 516,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-campus/scripts/sources/graduate-school.js\",\n        \"size\": 1045,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-campus/scripts/sources/itsc.js\",\n        \"size\": 409,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-campus/scripts/sources/nju.js\",\n        \"size\": 1207,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-campus/scripts/sources/registry.js\",\n        \"size\": 1412,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-campus/scripts/sources/research.js\",\n        \"size\": 764,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-campus/scripts/sources/youth-league.js\",\n        \"size\": 412,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-campus/scripts/text.js\",\n        \"size\": 914,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-campus/scripts/types.js\",\n        \"size\": 194,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-dorm/scripts/client.js\",\n        \"size\": 9260,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-dorm/scripts/commands.js\",\n        \"size\": 5687,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-ehall/scripts/academic-client.js\",\n        \"size\": 8935,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-ehall/scripts/classrooms.js\",\n        \"size\": 4853,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-ehall/scripts/client.js\",\n        \"size\": 4904,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-ehall/scripts/commands.js\",\n        \"size\": 23319,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-ehall/scripts/ics.js\",\n        \"size\": 1924,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-ehall/scripts/mcp.js\",\n        \"size\": 5455,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-ehall/scripts/profile.js\",\n        \"size\": 22246,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-ehall/scripts/scholarship.js\",\n        \"size\": 19927,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-ehall/scripts/selection-client.js\",\n        \"size\": 6853,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-ehall/scripts/services.js\",\n        \"size\": 10100,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-ehall/scripts/text.js\",\n        \"size\": 5128,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-ehall/scripts/timetable-client.js\",\n        \"size\": 2738,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-ehall/scripts/timetable-contract.js\",\n        \"size\": 871,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-ehall/scripts/trip.js\",\n        \"size\": 18518,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-ehall/scripts/types.js\",\n        \"size\": 197,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-institution/scripts/client.js\",\n        \"size\": 8594,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-institution/scripts/commands.js\",\n        \"size\": 4971,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-institution/scripts/directory.js\",\n        \"size\": 4470,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-institution/scripts/mcp.js\",\n        \"size\": 1588,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-institution/scripts/text.js\",\n        \"size\": 14107,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-institution/scripts/types.js\",\n        \"size\": 11,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-itxia/scripts/client.js\",\n        \"size\": 5702,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-itxia/scripts/commands.js\",\n        \"size\": 5082,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-itxia/scripts/mcp.js\",\n        \"size\": 446,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-itxia/scripts/schema.js\",\n        \"size\": 843,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-library/scripts/client.js\",\n        \"size\": 4945,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-library/scripts/commands.js\",\n        \"size\": 2716,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-library/scripts/contract.js\",\n        \"size\": 263,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-library/scripts/mcp.js\",\n        \"size\": 918,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-library/scripts/services.js\",\n        \"size\": 601,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-library/scripts/text.js\",\n        \"size\": 1264,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-library/scripts/types.js\",\n        \"size\": 83,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-lms/scripts/client.js\",\n        \"size\": 8087,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-lms/scripts/commands.js\",\n        \"size\": 5822,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-mail/scripts/client.js\",\n        \"size\": 7270,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-mail/scripts/commands.js\",\n        \"size\": 5424,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-mail/scripts/mcp.js\",\n        \"size\": 955,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-mail/scripts/services.js\",\n        \"size\": 989,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-pay/scripts/client.js\",\n        \"size\": 4778,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-pay/scripts/commands.js\",\n        \"size\": 2947,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-se/scripts/client.js\",\n        \"size\": 17322,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-se/scripts/commands.js\",\n        \"size\": 4576,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-se/scripts/mcp.js\",\n        \"size\": 1681,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-se/scripts/services.js\",\n        \"size\": 1367,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-se/scripts/text.js\",\n        \"size\": 2118,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-se/scripts/types.js\",\n        \"size\": 72,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-self-service/scripts/client.js\",\n        \"size\": 13436,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-self-service/scripts/commands.js\",\n        \"size\": 6552,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-software/scripts/client.js\",\n        \"size\": 3388,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-software/scripts/commands.js\",\n        \"size\": 1607,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-software/scripts/mcp.js\",\n        \"size\": 361,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-sports/scripts/client.js\",\n        \"size\": 4728,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-sports/scripts/commands.js\",\n        \"size\": 3489,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-sports/scripts/mcp.js\",\n        \"size\": 960,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-sports/scripts/services.js\",\n        \"size\": 1420,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-sports/scripts/signing.js\",\n        \"size\": 1088,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-sports/scripts/text.js\",\n        \"size\": 2059,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-sports/scripts/types.js\",\n        \"size\": 163,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-table/scripts/apps.js\",\n        \"size\": 10398,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-table/scripts/client.js\",\n        \"size\": 14829,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-table/scripts/commands.js\",\n        \"size\": 9077,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-table/scripts/mcp.js\",\n        \"size\": 1693,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-table/scripts/schema.js\",\n        \"size\": 3483,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-table/scripts/services.js\",\n        \"size\": 2459,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-table/templates/gradebook.json\",\n        \"size\": 4649,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-tex/scripts/client.js\",\n        \"size\": 9611,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-tex/scripts/commands.js\",\n        \"size\": 6659,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-tex/scripts/editor.js\",\n        \"size\": 7262,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-tex/scripts/mcp.js\",\n        \"size\": 1177,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-tex/scripts/services.js\",\n        \"size\": 2584,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-tex/scripts/types.js\",\n        \"size\": 11,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-youth/scripts/client.js\",\n        \"size\": 14536,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-youth/scripts/commands.js\",\n        \"size\": 12414,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-youth/scripts/mcp.js\",\n        \"size\": 4141,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/skills/njucli-youth/scripts/services.js\",\n        \"size\": 3357,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/account/commands.js\",\n        \"size\": 1631,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/account/service.js\",\n        \"size\": 446,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/account/store.js\",\n        \"size\": 3043,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/account/types.js\",\n        \"size\": 11,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/app/production.js\",\n        \"size\": 6891,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/app/runtime.js\",\n        \"size\": 694,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/auth/account-lock.js\",\n        \"size\": 3532,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/auth/browser-session.js\",\n        \"size\": 10288,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/auth/capabilities.js\",\n        \"size\": 5571,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/auth/commands.js\",\n        \"size\": 6848,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/auth/coordinator.js\",\n        \"size\": 2930,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/auth/daemon.js\",\n        \"size\": 9871,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/auth/drivers/box-browser.js\",\n        \"size\": 2285,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/auth/drivers/opac-browser.js\",\n        \"size\": 1022,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/auth/drivers/se-browser.js\",\n        \"size\": 1211,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/auth/drivers/selection-browser.js\",\n        \"size\": 1288,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/auth/drivers/sso-browser.js\",\n        \"size\": 2081,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/auth/drivers/tex-browser.js\",\n        \"size\": 2057,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/auth/mail-bind.js\",\n        \"size\": 3720,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/auth/service.js\",\n        \"size\": 3795,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/auth/session-store.js\",\n        \"size\": 997,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/auth/slider.js\",\n        \"size\": 3654,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/auth/sports-token.js\",\n        \"size\": 2616,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/auth/types.js\",\n        \"size\": 11,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/cli.js\",\n        \"size\": 193,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/commands/upgrade.js\",\n        \"size\": 2178,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/core/command.js\",\n        \"size\": 1845,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/core/dates.js\",\n        \"size\": 1437,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/core/errors.js\",\n        \"size\": 681,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/core/fs.js\",\n        \"size\": 1148,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/core/guards.js\",\n        \"size\": 335,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/core/options.js\",\n        \"size\": 656,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/core/output.js\",\n        \"size\": 1576,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/core/redaction.js\",\n        \"size\": 1458,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/core/types.js\",\n        \"size\": 11,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/src/mcp/read.js\",\n        \"size\": 1501,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/ai-plugin.md\",\n        \"size\": 5129,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/assets/logo.svg\",\n        \"size\": 404,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/assets/njucli-user-group.png\",\n        \"size\": 1318,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/images/workbuddy/01-main.png\",\n        \"size\": 96994,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/images/workbuddy/02-mcp-server-management.png\",\n        \"size\": 121980,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/images/workbuddy/03-skills-installed.png\",\n        \"size\": 197694,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/images/workbuddy/04-chat-prompt.png\",\n        \"size\": 97370,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/images/workbuddy/05-chat-result.png\",\n        \"size\": 140566,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/installation.md\",\n        \"size\": 2991,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/interface-evidence.md\",\n        \"size\": 11528,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/reports/2026-10-10-intranet.md\",\n        \"size\": 8403,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/reports/2026-10-20-mirrors-classrooms.md\",\n        \"size\": 5922,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/reports/2026-10-20-selection-dorm-youth.md\",\n        \"size\": 4593,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/reports/2026-10-20-skill-suite.md\",\n        \"size\": 3690,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/reports/2026-10-20-unified-cli.md\",\n        \"size\": 2941,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/reports/assets/2026-10-10/cli-results.png\",\n        \"size\": 147308,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/reports/assets/2026-10-10/hospital-home.png\",\n        \"size\": 592630,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/reports/assets/2026-10-10/hospital-login.png\",\n        \"size\": 295049,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/reports/assets/2026-10-10/hospital-menu.png\",\n        \"size\": 20634,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/reports/assets/2026-10-10/library-holdings.png\",\n        \"size\": 347685,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/reports/assets/2026-10-10/library-results.json\",\n        \"size\": 2023,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/reports/assets/2026-10-10/library-search.png\",\n        \"size\": 300937,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/reports/assets/2026-10-20-mirrors-classrooms/checks.log\",\n        \"size\": 1135,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/reports/assets/2026-10-20-mirrors-classrooms/cli.jsonl\",\n        \"size\": 97041,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/reports/assets/2026-10-20-mirrors-classrooms/http.json\",\n        \"size\": 5078,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/reports/assets/2026-10-20-mirrors-classrooms/mcp.jsonl\",\n        \"size\": 9613,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/reports/assets/2026-10-20-mirrors-classrooms/review.json\",\n        \"size\": 4719,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/reports/assets/2026-10-20-selection-dorm-youth/cli.jsonl\",\n        \"size\": 23953,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/reports/assets/2026-10-20-selection-dorm-youth/mcp.jsonl\",\n        \"size\": 2130,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/reports/assets/2026-10-20-selection-dorm-youth/selection-state.json\",\n        \"size\": 1036,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/reports/assets/2026-10-20-skill-suite/agent-skills.txt\",\n        \"size\": 1310,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/reports/assets/2026-10-20-skill-suite/checks.txt\",\n        \"size\": 736,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/reports/assets/2026-10-20-skill-suite/verification.json\",\n        \"size\": 25318,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/reports/assets/2026-10-20-unified-cli/checks.txt\",\n        \"size\": 659,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/reports/assets/2026-10-20-unified-cli/commands.json\",\n        \"size\": 9406,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/reports/assets/2026-10-20-unified-cli/mcp.json\",\n        \"size\": 4349,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/reports/assets/2026-10-20-unified-cli/package-summary.json\",\n        \"size\": 916,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"docs/workbuddy.md\",\n        \"size\": 6028,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"package.json\",\n        \"size\": 1595,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/install-skills.mjs\",\n        \"size\": 1838,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/install.sh\",\n        \"size\": 1712,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-auth/SKILL.md\",\n        \"size\": 4431,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-box/references/documents.md\",\n        \"size\": 16785,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-box/references/interfaces.md\",\n        \"size\": 3344,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-box/SKILL.md\",\n        \"size\": 6273,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-box/templates/chart.json\",\n        \"size\": 286,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-box/templates/report.json\",\n        \"size\": 655,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-box/templates/whiteboard.excalidraw\",\n        \"size\": 12611,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-campus/references/mirrors.md\",\n        \"size\": 1138,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-campus/SKILL.md\",\n        \"size\": 1784,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-dorm/references/interfaces.md\",\n        \"size\": 3719,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-dorm/SKILL.md\",\n        \"size\": 2110,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-ehall/references/interfaces.md\",\n        \"size\": 15730,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-ehall/references/profile.md\",\n        \"size\": 5420,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-ehall/references/scholarship.md\",\n        \"size\": 7389,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-ehall/references/trip.md\",\n        \"size\": 3192,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-ehall/SKILL.md\",\n        \"size\": 5565,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/coverage.md\",\n        \"size\": 3766,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/人工智能学院.md\",\n        \"size\": 7763,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/信息管理学院.md\",\n        \"size\": 14456,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/先进制造学院.md\",\n        \"size\": 2372,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/前沿科学学院.md\",\n        \"size\": 13208,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/化学学院.md\",\n        \"size\": 52459,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/化工学院.md\",\n        \"size\": 597,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/匡亚明学院.md\",\n        \"size\": 9615,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/医学院.md\",\n        \"size\": 32095,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/南京赫尔辛基大气与地球系统科学学院（南赫学院）.md\",\n        \"size\": 13699,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/历史学院.md\",\n        \"size\": 16856,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/哲学学院.md\",\n        \"size\": 11343,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/商学院.md\",\n        \"size\": 26143,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/国家卓越工程师学院.md\",\n        \"size\": 596,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/国际关系学院.md\",\n        \"size\": 3713,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/地球科学与工程学院.md\",\n        \"size\": 43486,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/地理与海洋科学学院.md\",\n        \"size\": 34085,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/外国语学院.md\",\n        \"size\": 14358,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/大气科学学院.md\",\n        \"size\": 16460,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/天文与空间科学学院.md\",\n        \"size\": 13967,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/工程管理学院.md\",\n        \"size\": 9490,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/建筑与城市规划学院.md\",\n        \"size\": 10646,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/政府管理学院.md\",\n        \"size\": 18184,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/教育研究院·陶行知教师教育学院.md\",\n        \"size\": 4401,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/数字经济与管理学院.md\",\n        \"size\": 2526,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/数学学院.md\",\n        \"size\": 26053,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/文学院.md\",\n        \"size\": 24773,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/新生学院.md\",\n        \"size\": 80644,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/新闻传播学院.md\",\n        \"size\": 6293,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/智能科学与技术学院.md\",\n        \"size\": 8994,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/智能软件与工程学院.md\",\n        \"size\": 3196,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/未来技术学院.md\",\n        \"size\": 619,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/机器人与自动化学院.md\",\n        \"size\": 4744,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/法学院.md\",\n        \"size\": 12330,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/海外教育学院.md\",\n        \"size\": 6608,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/物理学院.md\",\n        \"size\": 33791,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/环境学院.md\",\n        \"size\": 21905,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/现代工程与应用科学学院.md\",\n        \"size\": 23521,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/生命科学学院.md\",\n        \"size\": 19429,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/生物医学工程学院.md\",\n        \"size\": 3407,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/电子科学与工程学院.md\",\n        \"size\": 19615,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/社会学院.md\",\n        \"size\": 12256,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/管理学院.md\",\n        \"size\": 9936,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/终身教育学院.md\",\n        \"size\": 620,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/经济学院.md\",\n        \"size\": 9773,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/能源与资源学院.md\",\n        \"size\": 4251,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/艺术学院.md\",\n        \"size\": 6930,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/计算机学院.md\",\n        \"size\": 30674,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/软件学院.md\",\n        \"size\": 9177,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/集成电路学院.md\",\n        \"size\": 4094,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/institutions/马克思主义学院.md\",\n        \"size\": 10477,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/interfaces.md\",\n        \"size\": 3486,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/后勤电话.md\",\n        \"size\": 10069,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/机构目录.md\",\n        \"size\": 12676,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/references/机构资料.json\",\n        \"size\": 1954772,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-institution/SKILL.md\",\n        \"size\": 3226,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-itxia/references/interfaces.md\",\n        \"size\": 5958,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-itxia/references/reservation-notice.md\",\n        \"size\": 1786,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-itxia/references/service-terms.md\",\n        \"size\": 12293,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-itxia/SKILL.md\",\n        \"size\": 4115,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-library/references/network.md\",\n        \"size\": 1453,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-library/SKILL.md\",\n        \"size\": 1629,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-lms/references/interfaces.md\",\n        \"size\": 3945,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-lms/SKILL.md\",\n        \"size\": 2953,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-mail/SKILL.md\",\n        \"size\": 2147,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-pay/references/interfaces.md\",\n        \"size\": 1938,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-pay/SKILL.md\",\n        \"size\": 1351,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-se/SKILL.md\",\n        \"size\": 1708,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-self-service/references/interfaces.md\",\n        \"size\": 8157,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-self-service/SKILL.md\",\n        \"size\": 4047,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-software/SKILL.md\",\n        \"size\": 1233,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-sports/SKILL.md\",\n        \"size\": 1401,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-table/references/interfaces.md\",\n        \"size\": 5539,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-table/SKILL.md\",\n        \"size\": 5771,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-table/templates/gradebook.json\",\n        \"size\": 4649,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-tex/references/interfaces.md\",\n        \"size\": 3074,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-tex/SKILL.md\",\n        \"size\": 2491,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-youth/references/interfaces.md\",\n        \"size\": 4828,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/njucli-youth/SKILL.md\",\n        \"size\": 2722,\n        \"mode\": 420\n      }\n    ],\n    \"entryCount\": 286,\n    \"bundled\": []\n  }\n]\n",
+      "stderr": ""
+    },
+    {
+      "name": "install",
+      "command": [
+        "npm",
+        "install",
+        "--global",
+        "--prefix",
+        "<verification-root>/candidate-install",
+        "--foreground-scripts",
+        "--no-audit",
+        "--no-fund",
+        "<verification-root>/candidate-pack/njucli-0.1.0.tgz"
+      ],
+      "exitCode": 0,
+      "stdout": "\n> njucli@0.1.0 postinstall\n> node scripts/install-skills.mjs\n\n已安装 NjuCLI Skills 套件：<verification-root>/candidate-skills/njucli\n\nadded 160 packages in 1s\n",
+      "stderr": "npm warn deprecated whatwg-encoding@3.1.1: Use @exodus/bytes instead for a more spec-conformant and faster implementation\nnpm warn install-scripts 1 package has install scripts not yet covered by allowScripts:\nnpm warn install-scripts   njucli@0.1.0 (postinstall: node scripts/install-skills.mjs)\nnpm warn install-scripts\nnpm warn install-scripts Run `npm install -g --allow-scripts=njucli` to allow these scripts once, or `npm config set allow-scripts=njucli --location=user` to allow them for all global installs.\n"
+    },
+    {
+      "name": "cli-help",
+      "command": [
+        "njucli",
+        "--help"
+      ],
+      "exitCode": 0,
+      "stdout": "Usage: njucli [options] [command]\n\n南京大学校园服务命令行工具\n\nOptions:\n  -V, --version      output the version number\n  -h, --help         display help for command\n\nCommands:\n  institution        检索学校机构、教师（含联系方式）与后勤电话\n  account            管理本机隔离账号\n  auth               管理统一认证会话\n  box|njubox         使用南大云盘：在线文档、文件、资料库、分享与协作\n  youth              第二课堂、志愿服务、社会实践与社团\n  itxia              IT 侠电脑维修预约、打开预约单与进度查询；取消仅 CLI 且须 --yes，只读 MCP 不提供\n  table              南大协同表格：模板、登分表、字段与数据填写\n  campus             查询校园信息与日程汇总\n  ehall              教务、课表、选课、个人资料与办事大厅\n  dorm               宿舍电费房间绑定与充值记录\n  pay                校园卡余额与消费、充值记录\n  library            查询图书馆馆藏与借阅\n  mail               绑定校园邮箱、查询邮件和下载附件（不修改已读状态）\n  software           查询正版软件与下载官方安装包\n  sports             查询体育场馆与预约记录\n  se                 使用软件学院教学支持系统\n  lms                智汇南雍：课程、课件、作业、测试与助教作业创建\n  tex                使用南京大学 TeXPage 写作平台\n  self-service       证明申请、电子文件领取与云打印查询\n  upgrade [options]  从 GitHub main 升级全局 CLI 和 Skill\n  mcp                启动只读 MCP stdio 服务\n",
+      "stderr": ""
+    },
+    {
+      "name": "mirrors",
+      "command": [
+        "njucli",
+        "campus",
+        "mirrors",
+        "ubuntu",
+        "--format",
+        "json"
+      ],
+      "exitCode": 0,
+      "stdout": "{\"ok\":true,\"data\":{\"sourceUrl\":\"https://mirror.nju.edu.cn/\",\"items\":[{\"name\":\"ubuntu\",\"url\":\"https://mirror.nju.edu.cn/ubuntu/\",\"status\":\"success\",\"helpUrl\":\"https://help.mirror.nju.edu.cn/ubuntu/?mirror=NJU\"},{\"name\":\"ubuntu-cdimage\",\"url\":\"https://mirror.nju.edu.cn/ubuntu-cdimage/\",\"status\":\"success\",\"helpUrl\":null},{\"name\":\"ubuntu-cloud-images\",\"url\":\"https://mirror.nju.edu.cn/ubuntu-cloud-images/\",\"status\":\"success\",\"helpUrl\":\"https://help.mirror.nju.edu.cn/ubuntu-cloud-images/?mirror=NJU\"},{\"name\":\"ubuntu-old-releases\",\"url\":\"https://mirror.nju.edu.cn/ubuntu-old-releases/\",\"status\":\"success\",\"helpUrl\":\"https://help.mirror.nju.edu.cn/ubuntu-old-releases/?mirror=NJU\"},{\"name\":\"ubuntu-ports\",\"url\":\"https://mirror.nju.edu.cn/ubuntu-ports/\",\"status\":\"success\",\"helpUrl\":\"https://help.mirror.nju.edu.cn/ubuntu-ports/?mirror=NJU\"},{\"name\":\"ubuntu-releases\",\"url\":\"https://mirror.nju.edu.cn/ubuntu-releases/\",\"status\":\"success\",\"helpUrl\":null},{\"name\":\"ubuntukylin\",\"url\":\"https://mirror.nju.edu.cn/ubuntukylin/\",\"status\":\"success\",\"helpUrl\":null},{\"name\":\"ubuntukylin-cdimage\",\"url\":\"https://mirror.nju.edu.cn/ubuntukylin-cdimage/\",\"status\":\"success\",\"helpUrl\":null}]}}\n",
+      "stderr": ""
+    },
+    {
+      "name": "marketplace-add",
+      "command": [
+        "claude",
+        "plugin",
+        "marketplace",
+        "add",
+        "<verification-root>/candidate-install/lib/node_modules/njucli",
+        "--scope",
+        "user",
+        "--json"
+      ],
+      "exitCode": 0,
+      "stdout": "{\"command\":\"marketplace-add\",\"outcome\":\"ok\",\"marketplace\":\"njucli\",\"message\":\"Successfully added marketplace: njucli (declared in user settings)\"}\n",
+      "stderr": ""
+    },
+    {
+      "name": "plugin-install",
+      "command": [
+        "claude",
+        "plugin",
+        "install",
+        "njucli@njucli",
+        "--scope",
+        "user",
+        "--json"
+      ],
+      "exitCode": 0,
+      "stdout": "{\"command\":\"install\",\"outcome\":\"ok\",\"plugin\":\"njucli@njucli\",\"pluginId\":\"njucli@njucli\",\"scope\":\"user\",\"message\":\"Successfully installed plugin: njucli@njucli (scope: user)\"}\n",
+      "stderr": ""
+    },
+    {
+      "name": "plugin-list",
+      "command": [
+        "claude",
+        "plugin",
+        "list",
+        "--json"
+      ],
+      "exitCode": 0,
+      "stdout": "[\n  {\n    \"id\": \"njucli@njucli\",\n    \"version\": \"0.1.0\",\n    \"scope\": \"user\",\n    \"enabled\": true,\n    \"installPath\": \"<verification-root>/claude-candidate/plugins/cache/njucli/njucli/0.1.0\",\n    \"readFromFolder\": \"<verification-root>/candidate-install/lib/node_modules/njucli\",\n    \"folderVersion\": \"0.1.0\",\n    \"installedAt\": \"2026-10-21T08:43:31.180Z\",\n    \"lastUpdated\": \"2026-10-21T08:43:31.180Z\",\n    \"mcpServers\": {\n      \"njucli\": {\n        \"command\": \"njucli\",\n        \"args\": [\n          \"mcp\"\n        ]\n      }\n    },\n    \"projectEnabled\": false\n  }\n]\n",
+      "stderr": ""
+    },
+    {
+      "name": "plugin-details",
+      "command": [
+        "claude",
+        "plugin",
+        "details",
+        "njucli@njucli"
+      ],
+      "exitCode": 0,
+      "stdout": "njucli 0.1.0\n  Description: 统一安装南京大学校园服务 Skills 与只读 MCP 入口\n  Source: njucli@njucli\n\nComponent inventory\n  Skills (18)  njucli-auth, njucli-box, njucli-campus, njucli-dorm, njucli-ehall, njucli-institution, njucli-itxia, njucli-library, njucli-lms, njucli-mail, njucli-pay, njucli-se, njucli-self-service, njucli-software, njucli-sports, njucli-table, njucli-tex, njucli-youth\n  Agents (0)\n  Hooks (0)\n  MCP servers (1)  njucli  (tool schemas resolved at runtime; not counted)\n  LSP servers (0)\n\nProjected token cost\n  Always-on:   ~437 tok   added to every session\n\nPer-component (rounded)\n  component            always-on  on-invoke\n  njucli-dorm               < 20       ~300\n  njucli-institution         ~30       ~410\n  njucli-self-service        ~30       ~590\n  njucli-library            < 20       ~230\n  njucli-table               ~30       ~860\n  njucli-mail               < 20       ~310\n  njucli-auth               < 20       ~570\n  njucli-campus              ~30       ~240\n  njucli-pay                < 20       ~150\n  njucli-se                  ~30       ~250\n  njucli-ehall               ~30       ~860\n  njucli-itxia               ~40       ~520\n  njucli-sports              ~20       ~210\n  njucli-lms                 ~30       ~380\n  njucli-software            ~30       ~160\n  njucli-youth               ~20       ~440\n  njucli-box                 ~30       ~960\n  njucli-tex                 ~30       ~390\n\n  On-invoke cost is paid each time a skill or agent fires.\n  Token counts are estimates and may differ from actual usage.\n",
+      "stderr": ""
+    }
+  ],
+  "skillFilesMatchSource": true,
+  "session": {
+    "loadMethod": "--plugin-dir points to installed plugin cache; existing Claude login reused",
+    "njucliSkills": [
+      "njucli:njucli-auth",
+      "njucli:njucli-box",
+      "njucli:njucli-campus",
+      "njucli:njucli-dorm",
+      "njucli:njucli-ehall",
+      "njucli:njucli-institution",
+      "njucli:njucli-itxia",
+      "njucli:njucli-library",
+      "njucli:njucli-lms",
+      "njucli:njucli-mail",
+      "njucli:njucli-pay",
+      "njucli:njucli-se",
+      "njucli:njucli-self-service",
+      "njucli:njucli-software",
+      "njucli:njucli-sports",
+      "njucli:njucli-table",
+      "njucli:njucli-tex",
+      "njucli:njucli-youth"
+    ],
+    "mcpServers": [
+      {
+        "name": "njucli",
+        "status": "connected",
+        "source": "dynamic"
+      }
+    ],
+    "toolCalls": [
+      {
+        "tool": "Skill",
+        "input": {
+          "skill": "njucli:njucli-campus",
+          "args": "查询南京大学公开的 Ubuntu 镜像条目：<verification-root>/candidate-install/bin/njucli campus mirrors ubuntu --format json"
+        }
+      },
+      {
+        "toolResult": "Launching skill: njucli:njucli-campus",
+        "isError": false
+      },
+      {
+        "tool": "Bash",
+        "input": {
+          "command": "<verification-root>/candidate-install/bin/njucli campus mirrors ubuntu --format json",
+          "description": "查询南大公开 Ubuntu 镜像条目",
+          "timeout": 120000
+        }
+      },
+      {
+        "toolResult": "{\"ok\":true,\"data\":{\"sourceUrl\":\"https://mirror.nju.edu.cn/\",\"items\":[{\"name\":\"ubuntu\",\"url\":\"https://mirror.nju.edu.cn/ubuntu/\",\"status\":\"success\",\"helpUrl\":\"https://help.mirror.nju.edu.cn/ubuntu/?mirror=NJU\"},{\"name\":\"ubuntu-cdimage\",\"url\":\"https://mirror.nju.edu.cn/ubuntu-cdimage/\",\"status\":\"success\",\"helpUrl\":null},{\"name\":\"ubuntu-cloud-images\",\"url\":\"https://mirror.nju.edu.cn/ubuntu-cloud-images/\",\"status\":\"success\",\"helpUrl\":\"https://help.mirror.nju.edu.cn/ubuntu-cloud-images/?mirror=NJU\"},{\"name\":\"ubuntu-old-releases\",\"url\":\"https://mirror.nju.edu.cn/ubuntu-old-releases/\",\"status\":\"success\",\"helpUrl\":\"https://help.mirror.nju.edu.cn/ubuntu-old-releases/?mirror=NJU\"},{\"name\":\"ubuntu-ports\",\"url\":\"https://mirror.nju.edu.cn/ubuntu-ports/\",\"status\":\"success\",\"helpUrl\":\"https://help.mirror.nju.edu.cn/ubuntu-ports/?mirror=NJU\"},{\"name\":\"ubuntu-releases\",\"url\":\"https://mirror.nju.edu.cn/ubuntu-releases/\",\"status\":\"success\",\"helpUrl\":null},{\"name\":\"ubuntukylin\",\"url\":\"https://mirror.nju.edu.cn/ubuntukylin/\",\"status\":\"success\",\"helpUrl\":null},{\"name\":\"ubuntukylin-cdimage\",\"url\":\"https://mirror.nju.edu.cn/ubuntukylin-cdimage/\",\"status\":\"success\",\"helpUrl\":null}]}}",
+        "isError": false
+      }
+    ],
+    "result": "候选包里的公开查询（`campus mirrors ubuntu --format json`）执行成功，返回 `ok: true`。数据来源是 https://mirror.nju.edu.cn/ 。\n\n- **条目数量**：名称中含 \"ubuntu\" 的条目共 **8 个**。\n- **ubuntu 地址**：https://mirror.nju.edu.cn/ubuntu/ ，使用帮助见 https://help.mirror.nju.edu.cn/ubuntu/?mirror=NJU 。\n- **同步状态**：`ubuntu` 是 `success`，另外 7 个也都是 `success`。\n\n全部条目：\n\n| 名称 | 状态 | 有帮助链接 |\n|---|---|---|\n| ubuntu | success | 是 |\n| ubuntu-cdimage | success | 否 |\n| ubuntu-cloud-images | success | 是 |\n| ubuntu-old-releases | success | 是 |\n| ubuntu-ports | success | 是 |\n| ubuntu-releases | success | 否 |\n| ubuntukylin | success | 否 |\n| ubuntukylin-cdimage | success | 否 |\n\n这次只跑了这一条公开查询，没有访问校园账号，也没有读取个人目录。",
+    "exitCode": 0
+  },
+  "publicQuery": {
+    "ok": true,
+    "data": {
+      "sourceUrl": "https://mirror.nju.edu.cn/",
+      "items": [
+        {
+          "name": "ubuntu",
+          "url": "https://mirror.nju.edu.cn/ubuntu/",
+          "status": "success",
+          "helpUrl": "https://help.mirror.nju.edu.cn/ubuntu/?mirror=NJU"
+        },
+        {
+          "name": "ubuntu-cdimage",
+          "url": "https://mirror.nju.edu.cn/ubuntu-cdimage/",
+          "status": "success",
+          "helpUrl": null
+        },
+        {
+          "name": "ubuntu-cloud-images",
+          "url": "https://mirror.nju.edu.cn/ubuntu-cloud-images/",
+          "status": "success",
+          "helpUrl": "https://help.mirror.nju.edu.cn/ubuntu-cloud-images/?mirror=NJU"
+        },
+        {
+          "name": "ubuntu-old-releases",
+          "url": "https://mirror.nju.edu.cn/ubuntu-old-releases/",
+          "status": "success",
+          "helpUrl": "https://help.mirror.nju.edu.cn/ubuntu-old-releases/?mirror=NJU"
+        },
+        {
+          "name": "ubuntu-ports",
+          "url": "https://mirror.nju.edu.cn/ubuntu-ports/",
+          "status": "success",
+          "helpUrl": "https://help.mirror.nju.edu.cn/ubuntu-ports/?mirror=NJU"
+        },
+        {
+          "name": "ubuntu-releases",
+          "url": "https://mirror.nju.edu.cn/ubuntu-releases/",
+          "status": "success",
+          "helpUrl": null
+        },
+        {
+          "name": "ubuntukylin",
+          "url": "https://mirror.nju.edu.cn/ubuntukylin/",
+          "status": "success",
+          "helpUrl": null
+        },
+        {
+          "name": "ubuntukylin-cdimage",
+          "url": "https://mirror.nju.edu.cn/ubuntukylin-cdimage/",
+          "status": "success",
+          "helpUrl": null
+        }
+      ]
+    }
+  },
+  "accountIsolation": "XDG_CONFIG_HOME and XDG_DATA_HOME point to temporary directories; no campus credentials used",
+  "oneCommandInstall": {
+    "command": [
+      "claude",
+      "plugin",
+      "install",
+      "njucli",
+      "--marketplace",
+      "<verification-root>/candidate-install/lib/node_modules/njucli",
+      "--scope",
+      "user",
+      "--json"
+    ],
+    "exitCode": 0,
+    "stdout": "{\"command\":\"install\",\"outcome\":\"ok\",\"plugin\":\"njucli@njucli\",\"pluginId\":\"njucli@njucli\",\"scope\":\"user\",\"message\":\"Successfully installed plugin: njucli@njucli (scope: user)\"}\n",
+    "stderr": "",
+    "plugins": [
+      {
+        "id": "njucli@njucli",
+        "version": "0.1.0",
+        "scope": "user",
+        "enabled": true,
+        "installPath": "<verification-root>/claude-one-command/plugins/cache/njucli/njucli/0.1.0",
+        "readFromFolder": "<verification-root>/candidate-install/lib/node_modules/njucli",
+        "folderVersion": "0.1.0",
+        "installedAt": "2026-10-21T08:48:43.894Z",
+        "lastUpdated": "2026-10-21T08:48:43.894Z",
+        "mcpServers": {
+          "njucli": {
+            "command": "njucli",
+            "args": [
+              "mcp"
+            ]
+          }
+        },
+        "projectEnabled": false
+      }
+    ]
+  }
+}

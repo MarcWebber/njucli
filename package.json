@@ -21,6 +21,7 @@
     "AGENTS.md",
     "REVIEW_RULES.md",
     ".codex-plugin",
+    ".claude-plugin",
     ".mcp.json",
     "skills/*/SKILL.md",
     "skills/*/references/**",

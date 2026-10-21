@@ -12,6 +12,8 @@ NjuCLI 提供统一 CLI、只读 stdio MCP 工具和 NjuCLI Skills 套件。安�
 
 仓库的 `.codex-plugin/plugin.json` 提供套件清单，`.mcp.json` 提供 MCP 配置。全局安装将整个套件注册到 `${CODEX_HOME:-~/.codex}/skills/njucli/`，其中 18 个业务子目录各有自己的 `SKILL.md`，宿主按任务选择对应 Skill。其他支持递归发现的宿主可通过 `NJUCLI_SKILLS_DIR` 指定全局 Skills 目录，套件注册到其中的 `njucli/`。目录与验证范围见[安装与维护](installation.md)。
 
+Claude Code 使用 `.claude-plugin/` 中的原生插件与 marketplace 声明，按[Claude Code 安装步骤](installation.md#claude-code)一次安装全部业务 Skill 和只读 MCP 入口。
+
 ## MCP 配置
 
 将以下服务合并到宿主配置：
@@ -58,6 +60,7 @@ NjuCLI 提供统一 CLI、只读 stdio MCP 工具和 NjuCLI Skills 套件。安�
 
 ## 客户端指南
 
+- [Claude Code](installation.md#claude-code)：用户级插件安装、组件检查和更新。
 - [WorkBuddy](workbuddy.md)：MCP 配置、Skills 安装与客户端发现检查。
 
 ## 任务使用

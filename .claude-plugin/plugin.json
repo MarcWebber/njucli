@@ -1,0 +1,9 @@
+{
+  "name": "njucli",
+  "version": "0.1.0",
+  "description": "南京大学校园服务 CLI 与 AI Skills",
+  "author": { "name": "MarcWebber" },
+  "homepage": "https://github.com/MarcWebber/njucli",
+  "repository": "https://github.com/MarcWebber/njucli",
+  "license": "SEE LICENSE IN LICENSE"
+}
