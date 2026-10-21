@@ -66,9 +66,9 @@ njucli auth daemon stop
 ### 登录后自启动
 
 ```bash
-node scripts/run.mjs auto start
-node scripts/run.mjs auto status --format json
-node scripts/run.mjs auto stop
+njucli auto start
+njucli auto status --format json
+njucli auto stop
 ```
 
 `auto start` 为当前账号保存系统自启动配置，立即启动保活，并在重启后登录系统时自动启动；默认每 600 秒维护一次，支持 `--interval`。已有后台进程会先完成当前维护再切换。用 `account use` 选择账号后分别启用；也可通过环境变量 `NJUCLI_ACCOUNT` 指定账号。状态返回 `enabled`（已启用）、`loaded`（系统已加载或注册）及配置路径；实际进程与维护结果用 `auth daemon status` 查询。
@@ -83,7 +83,7 @@ node scripts/run.mjs auto stop
 
 重启不会删除已保存的 Cookie 和凭据；会话仍有效时复用，过期时自动登录。后台维护统一认证，eHall 等业务站点在实际调用时建立或恢复自己的会话。学校要求本人验证时，通过官方页面完成。
 
-macOS 的配置加载和维护结果已实机核对；Linux 与 Windows 已实现，实际系统运行待核对。
+macOS 与 Linux 的配置加载和维护结果已实机核对；Windows 的实际系统运行待核对。
 
 遇到登录错误时：
 

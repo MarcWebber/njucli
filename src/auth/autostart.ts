@@ -150,7 +150,7 @@ TimeoutStopSec=40
 WantedBy=default.target
 `);
       await execute("systemctl", ["--user", "daemon-reload"]);
-      await execute("systemctl", ["--user", "enable", "--now", name]);
+      await execute("systemctl", ["--user", "enable", "--now", path]);
     }
     enabled = true;
     loaded = true;
