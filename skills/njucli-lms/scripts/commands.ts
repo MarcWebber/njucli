@@ -4,7 +4,7 @@ import { addFormatOption, runCommand, type CommandRuntime, type FormatOptions } 
 import { AppError } from "../../../src/core/errors.js";
 import { optionalPositiveInteger } from "../../../src/core/options.js";
 import { z } from "zod";
-import type { ReadTool } from "../../../src/mcp/read.js";
+import type { McpTool } from "../../../src/mcp/tools.js";
 import type { LmsServices } from "./client.js";
 
 const timestamp = z.iso.datetime({ offset: true, precision: 0 })
@@ -62,14 +62,20 @@ export function registerLmsCommands(program: Command, service: LmsServices, runt
   return lms;
 }
 
-export function registerLmsTools(read: ReadTool, service: LmsServices): void {
+export function registerLmsTools(tool: McpTool, service: LmsServices): void {
   const id = z.number().int().positive().max(Number.MAX_SAFE_INTEGER);
   const page = z.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional();
-  read("lms_courses", "分页查询智汇南雍课程及教学权限，用 nextPage 翻页。", { page, query: z.string().optional() }, ({ page, query }) => service.courses(page, query));
-  read("lms_course", "读取智汇南雍课程信息与学期。", { courseId: id }, ({ courseId }) => service.course(courseId));
-  read("lms_activities", "读取智汇南雍课件等学习活动及附件信息。", { courseId: id }, ({ courseId }) => service.activities(courseId));
-  read("lms_assignments", "分页查询智汇南雍作业类型活动；测试类型使用 lms_exams。", { courseId: id, page }, ({ courseId, page }) => service.assignments(courseId, page));
-  read("lms_assignment", "读取作业正文、截止时间、发布状态及附件。", { activityId: id }, ({ activityId }) => service.assignment(activityId));
-  read("lms_exams", "查询智汇南雍测试类型活动，包括使用测试布置的书面作业。", { courseId: id }, ({ courseId }) => service.exams(courseId));
-  read("lms_todos", "读取智汇南雍首页待办。", {}, () => service.todos());
+  tool("lms_courses", "分页查询智汇南雍课程及教学权限，用 nextPage 翻页。", { page, query: z.string().optional() }, ({ page, query }) => service.courses(page, query));
+  tool("lms_course", "读取智汇南雍课程信息与学期。", { courseId: id }, ({ courseId }) => service.course(courseId));
+  tool("lms_activities", "读取智汇南雍课件等学习活动及附件信息。", { courseId: id }, ({ courseId }) => service.activities(courseId));
+  tool("lms_assignments", "分页查询智汇南雍作业类型活动；测试类型使用 lms_exams。", { courseId: id, page }, ({ courseId, page }) => service.assignments(courseId, page));
+  tool("lms_assignment", "读取作业正文、截止时间、发布状态及附件。", { activityId: id }, ({ activityId }) => service.assignment(activityId));
+  tool("lms_exams", "查询智汇南雍测试类型活动，包括使用测试布置的书面作业。", { courseId: id }, ({ courseId }) => service.exams(courseId));
+  tool("lms_todos", "读取智汇南雍首页待办。", {}, () => service.todos());
+  tool("lms_create_assignment", "助教或教师创建个人作业草稿并回读；publish 发布，notify 随发布发送平台通知。", {
+    courseId: id, input: assignmentInput, publish: z.boolean().optional(), notify: z.boolean().optional(),
+  }, ({ courseId, input, publish, notify }) => {
+    if (notify && !publish) throw new AppError("INVALID_INPUT", "notify 需配合 publish 使用");
+    return service.createAssignment(courseId, input, publish, notify);
+  }, { destructiveHint: false });
 }

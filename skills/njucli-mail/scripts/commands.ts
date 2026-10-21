@@ -6,11 +6,24 @@ import type { MailBinding } from "./client.js";
 import { addFormatOption, runCommand, type CommandRuntime, type FormatOptions } from "../../../src/core/command.js";
 import { requiredText } from "../../../src/core/guards.js";
 import { optionalPositiveInteger } from "../../../src/core/options.js";
+import { AppError } from "../../../src/core/errors.js";
+import { mailSendInput } from "./schema.js";
 
 type ListOptions = FormatOptions & { folder?: string; unread?: boolean; limit?: string; before?: string };
 
 export function registerMailCommands(program: Command, service: MailServices, runtime: CommandRuntime): Command {
-  const mail = program.command("mail").description("绑定校园邮箱、查询邮件和下载附件（不修改已读状态）");
+  const mail = program.command("mail").description("校园邮箱收发、附件与多邮箱管理");
+  addFormatOption(mail.command("send").description("从当前邮箱发送正文及附件，核对 SMTP 接收结果")
+    .requiredOption("--input <path>", "邮件 JSON：to、subject、text 或 html；可带 cc、bcc、attachments"))
+    .action((options: FormatOptions & { input: string }) => runCommand(runtime, options, async () => {
+      let value: unknown;
+      try { value = JSON.parse(await readFile(options.input, "utf8")); }
+      catch (cause) { throw new AppError("INVALID_INPUT", "请提供可读取的邮件 JSON 文件", { cause }); }
+      const parsed = mailSendInput.safeParse(value);
+      if (!parsed.success) throw new AppError("INVALID_INPUT", "请核对收件人、主题与正文", { details: parsed.error.issues });
+      const data = await service.send(parsed.data);
+      return { data, text: `SMTP 已接收邮件 ${data.messageId}；发件人 ${data.from}` };
+    }));
   addFormatOption(mail.command("bind").description("保存邮箱账号密码并验证 IMAP；已有凭据直接复用")
     .option("--address <address>", "完整邮箱地址")
     .option("--password <password>", "邮箱客户端专用密码")

@@ -15,7 +15,7 @@ NjuCLI 服务南京大学学生及其 AI 助手，围绕写作、邮件、上课
 | `src/auth/` | SSO 登录、凭据、公共浏览器与会话机制 |
 | `skills/<任务>/scripts/` | 所属业务的 client、命令、展示、服务、MCP 定义 |
 | `src/core/` | 文件、输入、日期、输出与脱敏函数 |
-| `src/mcp/` | 只读 MCP 协议与输出处理 |
+| `src/mcp/` | MCP 协议、读写标注与输出处理 |
 | `tests/` | 真实本地进程、文件锁与 CLI 安装产物检查 |
 | `skills/<任务>/SKILL.md`、`references/` | 各 Skill 的触发说明与任务流程；较长流程和接口资料按需拆入 references |
 | `.codex-plugin/`、`.mcp.json` | 插件清单与本地 MCP 配置 |
@@ -28,7 +28,7 @@ NjuCLI 服务南京大学学生及其 AI 助手，围绕写作、邮件、上课
 ## 实现约定
 
 - 功能性优先，采用完成当前任务的最简单实现。业务代码和资料按 Skill 归属；外层只保留统一认证、实际共用工具、安装构建和入口装配。解析和小型返回结构就近定义。
-- 简单业务以 `client.ts` 和 `commands.ts` 组织：client 包含请求与简短会话包装，commands 包含输入校验、CLI 和只读 MCP。文件按独立职责或实际复用拆分。
+- 简单业务以 `client.ts` 和 `commands.ts` 组织：client 包含请求与简短会话包装，commands 包含输入校验、CLI 和 MCP。文件按独立职责或实际复用拆分。
 - 统一入口在 `src/app/production.ts` 的同一次 `mount` 调用中关联业务实例、CLI 和 MCP。业务复用公共 SSO 会话，站点跳转、令牌交换、CSRF 与响应校验随所属 Skill 维护。
 - 每个动作绑定一个明确业务方法，每份远端契约对应一个 client 和一条请求路径。
 - 直接复用已有函数与 client 方法类型。共享工具以实际重复调用、相同语义为依据；单实现存储直接使用具体类。删除无调用代码、冗余字段、透传包装和重复注册表。

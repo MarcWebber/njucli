@@ -5,7 +5,7 @@ import { z } from "zod";
 import type { TableServices } from "./services.js";
 import { addFormatOption, runCommand, type CommandRuntime, type FormatOptions } from "../../../src/core/command.js";
 import { AppError } from "../../../src/core/errors.js";
-import { saveFile } from "../../../src/core/fs.js";
+import { loadTablePreset } from "./services.js";
 import { appId, appPageInput, appPaginationInput, baseInput, columnInput, formInput, rowsInput, sheetInput, updatesInput, viewInput } from "./schema.js";
 
 async function input<T>(path: string | URL, schema: z.ZodType<T>): Promise<T> {
@@ -17,7 +17,6 @@ async function input<T>(path: string | URL, schema: z.ZodType<T>): Promise<T> {
   if (!result.success) throw new AppError("INVALID_INPUT", "表格输入格式有误", { details: result.error.issues });
   return result.data;
 }
-const presetPath = new URL("../templates/gradebook.json", import.meta.url);
 const resultText = (data: unknown) => ({ data, text: JSON.stringify(data, null, 2) });
 
 export function registerTableCommands(program: Command, service: TableServices, runtime: CommandRuntime): Command {
@@ -55,10 +54,7 @@ export function registerTableCommands(program: Command, service: TableServices, 
     }));
   addFormatOption(table.command("preset <name>").description("查看或导出内置模板定义：gradebook（登分表）").option("--output <path>", "保存 JSON 定义供修改"))
     .action((name: string, options: FormatOptions & { output?: string }) => runCommand(runtime, options, async () => {
-      if (name !== "gradebook") throw new AppError("INVALID_INPUT", "内置模板：gradebook");
-      const data = await input(presetPath, baseInput);
-      if (options.output) return resultText(await saveFile(options.output, JSON.stringify(data, null, 2) + "\n"));
-      return resultText(data);
+      return resultText(await service.preset(name, options.output));
     }));
   addFormatOption(table.command("show <base>").description("读取工作表、字段、公式和视图；base 使用 UUID"))
     .action((base: string, options: FormatOptions) => runCommand(runtime, options, async () => resultText(await service.show(base))));
@@ -79,7 +75,7 @@ export function registerTableCommands(program: Command, service: TableServices, 
       if (options.preset && options.preset !== "gradebook") throw new AppError("INVALID_INPUT", "内置模板：gradebook");
       const workspace = options.workspace === undefined ? undefined : Number(options.workspace);
       if (workspace !== undefined && (!Number.isInteger(workspace) || workspace < 1)) throw new AppError("INVALID_INPUT", "工作区 ID 须为正整数");
-      const definition = options.preset ? await input(presetPath, baseInput) : options.input ? await input(options.input, baseInput) : undefined;
+      const definition = options.preset ? await loadTablePreset(options.preset) : options.input ? await input(options.input, baseInput) : undefined;
       return resultText(await service.create(name, { template: options.template, definition, workspace }));
     }));
   addFormatOption(table.command("sheet-add <base>").description("新增带字段和视图的工作表").requiredOption("--input <path>", "工作表结构 JSON"))

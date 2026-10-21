@@ -4,7 +4,7 @@ import { addFormatOption, runCommand, type CommandRuntime, type FormatOptions } 
 import { addDays, parseCampusDate } from "../../../src/core/dates.js";
 import { AppError } from "../../../src/core/errors.js";
 import { optionalPositiveInteger } from "../../../src/core/options.js";
-import type { ReadTool } from "../../../src/mcp/read.js";
+import type { McpTool } from "../../../src/mcp/tools.js";
 import type { PayServices } from "./client.js";
 
 function billRange(from?: string, to?: string) {
@@ -38,9 +38,9 @@ export function registerPayCommands(program: Command, service: PayServices, runt
   return group;
 }
 
-export function registerPayTools(read: ReadTool, service: PayServices): void {
-  read("pay_balance", "查询本人校园卡余额，单位为元。", {}, () => service(client => client.balance()));
-  read("pay_bills", "查询本人校园卡消费与充值记录，默认最近 30 天，每页 200 条。", {
+export function registerPayTools(tool: McpTool, service: PayServices): void {
+  tool("pay_balance", "查询本人校园卡余额，单位为元。", {}, () => service(client => client.balance()));
+  tool("pay_bills", "查询本人校园卡消费与充值记录，默认最近 30 天，每页 200 条。", {
     from: z.string().optional().describe("开始日期 YYYY-MM-DD，含当日"),
     to: z.string().optional().describe("截止日期 YYYY-MM-DD，不含当日，默认明天"),
     page: z.number().int().positive().optional().describe("页码，从 1 开始"),

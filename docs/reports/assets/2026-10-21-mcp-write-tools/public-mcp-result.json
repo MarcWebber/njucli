@@ -1,0 +1,63 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "{\n  \"ok\": true,\n  \"data\": {\n    \"sourceUrl\": \"https://mirror.nju.edu.cn/\",\n    \"items\": [\n      {\n        \"name\": \"ubuntu\",\n        \"url\": \"https://mirror.nju.edu.cn/ubuntu/\",\n        \"status\": \"success\",\n        \"helpUrl\": \"https://help.mirror.nju.edu.cn/ubuntu/?mirror=NJU\"\n      },\n      {\n        \"name\": \"ubuntu-cdimage\",\n        \"url\": \"https://mirror.nju.edu.cn/ubuntu-cdimage/\",\n        \"status\": \"success\",\n        \"helpUrl\": null\n      },\n      {\n        \"name\": \"ubuntu-cloud-images\",\n        \"url\": \"https://mirror.nju.edu.cn/ubuntu-cloud-images/\",\n        \"status\": \"success\",\n        \"helpUrl\": \"https://help.mirror.nju.edu.cn/ubuntu-cloud-images/?mirror=NJU\"\n      },\n      {\n        \"name\": \"ubuntu-old-releases\",\n        \"url\": \"https://mirror.nju.edu.cn/ubuntu-old-releases/\",\n        \"status\": \"success\",\n        \"helpUrl\": \"https://help.mirror.nju.edu.cn/ubuntu-old-releases/?mirror=NJU\"\n      },\n      {\n        \"name\": \"ubuntu-ports\",\n        \"url\": \"https://mirror.nju.edu.cn/ubuntu-ports/\",\n        \"status\": \"syncing\",\n        \"helpUrl\": \"https://help.mirror.nju.edu.cn/ubuntu-ports/?mirror=NJU\"\n      },\n      {\n        \"name\": \"ubuntu-releases\",\n        \"url\": \"https://mirror.nju.edu.cn/ubuntu-releases/\",\n        \"status\": \"success\",\n        \"helpUrl\": null\n      },\n      {\n        \"name\": \"ubuntukylin\",\n        \"url\": \"https://mirror.nju.edu.cn/ubuntukylin/\",\n        \"status\": \"success\",\n        \"helpUrl\": null\n      },\n      {\n        \"name\": \"ubuntukylin-cdimage\",\n        \"url\": \"https://mirror.nju.edu.cn/ubuntukylin-cdimage/\",\n        \"status\": \"success\",\n        \"helpUrl\": null\n      }\n    ]\n  }\n}"
+    }
+  ],
+  "structuredContent": {
+    "data": {
+      "sourceUrl": "https://mirror.nju.edu.cn/",
+      "items": [
+        {
+          "name": "ubuntu",
+          "url": "https://mirror.nju.edu.cn/ubuntu/",
+          "status": "success",
+          "helpUrl": "https://help.mirror.nju.edu.cn/ubuntu/?mirror=NJU"
+        },
+        {
+          "name": "ubuntu-cdimage",
+          "url": "https://mirror.nju.edu.cn/ubuntu-cdimage/",
+          "status": "success",
+          "helpUrl": null
+        },
+        {
+          "name": "ubuntu-cloud-images",
+          "url": "https://mirror.nju.edu.cn/ubuntu-cloud-images/",
+          "status": "success",
+          "helpUrl": "https://help.mirror.nju.edu.cn/ubuntu-cloud-images/?mirror=NJU"
+        },
+        {
+          "name": "ubuntu-old-releases",
+          "url": "https://mirror.nju.edu.cn/ubuntu-old-releases/",
+          "status": "success",
+          "helpUrl": "https://help.mirror.nju.edu.cn/ubuntu-old-releases/?mirror=NJU"
+        },
+        {
+          "name": "ubuntu-ports",
+          "url": "https://mirror.nju.edu.cn/ubuntu-ports/",
+          "status": "syncing",
+          "helpUrl": "https://help.mirror.nju.edu.cn/ubuntu-ports/?mirror=NJU"
+        },
+        {
+          "name": "ubuntu-releases",
+          "url": "https://mirror.nju.edu.cn/ubuntu-releases/",
+          "status": "success",
+          "helpUrl": null
+        },
+        {
+          "name": "ubuntukylin",
+          "url": "https://mirror.nju.edu.cn/ubuntukylin/",
+          "status": "success",
+          "helpUrl": null
+        },
+        {
+          "name": "ubuntukylin-cdimage",
+          "url": "https://mirror.nju.edu.cn/ubuntukylin-cdimage/",
+          "status": "success",
+          "helpUrl": null
+        }
+      ]
+    }
+  }
+}

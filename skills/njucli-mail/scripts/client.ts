@@ -1,7 +1,9 @@
 import { ImapFlow, type FetchMessageObject } from "imapflow";
 import { simpleParser } from "mailparser";
-import { unlink } from "node:fs/promises";
-import { join } from "node:path";
+import nodemailer from "nodemailer";
+import { readFile, unlink } from "node:fs/promises";
+import { basename, join } from "node:path";
+import type { MailSendInput } from "./schema.js";
 
 import { AppError } from "../../../src/core/errors.js";
 import { readJsonFile, saveFile, writeJsonFile } from "../../../src/core/fs.js";
@@ -107,6 +109,8 @@ export class MailClient {
     const { row, parsed } = await this.message(id);
     return {
       id, ...summary(row), text: parsed.text ?? "",
+      messageId: parsed.messageId ?? null,
+      references: typeof parsed.references === "string" ? [parsed.references] : parsed.references ?? [],
       attachments: parsed.attachments.map((file, index) => ({
         id: String(index + 1), name: file.filename ?? null, contentType: file.contentType, bytes: file.size,
       })),
@@ -118,6 +122,31 @@ export class MailClient {
     const file = parsed.attachments[attachment - 1];
     if (!file) throw new AppError("NOT_FOUND", "附件不存在，请使用 mail read 返回的附件编号");
     return saveFile(output, file.content);
+  }
+
+  async send(input: MailSendInput) {
+    const credentials = await this.credentials();
+    const attachments = await Promise.all((input.attachments ?? []).map(async path => ({
+      filename: basename(path), content: await readFile(path),
+    })));
+    const transport = nodemailer.createTransport({
+      host: "smtp.exmail.qq.com", port: 465, secure: true,
+      auth: { user: credentials.address, pass: credentials.password },
+      logger: false, debug: false, disableFileAccess: true, disableUrlAccess: true,
+    });
+    try {
+      const info = await transport.sendMail({ ...input, from: credentials.address, attachments });
+      const result = {
+        from: credentials.address, messageId: info.messageId,
+        accepted: info.accepted, rejected: info.rejected, response: info.response,
+      };
+      if (info.rejected.length || !info.accepted.length) {
+        throw new AppError("REMOTE_UNAVAILABLE", "SMTP 仅接收了部分收件人，请按返回结果处理剩余收件人", { details: result });
+      }
+      return { ...result, delivery: "smtp-accepted" as const };
+    } finally {
+      transport.close();
+    }
   }
 
   private async message(id: string) {
@@ -133,10 +162,15 @@ export class MailClient {
   }
 
   private async session<T>(operation: (client: ImapFlow, address: string) => Promise<T>, address?: string): Promise<T> {
+    const credentials = await this.credentials(address);
+    return this.connect(credentials, (client) => operation(client, credentials.address));
+  }
+
+  private async credentials(address?: string): Promise<MailCredentials> {
     const saved = await this.saved();
     const credentials = saved.mailboxes.find((mailbox) => mailbox.address === (address ?? saved.current));
     if (!credentials) throw new AppError("AUTH_REQUIRED", `邮箱尚未绑定：${address ?? saved.current ?? "请运行 mail bind"}`, { authCommand: "njucli mail bind" });
-    return this.connect(credentials, (client) => operation(client, credentials.address));
+    return credentials;
   }
 
   private async connect<T>(credentials: MailCredentials, operation: (client: ImapFlow) => Promise<T>): Promise<T> {

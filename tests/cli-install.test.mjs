@@ -1,3 +1,5 @@
+import { createCli } from "../dist/src/app/production.js";
+import { createCommandRuntime } from "../dist/src/core/command.js";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { mkdtemp, readFile, readdir, realpath, rm } from "node:fs/promises";
@@ -58,7 +60,20 @@ test("统一安装：njucli、全局套件、目录、模板与 MCP", async (t) 
     await client.connect(transport);
     const { tools } = await client.listTools();
     assert.equal(new Set(tools.map((tool) => tool.name)).size, tools.length);
-    assert.ok(tools.every((tool) => tool.annotations.readOnlyHint === true));
+    const toolsByName = new Set(tools.map(tool => tool.name));
+    const namesByCommand = { ehall_scholarship_list: "ehall_scholarships", ehall_scholarship_show: "ehall_scholarship" };
+    const checkCommands = (program, path = []) => {
+      for (const command of program.commands) {
+        if (command._hidden || command.name() === "mcp") continue;
+        const current = [...path, command.name()];
+        if (command.commands.length) checkCommands(command, current);
+        else {
+          const name = current.join("_").replaceAll("-", "_");
+          assert.ok(toolsByName.has(namesByCommand[name] ?? name), `MCP missing: ${current.join(" ")}`);
+        }
+      }
+    };
+    checkCommands(createCli(createCommandRuntime()));
     for (const name of names.filter((name) => name !== "njucli-auth")) {
       const prefix = name.slice("njucli-".length).replaceAll("-", "_") + "_";
       assert.ok(tools.some((tool) => tool.name.startsWith(prefix)), name);
@@ -66,7 +81,7 @@ test("统一安装：njucli、全局套件、目录、模板与 MCP", async (t) 
     const result = await client.callTool({ name: "institution_list", arguments: {} });
     assert.equal(result.isError, undefined);
     assert.deepEqual(JSON.parse(result.content[0].text), institutions);
-    t.diagnostic(`1 个全局套件中的 ${names.length} 个独立 Skill、${tools.length} 个只读 MCP 工具通过实际安装验证`);
+    t.diagnostic(`1 个全局套件中的 ${names.length} 个独立 Skill、${tools.length} 个 MCP 工具通过实际安装验证`);
   } finally {
     await client.close();
   }

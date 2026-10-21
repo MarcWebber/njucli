@@ -31,7 +31,7 @@
 
 完整开发规范见 [AGENTS.md](AGENTS.md)。业务实现与说明放在所属 `skills/njucli-*/`；教务、课表、选课和办事大厅归 `njucli-ehall`，软件学院课程归 `njucli-se`。公共 SSO 与会话机制位于 `src/auth/`，业务站点的会话交接随所属 Skill 维护。
 
-新增远端能力先验证实际契约，再接入所属 Skill 的 client、命令和只读 MCP。
+新增远端能力先验证实际契约，再接入所属 Skill 的 client、命令和 MCP。
 
 简单业务将输入校验与 MCP 放在 `commands.ts`，请求与简短会话包装放在 `client.ts`。统一 CLI 在 `src/app/production.ts` 用一次 `mount` 关联业务实例、命令和 MCP。
 

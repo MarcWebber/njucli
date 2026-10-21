@@ -11,8 +11,10 @@ import { registerAccountCommands } from "../account/commands.js";
 import { createAccountServices } from "../account/service.js";
 import { registerAuthCommands } from "../auth/commands.js";
 import { createAuthServices } from "../auth/service.js";
-import { registerUpgradeCommand } from "../commands/upgrade.js";
-import { startReadMcp, type ReadTool } from "../mcp/read.js";
+import { registerAccountTools } from "../account/mcp.js";
+import { registerAuthTools } from "../auth/mcp.js";
+import { registerUpgradeCommand, registerUpgradeTools } from "../commands/upgrade.js";
+import { startMcp, type McpTool } from "../mcp/tools.js";
 import { InstitutionClient } from "../../skills/njucli-institution/scripts/client.js";
 import { registerInstitutionCommands } from "../../skills/njucli-institution/scripts/commands.js";
 import { registerInstitutionTools } from "../../skills/njucli-institution/scripts/mcp.js";
@@ -58,7 +60,7 @@ import { registerTexTools } from "../../skills/njucli-tex/scripts/mcp.js";
 export function createCli(runtime: CommandRuntime): Command {
   const context = createRuntime();
   const program = createProgram("njucli").description("南京大学校园服务命令行工具");
-  const readTools: Array<(read: ReadTool) => void> = [];
+  const mcpTools: Array<(tool: McpTool) => void> = [];
   const ehall = createEHallServices(context);
   const library = createLibraryServices(context);
   const sports = createSportsServices(context);
@@ -67,15 +69,15 @@ export function createCli(runtime: CommandRuntime): Command {
   function mount<T>(
     service: T,
     commands: (program: Command, service: T, runtime: CommandRuntime) => Command,
-    tools: (read: ReadTool, service: T) => void,
+    tools: (tool: McpTool, service: T) => void,
   ): void {
     commands(program, service, runtime);
-    readTools.push(read => tools(read, service));
+    mcpTools.push(tool => tools(tool, service));
   }
 
   mount(new InstitutionClient(), registerInstitutionCommands, registerInstitutionTools);
-  registerAccountCommands(program, createAccountServices(context), runtime);
-  registerAuthCommands(program, createAuthServices(context, youth.identity), runtime);
+  mount(createAccountServices(context), registerAccountCommands, registerAccountTools);
+  mount(createAuthServices(context, youth.identity), registerAuthCommands, registerAuthTools);
   mount(createBoxServices(context), registerBoxCommands, registerBoxTools);
   mount(youth, registerYouthCommands, registerYouthTools);
   mount(new ItxiaClient(), registerItxiaCommands, registerItxiaTools);
@@ -95,10 +97,11 @@ export function createCli(runtime: CommandRuntime): Command {
   mount(createSelfServiceServices(context), registerSelfServiceCommands, registerSelfServiceTools);
 
   registerUpgradeCommand(program, runtime);
-  program.command("mcp").description("启动只读 MCP stdio 服务")
+  mcpTools.push(tool => registerUpgradeTools(tool, runtime));
+  program.command("mcp").description("启动 MCP stdio 服务")
     .action(async () => {
-      await startReadMcp("njucli", read => {
-        for (const register of readTools) register(read);
+      await startMcp("njucli", tool => {
+        for (const register of mcpTools) register(tool);
       });
     });
   return addHelpActions(program);
