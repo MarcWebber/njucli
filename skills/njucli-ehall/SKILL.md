@@ -48,6 +48,8 @@ njucli ehall export ./schedule.ics --format json
 
 研究生课表用 `graduate-schedule` 查询。课表可加 `--term 学期ID` 指定学期，省略时采用当前或默认学期；本科的学期 ID 从 `ehall terms` 获取。
 
+按用户已知学籍选择入口。本科课表返回 `PERMISSION_DENIED` 表示应用权限不足，应核对学籍和入口；重复登录不会解决权限问题。只有 `AUTH_REQUIRED` 才需要恢复认证。
+
 ## 研究生成绩、考试与培养方案
 
 ```bash

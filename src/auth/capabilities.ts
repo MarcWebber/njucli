@@ -12,7 +12,7 @@ import { EHallTimetableClient } from "../../skills/njucli-ehall/scripts/timetabl
 import { opacSessionDriver } from "./drivers/opac-browser.js";
 import { YouthClient } from "../../skills/njucli-youth/scripts/client.js";
 import { TableClient } from "../../skills/njucli-table/scripts/client.js";
-import { AppError } from "../core/errors.js";
+import { LmsClient } from "../../skills/njucli-lms/scripts/client.js";
 import type { AuthCapability, AuthSessionDriver } from "./types.js";
 
 const VPN_TEST_URL = "https://www-nju-edu-cn-s.atrust.nju.edu.cn/";
@@ -43,15 +43,8 @@ const probeVpn = (account: AccountRecord): Promise<boolean> => withBrowserSessio
   return response.ok && new URL(response.url).hostname === new URL(VPN_TEST_URL).hostname;
 });
 
-const LMS_HOME = "https://lms.nju.edu.cn/user/index";
-const restoreLmsSession = (account: AccountRecord): Promise<boolean> => withBrowserSession(account, true, async session => {
-  const response = await session.request(LMS_HOME);
-  if (response.status === 401 || response.status === 403) return false;
-  if (!response.ok) throw new AppError("REMOTE_UNAVAILABLE", `智汇南雍登录检查返回 HTTP ${response.status}`);
-  const url = new URL(response.url);
-  if (url.origin !== new URL(LMS_HOME).origin || url.pathname !== "/user/index") return false;
-  return /\bglobalData\s*=\s*\{\s*user\s*:\s*\{\s*id\s*:\s*\d+/.test(await response.text());
-});
+const restoreLmsSession = (account: AccountRecord): Promise<boolean> =>
+  withBrowserSession(account, true, session => new LmsClient(session.request).restoreSession());
 
 const selfServiceSessionDriver: AuthSessionDriver = {
   probe: (account) => withBrowserSession(account, true, (session) => new SelfServiceClient(session.request).hasSession()),
