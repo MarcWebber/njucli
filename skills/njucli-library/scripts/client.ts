@@ -96,7 +96,7 @@ export class NjuOpacClient {
     const before = await find();
     if (!before) throw new AppError("NOT_FOUND", "本人在借列表中没有该 loanId");
     const result = await this.json<{ success: number; fail: number; result: unknown }>("/find/lendbook/reNew", { loanIds: [loanId] });
-    if (result.fail > 0) throw new AppError("REMOTE_REJECTED", "图书馆未接受续借", { details: { result } });
+    if (result.fail > 0) throw new AppError("REMOTE_UNAVAILABLE", "图书馆未接受续借", { details: { result } });
     const loan = await find();
     if (!loan || loan.dueOn <= before.dueOn)
       throw new AppError("REMOTE_UNAVAILABLE", "续借已提交，应还日期回读未确认延长，请查询 loans 后再操作", { details: { loanId, result } });
@@ -206,7 +206,7 @@ export class NjuOpacClient {
     if (!response.ok) throw new Error(`图书馆 OPAC 返回 HTTP ${response.status}`);
     const result = JSON.parse(text) as { success: boolean; errCode: number; message: string; data: T };
     if (result.errCode === 401 || result.errCode === 403) throw opacAuthRequired();
-    if (!result.success) throw new AppError(/验证手机号|验证.*邮箱|验证通知方式/.test(result.message) ? "USER_ACTION_REQUIRED" : "REMOTE_REJECTED", result.message, {
+    if (!result.success) throw new AppError(/验证手机号|验证.*邮箱|验证通知方式/.test(result.message) ? "USER_ACTION_REQUIRED" : "REMOTE_UNAVAILABLE", result.message, {
       details: { remoteCode: result.errCode, url: `${OPAC_BASE_URL}/#/personalCenter` },
     });
     return result.data;
