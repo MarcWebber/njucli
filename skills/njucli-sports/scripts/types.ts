@@ -14,10 +14,19 @@ export interface SportsVenueSiteSummary {
 
 export interface SportsSlotSchedule {
   date: string;
+  reservationDates: string[];
+  requiresVerification: boolean;
+  boundMobileRequired: boolean;
+  buddyMin: number;
+  buddyMax: number;
   slots: Array<{
+    timeId: string;
     startAt: string;
     endAt: string;
     spaces: Array<{
+      spaceId: string;
+      groupId: string | null;
+      fee: number | null;
       name: string;
       state: typeof RESERVATION_STATES[keyof typeof RESERVATION_STATES];
     }>;
@@ -26,6 +35,7 @@ export interface SportsSlotSchedule {
 
 export interface SportsBookingSummary {
   bookingId: string;
+  tradeNo: string | null;
   campus: string | null;
   venue: string | null;
   site: string | null;

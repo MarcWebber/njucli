@@ -1,0 +1,65 @@
+{
+  "date": "2026-10-22T17:31:03.349Z",
+  "profilePhoneUsed": true,
+  "ok": true,
+  "evidence": [
+    {
+      "action": "CLI book",
+      "created": true,
+      "ownListReadback": true,
+      "status": {
+        "reservationStatus": 21
+      },
+      "recordKeys": [
+        "createTime",
+        "createBy",
+        "id",
+        "roomId",
+        "userId",
+        "reservationStatus",
+        "reason",
+        "verify",
+        "startTime",
+        "endTime",
+        "signInTime",
+        "signOutTime",
+        "leaveMaxTime",
+        "leaveStartTime",
+        "leaveEndTime",
+        "minSignTime",
+        "maxSignTime",
+        "reservationDevice",
+        "remark",
+        "dictId",
+        "filePath",
+        "userName",
+        "roomName",
+        "departmentId",
+        "mobile",
+        "departmentName",
+        "leader",
+        "members",
+        "behaviorRecords",
+        "dictValue",
+        "statisticsCount",
+        "signInCount",
+        "realName",
+        "sysNumber",
+        "usedTime",
+        "usedNum",
+        "userType",
+        "minSignNum",
+        "reservationNum",
+        "signInNum"
+      ]
+    },
+    {
+      "action": "MCP cancel",
+      "cancelled": true,
+      "remaining": true,
+      "status": {
+        "reservationStatus": 61
+      }
+    }
+  ]
+}

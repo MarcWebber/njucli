@@ -3,6 +3,8 @@ import { MailClient } from "../../njucli-mail/scripts/client.js";
 import { z } from "zod";
 import { AppError } from "../../../src/core/errors.js";
 import type { FetchLike } from "../../../src/core/types.js";
+import { readFile } from "node:fs/promises";
+import { basename, extname } from "node:path";
 
 export const SELF_SERVICE_BASE = "https://zzfwx.nju.edu.cn/wec-self-print-app-console";
 // 官方移动端使用的客户端标识，与微信入口的 appId 参数不同。
@@ -176,6 +178,34 @@ export class SelfServiceClient {
     return { config, total: result.total, files };
   }
 
+  async cloudUpload(path: string, terminalCode: string) {
+    await this.current();
+    const bytes = await readFile(path);
+    const fileType = extname(path).slice(1).toLowerCase();
+    if (!["pdf", "doc", "docx", "png", "jpg", "jpeg", "gif", "bmp"].includes(fileType))
+      throw new AppError("INVALID_INPUT", "云打印支持 PDF、Word 和 png/jpg/jpeg/gif/bmp 图片");
+    if (bytes.length > 5 * 1024 * 1024) throw new AppError("INVALID_INPUT", "云打印上传文件不能超过 5 MB");
+    const form = new FormData();
+    form.append("file", new File([new Uint8Array(bytes)], basename(path)));
+    form.append("fileType", fileType);
+    form.append("terminalCode", terminalCode);
+    const order = parse(z.object({ orderId: z.string(), takeCode: z.string(), expireTime: z.string(), fee: z.number() }),
+      await this.data("/order/cloud-print-order/create", form));
+    const file = (await this.cloud()).files.find(item => item.orderId === order.orderId);
+    if (!file || file.fileType.toLowerCase() !== fileType || file.title !== basename(path, extname(path)))
+      throw new AppError("USER_ACTION_REQUIRED", "文件已返回申请号，待打印列表回读尚未匹配，请先查询 cloud", { details: { orderId: order.orderId } });
+    return { ...order, ...file };
+  }
+
+  async cloudDelete(orderId: string, terminalCode: string) {
+    if (!(await this.cloud()).files.some(item => item.orderId === orderId))
+      throw new AppError("INVALID_INPUT", "目标文件不在本人的待打印列表中");
+    await this.data(`/order/cloud-print-order-byGet/${encodeURIComponent(orderId)}/${encodeURIComponent(terminalCode)}`);
+    if ((await this.cloud()).files.some(item => item.orderId === orderId))
+      throw new AppError("USER_ACTION_REQUIRED", "删除后文件仍在待打印列表，请查询 cloud 后再处理", { details: { orderId } });
+    return { orderId, deleted: true };
+  }
+
   async terminals() {
     await this.current();
     const result = await this.json<{ success: boolean; msg: string | null; data: unknown }>("/warn/sp-terminal-status/getTerminalState");
@@ -215,16 +245,16 @@ export class SelfServiceClient {
     await this.data(`/message/sendElectronicItemEmail?${new URLSearchParams({ orderId: id, email })}`);
   }
 
-  private async json<T>(path: string, form?: Record<string, string>): Promise<T> {
+  private async json<T>(path: string, form?: Record<string, string> | FormData): Promise<T> {
     const response = await this.fetch(`${SELF_SERVICE_BASE}${path}`, {
-      headers: form ? { ...SELF_SERVICE_HEADERS, "Content-Type": "application/x-www-form-urlencoded" } : SELF_SERVICE_HEADERS,
-      ...(form ? { method: "POST", body: new URLSearchParams(form).toString() } : {}),
+      headers: form && !(form instanceof FormData) ? { ...SELF_SERVICE_HEADERS, "Content-Type": "application/x-www-form-urlencoded" } : SELF_SERVICE_HEADERS,
+      ...(form ? { method: "POST", body: form instanceof FormData ? form : new URLSearchParams(form).toString() } : {}),
     });
     if (!response.ok) throw new AppError("REMOTE_UNAVAILABLE", `自助服务返回 HTTP ${response.status}`);
     return JSON.parse(await response.text()) as T;
   }
 
-  private async data<T>(path: string, form?: Record<string, string>): Promise<T> {
+  private async data<T>(path: string, form?: Record<string, string> | FormData): Promise<T> {
     const result = await this.json<{ code: string; msg: string; data: T }>(path, form);
     if (result.code !== "0000") throw new AppError("REMOTE_UNAVAILABLE", result.msg || "自助服务请求失败");
     return result.data;

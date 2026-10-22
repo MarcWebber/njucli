@@ -1,0 +1,353 @@
+[
+  {
+    "name": "services",
+    "status": 200,
+    "hasLogin": true,
+    "keys": [
+      "message",
+      "result",
+      "data",
+      "hasLogin",
+      "contextPath"
+    ],
+    "dataKeys": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15",
+      "16",
+      "17",
+      "18",
+      "19"
+    ],
+    "matches": [
+      {
+        "serviceId": "5731056900180724",
+        "serviceName": "后勤服务",
+        "pcOpenUrl": "https://ehall.nju.edu.cn/appShow?appId=5731056900180724",
+        "mobileOpenUrl": "https://hqfk.nju.edu.cn/hqfk/",
+        "hasPermission": 1,
+        "domainId": "a2685db1-3d76-43dd-81a2-d8f4de6fd07f",
+        "domainName": "公共服务"
+      },
+      {
+        "serviceId": "7276647322385271",
+        "serviceName": "后勤服务反馈",
+        "pcOpenUrl": "https://ehall.nju.edu.cn/appShow?appId=7276647322385271",
+        "mobileOpenUrl": "https://hqfk.nju.edu.cn/hqfk/#/fkindex",
+        "hasPermission": 1,
+        "domainId": "bbceac64-7c28-429f-af2b-53277e72d6e6",
+        "domainName": "生活服务"
+      },
+      {
+        "serviceId": "7186848311648985",
+        "serviceName": "其他后勤服务",
+        "pcOpenUrl": "https://ehall.nju.edu.cn/appShow?appId=7186848311648985",
+        "hasPermission": 1,
+        "domainId": "a2685db1-3d76-43dd-81a2-d8f4de6fd07f",
+        "domainName": "公共服务"
+      },
+      {
+        "serviceId": "4618295887225301",
+        "serviceName": "宿舍申办",
+        "pcOpenUrl": "https://ehall.nju.edu.cn/appShow?appId=4618295887225301",
+        "hasPermission": 1,
+        "domainId": "8888429c-73bd-4c3d-b8cb-a74c18a9e376",
+        "domainName": "本科生服务"
+      }
+    ]
+  },
+  {
+    "name": "classifications",
+    "status": 200,
+    "hasLogin": true,
+    "keys": [
+      "message",
+      "result",
+      "data",
+      "hasLogin",
+      "contextPath"
+    ],
+    "dataKeys": [
+      "0",
+      "1"
+    ],
+    "matches": []
+  },
+  {
+    "name": "search-公寓",
+    "status": 200,
+    "hasLogin": true,
+    "keys": [
+      "message",
+      "result",
+      "data",
+      "hasLogin",
+      "contextPath"
+    ],
+    "dataKeys": [
+      "appList",
+      "serviceList",
+      "questionList"
+    ],
+    "matches": []
+  },
+  {
+    "name": "search-后勤",
+    "status": 200,
+    "hasLogin": true,
+    "keys": [
+      "message",
+      "result",
+      "data",
+      "hasLogin",
+      "contextPath"
+    ],
+    "dataKeys": [
+      "appList",
+      "serviceList",
+      "questionList"
+    ],
+    "matches": [
+      {
+        "appId": "5731056900180724",
+        "appName": "后勤服务",
+        "middleIcon": "https://ehall.nju.edu.cn/resources/app/5731056900180724/1.0_EM1/icon_72.png?_=1756710378000",
+        "hasPermission": true
+      },
+      {
+        "categoryId": "2__2af716bb-0ae8-4007-89ac-c3b00c8cb34e",
+        "categoryName": "生活服务"
+      },
+      {
+        "appId": "7186848311648985",
+        "appName": "其他后勤服务",
+        "middleIcon": "https://ehall.nju.edu.cn/resources/app/7186848311648985/1.0_EM1/icon_72.png?_=1718684923000",
+        "hasPermission": true
+      },
+      {
+        "appId": "7276647322385271",
+        "appName": "后勤服务反馈",
+        "middleIcon": "https://ehall.nju.edu.cn/resources/app/7276647322385271/1.0_EM1/icon_72.png?_=1756709979000",
+        "hasPermission": true
+      },
+      {
+        "categoryId": "2__2af716bb-0ae8-4007-89ac-c3b00c8cb34e",
+        "categoryName": "生活服务"
+      }
+    ]
+  },
+  {
+    "name": "search-宿",
+    "status": 200,
+    "hasLogin": true,
+    "keys": [
+      "message",
+      "result",
+      "data",
+      "hasLogin",
+      "contextPath"
+    ],
+    "dataKeys": [
+      "appList",
+      "serviceList",
+      "questionList"
+    ],
+    "matches": [
+      {
+        "appId": "4618295887225301",
+        "appName": "宿舍申办",
+        "middleIcon": "https://ehall.nju.edu.cn/resources/app/4618295887225301/4.0.12_TR1/icon_72.png?_=1659692512000",
+        "hasPermission": true
+      },
+      {
+        "serviceWid": "1bc4e107-0304-470a-ad65-a688ade3339a",
+        "serviceName": "宿舍房源管理",
+        "dealBtnName": "在线办理",
+        "mobileBtnName": "在线办理"
+      },
+      {
+        "appId": "4609477345620574",
+        "appName": "宿舍房源管理",
+        "vendorName": "金智教育",
+        "domainId": "8888429c-73bd-4c3d-b8cb-a74c18a9e376",
+        "authUrl": "/sys/funauthapp/qxgl.do?min=1&appName=ssfyglapp&appId=4609477345620574&needFlow=true",
+        "appShortName": "ssfyglapp",
+        "appNameEnus": "ssfyglapp",
+        "hasPermission": false,
+        "middleIcon": "https://ehall.nju.edu.cn/resources/app/4609477345620574/4.0.9_TR1/icon_72.png?_=1659692770000",
+        "pinyinAppName": "sushefangyuanguanli",
+        "pcOpenUrl": "https://ehallapp.nju.edu.cn/xsfw/sys/ssfyglapp/*default/index.do",
+        "mobileAppOpenUrl": "https://ehallapp.nju.edu.cn/xsfw"
+      },
+      {
+        "serviceWid": "38282e72-bb42-44e5-a689-5105f3b871ad",
+        "serviceName": "宿舍人员管理",
+        "dealBtnName": "在线办理",
+        "mobileBtnName": "在线办理"
+      },
+      {
+        "appId": "4798729223561997",
+        "appName": "宿舍人员管理",
+        "vendorName": "金智教育",
+        "domainId": "8888429c-73bd-4c3d-b8cb-a74c18a9e376",
+        "authUrl": "/sys/funauthapp/qxgl.do?min=1&appName=ssryglapp&appId=4798729223561997&needFlow=true",
+        "appShortName": "ssryglapp",
+        "hasPermission": false,
+        "middleIcon": "https://ehall.nju.edu.cn/resources/app/4798729223561997/4.0.8_TR1/icon_72.png?_=1659692766000",
+        "pinyinAppName": "susherenyuanguanli",
+        "pcOpenUrl": "https://ehallapp.nju.edu.cn/xsfw/sys/ssryglapp/*default/index.do",
+        "mobileAppOpenUrl": "https://ehallapp.nju.edu.cn/xsfw"
+      },
+      {
+        "serviceWid": "9a7fb36e-2cc3-46e6-a31e-58e909539892",
+        "serviceName": "宿舍批量排宿",
+        "dealBtnName": "在线办理",
+        "mobileBtnName": "在线办理"
+      },
+      {
+        "appId": "4939631267749902",
+        "appName": "宿舍批量排宿",
+        "vendorName": "金智教育",
+        "domainId": "8888429c-73bd-4c3d-b8cb-a74c18a9e376",
+        "authUrl": "/sys/funauthapp/qxgl.do?min=1&appName=sspsapp&appId=4939631267749902&needFlow=true",
+        "appShortName": "sspsapp",
+        "hasPermission": false,
+        "middleIcon": "https://ehall.nju.edu.cn/resources/app/4939631267749902/4.0.14_TR1/icon_72.png?_=1659691989000",
+        "pinyinAppName": "sushepiliangpaisu",
+        "pcOpenUrl": "https://ehallapp.nju.edu.cn/xsfw/sys/sspsapp/*default/index.do",
+        "mobileAppOpenUrl": "https://ehallapp.nju.edu.cn/xsfw"
+      },
+      {
+        "serviceWid": "a1af5d5c-8bef-4f85-a4d5-8acf1076c1a2",
+        "serviceName": "青年教师周转房退宿申请",
+        "dealBtnName": "在线办理",
+        "mobileBtnName": "在线办理"
+      },
+      {
+        "serviceWid": "b11c1cbd-73cc-40c5-a2cd-532e2539c293",
+        "serviceName": "宿舍申办",
+        "dealBtnName": "在线办理",
+        "mobileBtnName": "在线办理"
+      },
+      {
+        "appId": "4618295887225301",
+        "appName": "宿舍申办",
+        "vendorName": "金智教育",
+        "domainId": "8888429c-73bd-4c3d-b8cb-a74c18a9e376",
+        "authUrl": "/sys/funauthapp/qxgl.do?min=1&appName=xszsapp&appId=4618295887225301&needFlow=true",
+        "appShortName": "xszsapp",
+        "hasPermission": true,
+        "middleIcon": "https://ehall.nju.edu.cn/resources/app/4618295887225301/4.0.12_TR1/icon_72.png?_=1659692512000",
+        "pinyinAppName": "susheshenban",
+        "pcOpenUrl": "https://ehallapp.nju.edu.cn/xsfw/sys/xszsapp/*default/index.do",
+        "mobileAppOpenUrl": "https://ehallapp.nju.edu.cn/xsfw"
+      },
+      {
+        "serviceWid": "c00dafd9-f154-4c24-8acf-07032de7b418",
+        "serviceName": "宿舍住宿管理",
+        "dealBtnName": "在线办理",
+        "mobileBtnName": "在线办理"
+      },
+      {
+        "appId": "4938824032342183",
+        "appName": "宿舍住宿管理",
+        "vendorName": "金智教育",
+        "domainId": "8888429c-73bd-4c3d-b8cb-a74c18a9e376",
+        "authUrl": "/sys/funauthapp/qxgl.do?min=1&appName=ssrcapp&appId=4938824032342183&needFlow=true",
+        "appShortName": "ssrcapp",
+        "hasPermission": false,
+        "middleIcon": "https://ehall.nju.edu.cn/resources/app/4938824032342183/4.0.14_TR1/icon_72.png?_=1659692999000",
+        "pinyinAppName": "sushezhusuguanli",
+        "pcOpenUrl": "https://ehallapp.nju.edu.cn/xsfw/sys/ssrcapp/*default/index.do",
+        "mobileAppOpenUrl": "https://ehallapp.nju.edu.cn/xsfw"
+      }
+    ]
+  },
+  {
+    "name": "search-报修",
+    "status": 200,
+    "hasLogin": true,
+    "keys": [
+      "message",
+      "result",
+      "data",
+      "hasLogin",
+      "contextPath"
+    ],
+    "dataKeys": [
+      "appList",
+      "serviceList",
+      "questionList"
+    ],
+    "matches": [
+      {
+        "serviceWid": "fe9346f1-173d-4735-b932-1c079b8f73e5",
+        "serviceName": "故障报修",
+        "dealBtnName": "在线办理",
+        "mobileBtnName": "在线办理"
+      }
+    ]
+  },
+  {
+    "name": "search-维修",
+    "status": 200,
+    "hasLogin": true,
+    "keys": [
+      "message",
+      "result",
+      "data",
+      "hasLogin",
+      "contextPath"
+    ],
+    "dataKeys": [
+      "appList",
+      "serviceList",
+      "questionList"
+    ],
+    "matches": [
+      {
+        "serviceWid": "181774d4-18f2-4caf-b537-088cd84dc3c6",
+        "serviceName": "校级基建（维修）项目工程款支付业务流程",
+        "dealBtnName": "在线办理",
+        "mobileBtnName": "在线办理"
+      },
+      {
+        "serviceWid": "2c9988b4-d7c3-4565-bc63-999bb7858349",
+        "serviceName": "基建维修合同（院系自筹经费）备案审批流程",
+        "dealBtnName": "在线办理",
+        "mobileBtnName": "在线办理"
+      },
+      {
+        "serviceWid": "3d9008ac-26c4-4f74-a0ee-eb9fc4622d39",
+        "serviceName": "仪器设备维修流程",
+        "dealBtnName": "在线办理",
+        "mobileBtnName": "在线办理"
+      },
+      {
+        "serviceWid": "75158a9d-e4d9-4193-ac57-e0b1953864b2",
+        "serviceName": "校级基建（维修）项目质保金支付业务流程",
+        "dealBtnName": "在线办理",
+        "mobileBtnName": "在线办理"
+      },
+      {
+        "serviceWid": "f25651e8-c0b5-43da-a8a6-b351ef5b321e",
+        "serviceName": "校级基建（维修）项目材料款支付业务流程",
+        "dealBtnName": "在线办理",
+        "mobileBtnName": "在线办理"
+      }
+    ]
+  }
+]

@@ -10,7 +10,7 @@
 | 软件学院课程 | [课程、作业、名单与成绩](#软件学院课程) |
 | 智汇南雍 | [课程、课件、作业、测试与助教作业创建](../skills/njucli-lms/references/interfaces.md) |
 | TeX | [项目、文件、编辑与编译](../skills/njucli-tex/references/interfaces.md) |
-| 图书馆 | [书目、馆藏与借阅](#图书馆) |
+| 图书馆 | [书目、馆藏与借阅](#图书馆)、[预约和跨校区委托](../skills/njucli-library/references/requests.md)、[研修间预约](../skills/njucli-library-room/references/interfaces.md) |
 | 体育场馆 | [场馆、时段与预约记录](#体育场馆) |
 | 校园信息 | [新闻、通知与食堂](#校园信息)；[NJU Mirror 镜像](../skills/njucli-campus/references/mirrors.md) |
 | 正版软件 | [目录与安装包](#正版软件) |
@@ -22,6 +22,7 @@
 | 学院与教师知识 | [官方目录、教师基础信息与后勤电话](../skills/njucli-institution/references/interfaces.md) |
 | 校园卡与个人支付 | [余额与交易记录](../skills/njucli-pay/references/interfaces.md) |
 | 宿舍服务 | [电费绑定管理与充值记录](../skills/njucli-dorm/references/interfaces.md) |
+| 校医院 | [预约、体检报告与大学生医保](../skills/njucli-hospital/references/interfaces.md) |
 
 本地检查见[贡献指南](../CONTRIBUTING.md#实现约定)。各节记录对应的实网验证范围；远端写入使用用户指定的目标和材料。
 
@@ -62,18 +63,18 @@ SSO 的 CAS `service` 使用 EHall `/login?service=https%3A%2F%2Fehall.nju.edu.c
 | `POST /find/unify/getPItemAndOnShelfCountAndDuxiuImageUrl` | `items: [{ recordId, title, isbn }]`；按 ID 返回 `pCount/onShelfCount`，供检索结果显示实时数量 |
 | `GET /find/searchResultDetail/getDetail?recordId=` | `clearTitle/authorOther` |
 | `POST /find/physical/groupitems` | `recordId/page/rows/isUnify/sortType/callNo/entrance`；返回 `totalCount/list`，逐页读取全部馆藏 |
-| `GET /oga/userinfo` | 通过 `userId` 确认读者会话；个人资料仅用于探测 |
+| `GET /find/userInfo/getUserInfo` | 读者资料；本站会话用受保护的本人借阅接口探测 |
 | `POST /find/loanInfo/loanList` | `page/rows/searchType/searchContent/sortType/startDate/endDate`；返回 `searchResult`，应还日期为 `normReturnDate` |
 
 检索字段 `all/title/author/isbn/callno` 分别映射 `keyWord/title/author/isbn/callNo`；匹配方式分别为 `2/2/1/1/3`。分页从 1 开始。馆藏使用 `libName/locationName/shelfNo/processType`，同时满足在架 `processTypeCode=411` 和可借 `circAttr=0` 时标记可借。检索数量按官网的第二次批量查询刷新；馆藏详情汇总本次逐册结果。
 
-书目与馆藏直接访问 OPAC。读者登录依赖 SSO，CAS service 为 `http://opac.nju.edu.cn:8081/CASSSO2/caslogin.jsp`；官网页面完成回跳并写入 `jwt` Cookie 后，以 `jwtOpacAuth` 请求头回读 `/oga/userinfo`。Cookie 经共享 `BrowserSession`、账号锁和原子文件保存，后续借阅调用复用当次会话；令牌字段在输出边界脱敏。
+书目与馆藏使用 OPAC，校外限制下通过已登录的官方 WebVPN 访问。读者登录依赖 SSO，CAS service 为 `http://opac.nju.edu.cn:8081/CASSSO2/caslogin.jsp`；正式 `loginExternal` 回跳令牌写入对应站点的 `jwt` Cookie 后，以 `jwtOpacAuth` 请求头回读 `/find/loanInfo/loanList` 确认会话。Cookie 经共享 `BrowserSession`、账号锁和原子文件保存，后续借阅调用复用当次会话；令牌字段在输出边界脱敏。
 
 实网通过五种检索字段、检索翻页和空结果、书目详情、8 册及跨页 90 册馆藏、读者登录、跨进程探测和当前借阅空列表。CLI 与 MCP 查询均已核对。正数借阅及逾期映射待实际业务核对。运行前提见[HTTPS 配置](../skills/njucli-library/references/network.md)，原始现象和截图见[校园网验证报告](reports/2026-10-10-intranet.md)。
 
 ## 体育场馆
 
-来源为[南大体育场馆系统](https://ggtypt.nju.edu.cn/venue/)，接口参考 `nju-cli/nju-cli` 的场馆实现。当前请求定义见 [场馆 client](../skills/njucli-sports/scripts/client.ts)。以下路径相对 `https://ggtypt.nju.edu.cn/venue-server`，请求均为 GET，响应 `code=200` 时读取 `data`。
+来源为[南大体育场馆系统](https://ggtypt.nju.edu.cn/venue/)，当前请求定义见[场馆 client](../skills/njucli-sports/scripts/client.ts)。以下查询路径相对 `https://ggtypt.nju.edu.cn/venue-server`，响应 `code=200` 时读取 `data`。新增预约写入入口、官方契约与尚未成功的验证范围见[原子接口资料](../skills/njucli-sports/references/interfaces.md)。
 
 | 路径 | 主要参数或字段 |
 | --- | --- |
@@ -104,8 +105,9 @@ SSO 的 CAS `service` 使用 EHall `/login?service=https%3A%2F%2Fehall.nju.edu.c
 
 两个真实邮箱的绑定、切换、分页、搜索和正文已验证。真实附件下载及自动生成专用密码的完整绑定向导待实网验收。
 
-## 校医院接入评估
+
+## 校医院
 
 [医院官网](https://hospital.nju.edu.cn/)的“自助服务”指向 [自助服务平台](https://ndyy.nju.edu.cn/zzfw/)。2026-10-10 已通过 `/zzfw/asLogin.aspx` 复用 SSO，回到 `/zzfw/Pages/Default.Aspx`，并读取 `/zzfw/ashx/PageInit.ashx` 的 `homeInfo/menuInfo`。实际菜单包括体检、疫苗、急救课程、活动和结核筛查预约，以及报告、大学生医保入口。
 
-独立 `njucli-hospital` Skill 可以按既有结构接入，认证能力由 SSO 派生。当前证据覆盖官网、认证和菜单；业务列表字段、报告下载与预约提交的接口仍需逐项核对。建议的首批功能和具体边界见[接入评估](reports/2026-10-10-intranet.md#校医院)。
+`njucli-hospital` 已提供医院项目与时段、本人预约、体检报告和大学生医保的原子动作。本站会话交接由业务 client 复用公共 SSO，会话探测以医院本人页面为准。请求字段、权限范围及已验证结果随所属 Skill 的[接口说明](../skills/njucli-hospital/references/interfaces.md)维护，实际 CLI/MCP 及写入回读见[验证报告](reports/2026-10-22-hospital-dorm-atomic.md)。

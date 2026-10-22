@@ -24,6 +24,8 @@ const browserScope = new AsyncLocalStorage<{
   session: BrowserSession;
 }>();
 
+const CAS_HOSTS = ["authserver.nju.edu.cn", "authserver-nju-edu-cn-s.atrust.nju.edu.cn"];
+
 function proxyOptions() {
   const value = process.env.NJUCLI_PROXY_URL?.trim();
   if (!value) return {};
@@ -187,7 +189,7 @@ export class BrowserSession {
     const url = new URL(page.url());
     if (isAuthenticated(url)) return;
     const credentials = await readJsonFile<AuthCredentials>(join(dirname(this.cookiePath), "auth.json"));
-    if (credentials && url.hostname === "authserver.nju.edu.cn" && url.pathname === "/authserver/login") {
+    if (credentials && CAS_HOSTS.includes(url.hostname) && url.pathname === "/authserver/login") {
       await page.locator("#userNameLogin_a").click();
       const form = page.locator("#pwdFromId:visible");
       await form.locator('input[name="username"]').fill(credentials.username);
@@ -234,14 +236,14 @@ export class BrowserSession {
 }
 
 async function loginResult(page: Page, slider: boolean): Promise<string> {
-  const handle = await page.waitForFunction((allowSlider) => {
-    if (location.hostname !== "authserver.nju.edu.cn" || location.pathname !== "/authserver/login") return "redirect";
+  const handle = await page.waitForFunction(({ allowSlider, casHosts }) => {
+    if (!casHosts.includes(location.hostname) || location.pathname !== "/authserver/login") return "redirect";
     const message = document.querySelector("#pwdFromId #showErrorTip")?.textContent?.trim();
     if (message) return message;
     const knob = document.querySelector<HTMLElement>("#sliderDiv .slider");
     if (allowSlider && knob?.offsetParent) return "slider";
     return false;
-  }, slider, { timeout: 30_000 });
+  }, { allowSlider: slider, casHosts: CAS_HOSTS }, { timeout: 30_000 });
   const result = await handle.jsonValue() as string;
   await handle.dispose();
   if (result !== "slider" && result !== "redirect") throw new AppError("AUTH_REJECTED", `学校拒绝登录：${result}`);

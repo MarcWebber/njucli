@@ -1,0 +1,216 @@
+[
+  {
+    "entry": "CLI",
+    "label": "owned-bookings",
+    "exit": 0,
+    "ok": true
+  },
+  {
+    "label": "owned-bookings-readback",
+    "count": 8
+  },
+  {
+    "entry": "CLI",
+    "label": "slots-current-day",
+    "exit": 0,
+    "ok": true
+  },
+  {
+    "label": "slots-readback",
+    "available": 0,
+    "reservationDates": [
+      "2026-10-22"
+    ],
+    "captchaRequired": "[REDACTED]",
+    "buddyMin": 0,
+    "idsPresent": true
+  },
+  {
+    "entry": "CLI",
+    "label": "reservation-info-expired-slot-readonly",
+    "exit": 1,
+    "ok": false,
+    "error": {
+      "code": "REMOTE_UNAVAILABLE",
+      "message": "Unexpected token '<', \"<!DOCTYPE \"... is not valid JSON"
+    }
+  },
+  {
+    "entry": "CLI",
+    "label": "slots-not-yet-open",
+    "exit": 1,
+    "ok": false,
+    "error": {
+      "code": "REMOTE_UNAVAILABLE",
+      "message": "查看失败，最多只能查看1天后的预约",
+      "details": {
+        "remoteCode": 250,
+        "path": "/api/reservation/day/info"
+      }
+    }
+  },
+  {
+    "entry": "MCP",
+    "registered": true
+  },
+  {
+    "entry": "MCP",
+    "name": "sports_bookings",
+    "ok": true,
+    "count": 8
+  },
+  {
+    "entry": "MCP",
+    "name": "sports_slots",
+    "ok": true
+  },
+  {
+    "reservationSubmitted": false,
+    "zeroConfirmationExecuted": false,
+    "cancellationExecuted": false,
+    "reason": "No currently available future slot; official captcha required. No historical order modified."
+  },
+  {
+    "label": "official-identity-and-ownership",
+    "identityMatchesAuthorizedAccount": true,
+    "allRecordsCount": 14,
+    "creatorRecordsCount": 8,
+    "companionRecordsExcluded": 6
+  },
+  {
+    "entry": "CLI",
+    "label": "owned-bookings-final",
+    "exit": 0,
+    "ok": true
+  },
+  {
+    "label": "ownership-filter-readback",
+    "matchesOfficialCreatorSet": true
+  },
+  {
+    "entry": "CLI",
+    "label": "own-booking-detail",
+    "exit": 0,
+    "ok": true
+  },
+  {
+    "entry": "CLI",
+    "label": "own-finance-detail",
+    "exit": 0,
+    "ok": true
+  },
+  {
+    "label": "finance-readback",
+    "fields": [
+      "subject",
+      "subjectDesc",
+      "buyerUser",
+      "startDate",
+      "endDate",
+      "isTimePay",
+      "amtStartTime",
+      "amtEndTime",
+      "amtStartDate",
+      "amtEndDate",
+      "actionMin",
+      "couponUseView",
+      "orderView",
+      "orderZoneList",
+      "spaceList",
+      "orderType",
+      "venueSiteId",
+      "payItem",
+      "orderId",
+      "isWalletSet",
+      "couponType",
+      "orderRoleId",
+      "totalCount",
+      "balanceMoney",
+      "reservationDate",
+      "orderPhone",
+      "trainParentPhone",
+      "validUseDateStr",
+      "batchReservationInfo",
+      "offlinePayTradeNo",
+      "orderName",
+      "orderUid",
+      "siteName",
+      "venueName",
+      "campusName",
+      "productName",
+      "coachName",
+      "payFee",
+      "payVipFee",
+      "couponBalance",
+      "orderCloseTime",
+      "payUserId",
+      "payRoleId",
+      "payStatus",
+      "orderStatus",
+      "schoolType",
+      "remainSecond",
+      "reservationDetailDate",
+      "isArt",
+      "payType",
+      "isNoneUser",
+      "childNum",
+      "manNum",
+      "isCredit",
+      "payFeeList",
+      "modalTip",
+      "trainStartDate",
+      "trainStopDate",
+      "gmtCreate",
+      "expireTime",
+      "rentStartDate",
+      "rentEndDate",
+      "timeList"
+    ],
+    "payFee": 0,
+    "orderStatus": 1,
+    "payStatus": 2
+  },
+  {
+    "entry": "CLI",
+    "label": "slots-final",
+    "exit": 0,
+    "ok": true
+  },
+  {
+    "label": "verification-requirement-readback",
+    "requiresVerification": true,
+    "available": 0
+  },
+  {
+    "entry": "CLI",
+    "label": "reservation-info-form-body-final",
+    "exit": 1,
+    "ok": false,
+    "error": {
+      "code": "REMOTE_SCHEMA_CHANGED",
+      "message": "体育场馆接口未返回 JSON",
+      "details": {
+        "path": "/api/reservation/order/info"
+      }
+    }
+  },
+  {
+    "label": "lms-final-cleanup",
+    "instructorView": true,
+    "simulatingStudent": false,
+    "temporaryAssignments": [
+      {
+        "activityId": 46546,
+        "deleted": true
+      },
+      {
+        "activityId": 46547,
+        "deleted": true
+      },
+      {
+        "activityId": 46549,
+        "deleted": true
+      }
+    ]
+  }
+]

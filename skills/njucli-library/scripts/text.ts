@@ -36,6 +36,6 @@ export function libraryLoansText(loans: LibraryLoan[]): string {
     return NONE;
   return loans.map((loan) => {
     const overdue = loan.overdue ? "逾期" : "借阅中";
-    return `${loan.title}\t${loan.dueOn}\t${overdue}`;
+    return `${loan.title}\t${loan.dueOn}\t${overdue}\t${loan.loanId}`;
   }).join("\n");
 }

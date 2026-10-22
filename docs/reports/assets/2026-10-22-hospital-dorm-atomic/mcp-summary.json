@@ -1,0 +1,43 @@
+[
+  {
+    "name": "hospital_kinds",
+    "args": {},
+    "isError": false,
+    "summary": {
+      "rows": 5
+    }
+  },
+  {
+    "name": "hospital_projects",
+    "args": {
+      "kind": 2
+    },
+    "isError": false,
+    "summary": {
+      "rows": 4
+    }
+  },
+  {
+    "name": "hospital_reports",
+    "args": {
+      "page": 1,
+      "size": 20
+    },
+    "isError": false,
+    "summary": {
+      "rows": 2,
+      "total": 2
+    }
+  },
+  {
+    "name": "hospital_insurance_fields",
+    "args": {},
+    "isError": false,
+    "summary": {
+      "keys": [
+        "residenceTypes",
+        "documentTypes"
+      ]
+    }
+  }
+]

@@ -12,10 +12,17 @@ const SPORTS_SSO_URL =
 interface LoginData {
   token: { access_token: string };
   roles: { id: string | number }[];
+  userId?: string | number;
+  role?: string | number;
+  username?: string;
 }
+
+export interface SportsIdentity { userId: string | number; role: string | number; username: string }
+export interface SportsTokenOptions { onIdentity?: (identity: SportsIdentity) => void }
 
 export async function exchangeSportsAccessToken(
   fetch: FetchLike,
+  options: SportsTokenOptions = {},
 ): Promise<string> {
   const landing = await request(fetch, SPORTS_SSO_URL);
   const landingUrl = new URL(landing.url);
@@ -35,16 +42,31 @@ export async function exchangeSportsAccessToken(
   });
   const token = login.token.access_token;
   const role = login.roles[0];
-  if (!role) return token;
+  if (!role) {
+    reportIdentity(login, options);
+    return token;
+  }
 
   const roleId = String(role.id);
-  const roleLogin = await sportsPost<Pick<LoginData, "token">>(
+  const roleLogin = await sportsPost<LoginData>(
     fetch,
     "/roleLogin",
     [["roleid", roleId]],
     { cgAuthorization: token },
   );
+  reportIdentity(roleLogin, options);
   return roleLogin.token.access_token;
+}
+
+function reportIdentity(data: LoginData, options: SportsTokenOptions): void {
+  if (!options.onIdentity) return;
+  // The current official roleLogin response returns identity at the top level.
+  const identity = data;
+  if ((typeof identity.userId !== "string" && typeof identity.userId !== "number")
+    || (typeof identity.role !== "string" && typeof identity.role !== "number")
+    || typeof identity.username !== "string" || !identity.username)
+    throw new AppError("REMOTE_SCHEMA_CHANGED", "体育场馆登录未返回可核对的本人身份");
+  options.onIdentity({ userId: identity.userId, role: identity.role, username: identity.username });
 }
 
 async function sportsPost<T>(

@@ -1,0 +1,11 @@
+{
+  "entry": "official-sports-login",
+  "loginSucceeded": true,
+  "roleLoginSucceeded": true,
+  "identityFieldPresent": true,
+  "identityMatchesAuthorizedAccount": true,
+  "selectedRoleMatchesReturnedRole": true,
+  "mineRecordsMatchReturnedIdentity": false,
+  "mineRecordsMatchReturnedUserId": false,
+  "mineRecordsMatchReturnedRole": true
+}

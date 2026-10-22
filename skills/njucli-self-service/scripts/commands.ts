@@ -62,6 +62,14 @@ export function registerSelfServiceCommands(program: Command, service: SelfServi
     .action((id: string, options: FormatOptions) => runCommand(runtime, options, async () => display(await service((client) => client.cancel(id)))));
   addFormatOption(group.command("cloud").description("查询云打印规则与本人待打印文件"))
     .action((options: FormatOptions) => runCommand(runtime, options, async () => display(await service((client) => client.cloud()))));
+  addFormatOption(group.command("cloud-upload <path>").description("上传一个文件至本人云打印队列并回读")
+    .requiredOption("--terminal <code>", "真实打印终端编号，来自 terminals"))
+    .action((path: string, options: FormatOptions & { terminal: string }) => runCommand(runtime, options, async () =>
+      display(await service(client => client.cloudUpload(path, options.terminal)))));
+  addFormatOption(group.command("cloud-delete <order-id>").description("删除本人待打印文件并回读")
+    .requiredOption("--terminal <code>", "真实打印终端编号"))
+    .action((orderId: string, options: FormatOptions & { terminal: string }) => runCommand(runtime, options, async () =>
+      display(await service(client => client.cloudDelete(orderId, options.terminal)))));
   return group;
 }
 
@@ -81,4 +89,10 @@ export function registerSelfServiceTools(tool: McpTool, service: SelfServiceServ
     id: z.string().min(1), email: z.email().optional(),
   }, ({ id, email }) => service((client) => client.send(id, email)), { destructiveHint: false });
   tool("self_service_cancel", "撤销本人未完成的免费申请并回读。", { id: z.string().min(1) }, ({ id }) => service((client) => client.cancel(id)), { destructiveHint: true });
+  tool("self_service_cloud_upload", "上传一个本地文件至本人云打印队列并回读；不执行现场打印。", {
+    path: z.string().min(1), terminalCode: z.string().min(1),
+  }, ({ path, terminalCode }) => service(client => client.cloudUpload(path, terminalCode)), { destructiveHint: false });
+  tool("self_service_cloud_delete", "删除本人待打印列表中的一个文件并回读。", {
+    orderId: z.string().min(1), terminalCode: z.string().min(1),
+  }, ({ orderId, terminalCode }) => service(client => client.cloudDelete(orderId, terminalCode)), { destructiveHint: true });
 }

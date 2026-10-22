@@ -1,0 +1,20 @@
+{
+  "date": "2026-10-22T17:35:09.666Z",
+  "evidence": [
+    {
+      "name": "library_room_bookings",
+      "ok": true,
+      "total": 3,
+      "statuses": [
+        61,
+        61,
+        61
+      ]
+    },
+    {
+      "name": "hospital_insurance_records",
+      "ok": true,
+      "total": 0
+    }
+  ]
+}

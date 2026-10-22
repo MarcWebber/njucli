@@ -1,0 +1,113 @@
+[
+  {
+    "entry": "CLI",
+    "label": "create-preview-fixture",
+    "exit": 0,
+    "ok": true
+  },
+  {
+    "entry": "CLI",
+    "label": "set-start-time",
+    "exit": 0,
+    "ok": true
+  },
+  {
+    "label": "set-start-time-readback",
+    "startTime": "2026-10-22T14:00:00Z",
+    "endTime": "2026-10-24T15:59:00Z",
+    "titleMatches": true
+  },
+  {
+    "entry": "CLI",
+    "label": "clear-start-time",
+    "exit": 0,
+    "ok": true
+  },
+  {
+    "label": "clear-start-time-readback",
+    "startTime": null,
+    "endTime": "2026-10-24T15:59:00Z",
+    "titleMatches": true
+  },
+  {
+    "entry": "CLI",
+    "label": "clear-end-time",
+    "exit": 1,
+    "ok": false,
+    "error": {
+      "code": "REMOTE_UNAVAILABLE",
+      "message": "智汇南雍返回 HTTP 400",
+      "details": {
+        "errors": {
+          "end_time": [
+            "该字段是必填字段。"
+          ]
+        }
+      }
+    }
+  },
+  {
+    "entry": "CLI",
+    "label": "title-only-with-null-dates",
+    "exit": 0,
+    "ok": true
+  },
+  {
+    "label": "title-only-with-null-dates-readback",
+    "startTime": null,
+    "endTime": "2026-10-24T15:59:00Z",
+    "titleMatches": true
+  },
+  {
+    "entry": "CLI",
+    "label": "restore-fixture-deadline",
+    "exit": 0,
+    "ok": true
+  },
+  {
+    "entry": "CLI",
+    "label": "publish-preview-fixture",
+    "exit": 1,
+    "ok": false,
+    "error": {
+      "code": "REMOTE_UNAVAILABLE",
+      "message": "作业发布状态回读尚未匹配",
+      "details": {
+        "activityId": 46547
+      }
+    }
+  },
+  {
+    "entry": "official-preview",
+    "action": "enter",
+    "status": 200
+  },
+  {
+    "entry": "official-preview",
+    "action": "readback",
+    "status": 200,
+    "simulatingStudent": true,
+    "instructorView": false
+  },
+  {
+    "entry": "CLI",
+    "label": "official-preview-student-submission",
+    "exit": 1,
+    "ok": false,
+    "error": {
+      "code": "PERMISSION_DENIED",
+      "message": "智汇南雍返回 HTTP 403"
+    }
+  },
+  {
+    "entry": "official-preview",
+    "action": "exit",
+    "status": 200
+  },
+  {
+    "entry": "CLI",
+    "label": "delete-preview-fixture",
+    "exit": 0,
+    "ok": true
+  }
+]
