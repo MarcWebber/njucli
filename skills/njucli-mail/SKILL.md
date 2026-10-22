@@ -1,9 +1,30 @@
 ---
 name: njucli-mail
-description: 查询南京大学校园邮箱、搜索和读取邮件、下载附件，绑定或切换邮箱。
+description: 使用南京大学校园邮箱发送邮件与附件、抄送和密送、回复邮件线程，查询和搜索邮件、读取正文与下载附件，绑定或切换邮箱。
 ---
 
 # 校园邮箱
+
+## 发送邮件
+
+按用户指定的收件人和内容准备 `message.json`：
+
+```json
+{
+  "to": ["recipient@example.org"],
+  "subject": "邮件主题",
+  "text": "邮件正文",
+  "attachments": ["/path/to/材料.pdf"]
+}
+```
+
+```bash
+njucli mail send --input message.json --format json
+```
+
+发件人使用当前绑定邮箱。`cc`、`bcc` 为邮箱地址数组，`html` 提供 HTML 正文，`attachments` 使用本地文件路径。回复邮件时，用 `mail read` 返回的 `messageId` 填写 `inReplyTo`，将原有 `references` 和该 `messageId` 合并为 `references` 数组。
+
+MCP 使用 `mail_send`，将同一份邮件 JSON 作为 `input` 传入。CLI 与 MCP 调用同一个发送方法。成功返回 SMTP 接收的 `messageId`、收件人列表和 `delivery: "smtp-accepted"`；收件箱的最终投递由邮件服务器完成。部分收件人拒收时，错误详情保留已接收和拒收地址，后续按这些结果处理。
 
 ## 首次使用
 

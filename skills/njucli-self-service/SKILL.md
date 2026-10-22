@@ -63,6 +63,6 @@ CLI 仅提供规则与列表查询。上传、删除和现场打印未封装，�
 
 ## MCP 接口说明
 
-MCP 仅提供只读查询（profile / items / show / quote / orders / order / terminals / cloud）。申请、邮件发送及撤销等写操作必须使用 CLI。
+MCP 提供查询及 `self_service_create`、`self_service_send`、`self_service_cancel`，与 CLI 共用身份、费用检查和结果回读。
 
 接口与实网验证范围见[接口记录](references/interfaces.md)。

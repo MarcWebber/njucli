@@ -36,7 +36,7 @@ njucli box doc-update REPO /课程项目周报.sdoc --input ./edited.json --base
 
 `original.json` 保持原样，更新前会对比当前文档的标识、版本与正文；变化时重新读取并合并。支持标题、二级标题、段落和白板块，使用原生 SeaDoc JSON；已有其他内容可保持原样。`doc-read --output` 覆盖指定本地文件。
 
-创建和更新成功后给用户返回的 `url`，访问沿用云盘权限。整篇更新后，已打开的网页需要刷新。并发修改、格式要求和失败后的处理见 [SeaDoc 文档说明](references/documents.md)。MCP 提供只读 `box_doc_read`，写入使用 CLI。
+创建和更新成功后给用户返回的 `url`，访问沿用云盘权限。整篇更新后，已打开的网页需要刷新。并发修改、格式要求和失败后的处理见 [SeaDoc 文档说明](references/documents.md)。MCP 提供 `box_doc_read`、`box_doc_create` 和 `box_doc_update`；正文作为 JSON 传入，更新时附带读取结果作为 `base`。
 
 从协同表格生成周报时，先用 `table rows` 读取指定视图，再整理正文并创建或更新文档，最后用 `table update` 将返回的链接填写到指定行。具体步骤见[表格到在线报告](references/documents.md#表格到在线报告)。
 

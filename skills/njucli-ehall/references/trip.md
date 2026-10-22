@@ -48,4 +48,4 @@ njucli ehall trip-submit --from YYYY-MM-DD --to YYYY-MM-DD --destination 市或�
 njucli ehall trip-submit --input /path/to/trip.json --format json
 ```
 
-临时输入文件以 0600 权限保存，完成后清理。联系人由 CLI 按账号保存和复用。只读 MCP 使用 `ehall_trip`；[接口说明](interfaces.md#研究生节假日行程登记)包含字段和验证范围。
+临时输入文件以 0600 权限保存，完成后清理。联系人由 CLI 按账号保存和复用。MCP 使用 `ehall_trip` 查询、`ehall_trip_submit` 提交；`dryRun` 支持预览；[接口说明](interfaces.md#研究生节假日行程登记)包含字段和验证范围。

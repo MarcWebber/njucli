@@ -100,6 +100,8 @@ SSO 的 CAS `service` 使用 EHall `/login?service=https%3A%2F%2Fehall.nju.edu.c
 
 [南大邮箱](https://mail.nju.edu.cn/)使用 `imap.exmail.qq.com:993` TLS；客户端专用密码需配合官网 IMAP/SMTP 开关。查询使用 `EXAMINE/BODY.PEEK`，保持邮件已读状态。邮件 ID 编码邮箱地址、邮件夹、`uidValidity` 与 UID，正文和附件按 ID 定位所属邮箱；附件编号从 1 开始。
 
+发送通过 `smtp.exmail.qq.com:465` TLS，使用当前绑定邮箱与客户端专用密码。`mail send` 和 `mail_send` 共用 `MailClient.send`，成功表示 SMTP 已接收全部目标收件人；部分拒收保留已接收与拒收地址，发送失败保持单次提交。公开协议结果与认证投递待验范围见[MCP 与邮件验证](reports/2026-10-21-mcp-write-tools.md)。
+
 两个真实邮箱的绑定、切换、分页、搜索和正文已验证。真实附件下载及自动生成专用密码的完整绑定向导待实网验收。
 
 ## 校医院接入评估

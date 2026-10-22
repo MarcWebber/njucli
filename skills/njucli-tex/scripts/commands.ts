@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import type { Command } from "commander";
 
 import type { TexServices } from './services.js';
@@ -105,7 +106,8 @@ export function registerTexCommands(
     .requiredOption("--version <version-no>", "projects 返回的版本号")
     .requiredOption("--input <local-path>", "本地 UTF-8 文件路径"))
     .action(async (projectKey: string, filePath: string, options: FormatOptions & { version: string; input: string }) => runCommand(runtime, options, async () => {
-      const data = await service.write(projectKey, options.version, filePath, options.input);
+      const content = new TextDecoder("utf-8", { fatal: true }).decode(await readFile(options.input));
+      const data = await service.write(projectKey, options.version, filePath, content);
       return { data, text: `${data.path}\t${data.bytes} bytes` };
     }));
 

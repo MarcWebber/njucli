@@ -35,7 +35,7 @@ njucli table form-submit "应用 URL 或 UUID" "表单页 ID" \
 
 `--readback-page` 选择同一工作表、显示全部提交字段的表格页。命令提交一次，并比较提交前后的行 ID 与字段，返回本次新增记录及详情链接。遇到提交或回读错误，先运行 `app-rows` 确认保存状态，再决定后续操作。此流程适用于新增填报记录；附件、关联记录和其他复杂字段需按各自接口契约处理。
 
-`app-rows` 支持 `--page`、`--size`（1–1000），按 `nextPage` 分页。MCP 提供 `table_app_show` 与 `table_app_rows` 只读工具，提交使用 CLI。
+`app-rows` 支持 `--page`、`--size`（1–1000），按 `nextPage` 分页。MCP 提供 `table_app_show`、`table_app_rows` 和 `table_form_submit`；提交使用 `app`、`pageId`、`input` 与 `readbackPage`。
 
 ## 查找与读取
 

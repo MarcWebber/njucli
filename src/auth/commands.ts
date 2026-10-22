@@ -5,6 +5,7 @@ import { AUTH_CAPABILITIES } from "./capabilities.js";
 import type { AuthCapability, AuthCredentials, SessionMetadata } from "./types.js";
 import { requiredText } from "../core/guards.js";
 import { AppError } from "../core/errors.js";
+import { credentialsInput } from "./schema.js";
 
 import type { AuthServices } from './service.js';
 import { addFormatOption, runCommand, type CommandRuntime, type FormatOptions } from "../core/command.js";
@@ -118,12 +119,9 @@ async function readCredentials(path: string): Promise<AuthCredentials> {
   let value: unknown;
   try { value = JSON.parse(input); }
   catch { throw new AppError("INVALID_INPUT", "凭据应为包含 username 和 password 的 JSON 对象"); }
-  if (typeof value !== "object" || value === null || !("username" in value) || !("password" in value)
-    || typeof value.username !== "string" || !value.username.trim()
-    || typeof value.password !== "string" || !value.password) {
-    throw new AppError("INVALID_INPUT", "凭据应包含非空字符串 username 和 password");
-  }
-  return { username: value.username.trim(), password: value.password };
+  const parsed = credentialsInput.safeParse(value);
+  if (!parsed.success) throw new AppError("INVALID_INPUT", "凭据应包含非空字符串 username 和 password");
+  return parsed.data;
 }
 
 function parseInterval(value: string): number {

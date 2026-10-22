@@ -6,7 +6,7 @@ import { orderLinks, type ItxiaClient, type ItxiaOrder } from "./client.js";
 import { identityInput, orderId, orderInput } from "./schema.js";
 
 export function registerItxiaCommands(program: Command, service: ItxiaClient, runtime: CommandRuntime): Command {
-  const itxia = program.command("itxia").description("IT 侠电脑维修预约、打开预约单与进度查询；取消仅 CLI 且须 --yes，只读 MCP 不提供");
+  const itxia = program.command("itxia").description("IT 侠电脑维修预约、打开预约单、进度查询与取消");
   addFormatOption(itxia.command("create").description("提交维修预约并回读确认")
     .requiredOption("--input <path>", "预约信息 JSON 文件，字段见 IT 侠 Skill")
     .option("--agree-terms", "已阅读并同意预约须知与服务条款"))

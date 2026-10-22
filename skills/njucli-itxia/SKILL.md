@@ -1,6 +1,6 @@
 ---
 name: njucli-itxia
-description: 通过南京大学 IT 侠官网提交电脑维修预约，输出打开预约单的方法，按预约单编号或姓名、手机号查询当前预约状态、处理人和回复。取消预约仅 CLI 支持，须带 --yes；只读 MCP 不暴露取消。用户需要 IT 侠预约、打开预约单、进度查询或取消时使用。
+description: 通过南京大学 IT 侠官网提交电脑维修预约，输出打开预约单的方法，按预约单编号或姓名、手机号查询当前预约状态、处理人和回复。取消预约须在 CLI 带 --yes，或在 MCP 传 yes: true。用户需要 IT 侠预约、打开预约单、进度查询或取消时使用。
 ---
 
 # IT 侠维修预约
@@ -70,4 +70,4 @@ njucli itxia status --name "预约时的姓名" --phone "预约时的手机号" 
 | `DONE` | 已完成 |
 | `CANCELED` | 已取消 |
 
-只读 MCP 提供 `itxia_status`（`id`）和 `itxia_retrieve`（`name`、`phone`）；提交预约使用 CLI。接口依据与实网验证范围见[接口说明](references/interfaces.md)。
+MCP 提供查询、打开预约单、`itxia_create`（预约 `input` 与 `agreeTerms: true`）和 `itxia_cancel`（`id` 与 `yes: true`）。接口依据与实网验证范围见[接口说明](references/interfaces.md)。

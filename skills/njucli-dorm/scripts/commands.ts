@@ -4,7 +4,7 @@ import { addFormatOption, runCommand, type CommandRuntime, type FormatOptions } 
 import { parseCampusDate } from "../../../src/core/dates.js";
 import { AppError } from "../../../src/core/errors.js";
 import { requiredText } from "../../../src/core/guards.js";
-import type { ReadTool } from "../../../src/mcp/read.js";
+import type { McpTool } from "../../../src/mcp/tools.js";
 import type { DormClient, DormServices } from "./client.js";
 
 function campusId(input: string): number {
@@ -82,16 +82,23 @@ export function registerDormCommands(program: Command, service: DormServices, ru
   return group;
 }
 
-export function registerDormTools(read: ReadTool, service: DormServices): void {
-  read("dorm_bindings", "查询当前账号已绑定的电费房间及绑定 ID。", {}, () => service(client => client.bindings()));
-  read("dorm_campuses", "查询宿舍电费系统支持的校区及 ID。", {}, () => service(client => client.campuses()));
+export function registerDormTools(tool: McpTool, service: DormServices): void {
+  tool("dorm_bindings", "查询当前账号已绑定的电费房间及绑定 ID。", {}, () => service(client => client.bindings()));
+  tool("dorm_campuses", "查询宿舍电费系统支持的校区及 ID。", {}, () => service(client => client.campuses()));
   const campus = z.number().int().positive().describe("campuses 返回的校区 ID");
-  read("dorm_buildings", "查询指定校区的宿舍楼栋。", { campus }, args => service(client => client.buildings(args.campus)));
-  read("dorm_rooms", "查询楼栋的电费房间目录。", { campus, building: z.string().trim().min(1) }, args => service(client => client.rooms(args.campus, args.building)));
-  read("dorm_bills", "查询本人电费充值记录，默认本月及前两个月至今天。", {
+  tool("dorm_buildings", "查询指定校区的宿舍楼栋。", { campus }, args => service(client => client.buildings(args.campus)));
+  tool("dorm_rooms", "查询楼栋的电费房间目录。", { campus, building: z.string().trim().min(1) }, args => service(client => client.rooms(args.campus, args.building)));
+  tool("dorm_bills", "查询本人电费充值记录，默认本月及前两个月至今天。", {
     from: z.string().optional(), to: z.string().optional(),
   }, async args => {
     const range = billRange(args.from, args.to);
     return { ...range, bills: await service(client => client.bills(range.from, range.to)) };
   });
+  tool("dorm_bind", "绑定本人宿舍电费房间并回读；replace 指定要替换的绑定 ID。", {
+    campus: z.number().int().positive(), building: z.string().trim().min(1), room: z.string().trim().min(1), replace: z.string().trim().min(1).optional(),
+  }, ({ campus, building, room, replace }) => service(client => client.bind(campus, building, room, replace)), { destructiveHint: true });
+  tool("dorm_unbind", "解除本人指定宿舍电费房间绑定并回读。", {
+    binding: z.string().trim().min(1),
+  }, ({ binding }) => service(client => client.unbind(binding)), { destructiveHint: true });
+
 }

@@ -20,7 +20,7 @@ NjuCLI 将报告、图表与白板保存在 NJU Box，提供固定链接供学�
 
 同名文件已存在时，创建命令提示继续编辑已有文档。若检查后发生同名创建，服务端可能自动改名；命令返回实际路径并提示核对后继续。写入失败或回读未完成时，会保留目标路径供检查，后续按已有状态处理，避免重复创建。
 
-`doc-read` 返回 JSON 正文，也通过只读 MCP `box_doc_read` 提供。CLI 的 `--output` 文件包含原文快照；直接重定向 `--format json` 得到的是带 `ok/data` 的命令输出，更新时请使用 `--output` 文件。
+`doc-read` 返回 JSON 正文，也通过 MCP `box_doc_read` 提供。CLI 的 `--output` 文件包含原文快照；直接重定向 `--format json` 得到的是带 `ok/data` 的命令输出，更新时请使用 `--output` 文件。
 
 ## 表格到在线报告
 
@@ -55,7 +55,7 @@ NJU Table（数据） → Agent 整理正文与图形 → NjuCLI Box 命令
                                链接按需填回 NJU Table
 ```
 
-能力归属 `njucli-box`，复用 BoxClient、账号隔离和当前调用的认证会话。`documents.ts` 校验正文，`whiteboards.ts` 校验原生元素并将图表数据转换为元素，`client.ts` 保存及回读；CLI 和只读 MCP 共享这份实现。Table 通过已有读写命令组合。
+能力归属 `njucli-box`，复用 BoxClient、账号隔离和当前调用的认证会话。`documents.ts` 校验正文，`whiteboards.ts` 校验原生元素并将图表数据转换为元素，`client.ts` 保存及回读；CLI 和 MCP 共享这份实现。Table 通过已有读写命令组合。
 
 ### 开源工具选择
 

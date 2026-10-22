@@ -10,7 +10,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-20%2B-5FA04E?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![License: Personal Use](https://img.shields.io/badge/License-Personal_Use-blue)](LICENSE)
 
-南京大学校园服务套件，面向学生及其 AI 助手。查课表、找空闲教室、看邮件、管理云盘、写论文，统一通过 NjuCLI 完成。
+南京大学校园服务套件，面向学生及其 AI 助手。查课表、找空闲教室、收发邮件、管理云盘与表格、编辑和编译论文，统一通过 NjuCLI 完成。
 
 ## 一键安装
 
@@ -41,7 +41,7 @@ https://github.com/MarcWebber/njucli
 | 场景 | 你可以交给 AI 的任务 |
 | --- | --- |
 | 上课与教务 | [查课表、成绩、考试和空闲教室](skills/njucli-ehall/SKILL.md)，查看[软件学院](skills/njucli-se/SKILL.md)和[智汇南雍](skills/njucli-lms/SKILL.md)的课程与作业 |
-| 邮件与文件 | [查看邮件和附件](skills/njucli-mail/SKILL.md)，[管理云盘、在线文档与白板](skills/njucli-box/SKILL.md)，[填写协同表格](skills/njucli-table/SKILL.md) |
+| 邮件与文件 | [收发邮件与附件](skills/njucli-mail/SKILL.md)，[管理云盘、在线文档与白板](skills/njucli-box/SKILL.md)，[填写协同表格](skills/njucli-table/SKILL.md) |
 | 学习与写作 | [检索图书和借阅](skills/njucli-library/SKILL.md)，[撰写与编译 LaTeX](skills/njucli-tex/SKILL.md)，[查找校园正版软件](skills/njucli-software/SKILL.md) |
 | 校园生活 | [看通知、食堂信息、查镜像](skills/njucli-campus/SKILL.md)，[查体育场馆](skills/njucli-sports/SKILL.md)，查看[校园卡](skills/njucli-pay/SKILL.md)和[宿舍电费](skills/njucli-dorm/SKILL.md) |
 | 校园事务 | [查青年平台活动](skills/njucli-youth/SKILL.md)，[申请成绩单与证明](skills/njucli-self-service/SKILL.md)，[预约 IT 侠维修](skills/njucli-itxia/SKILL.md)，[查教师与后勤联系方式](skills/njucli-institution/SKILL.md) |
@@ -50,7 +50,7 @@ https://github.com/MarcWebber/njucli
 
 ## 接入与文档
 
-支持读取本地 Skill 并执行命令的 AI 助手，可使用完整套件；支持本地 stdio MCP 的客户端，可接入只读查询工具。
+支持读取本地 Skill 并执行命令的 AI 助手，可使用完整套件；支持本地 stdio MCP 的客户端，可调用查询与写入工具。
 
 [AI 客户端接入](docs/ai-plugin.md) · [WorkBuddy 教程](docs/workbuddy.md) · [安装与维护](docs/installation.md) · [贡献指南](CONTRIBUTING.md) · [问题反馈](https://github.com/MarcWebber/njucli/issues)
 

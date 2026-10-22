@@ -2,7 +2,7 @@ import { type SkillRuntime } from "../../../src/app/runtime.js";
 import { MailClient, type MailBinding } from "./client.js";
 import { bindMailAccount } from "../../../src/auth/mail-bind.js";
 
-export type MailServices = Pick<MailClient, "accounts" | "use" | "status" | "unbind" | "folders" | "list" | "search" | "read" | "download"> & {
+export type MailServices = Pick<MailClient, "accounts" | "use" | "status" | "unbind" | "folders" | "list" | "search" | "read" | "download" | "send"> & {
   bind(credentials?: MailBinding): ReturnType<MailClient["bind"]>;
 };
 
@@ -20,5 +20,6 @@ export function createMailServices(runtime: SkillRuntime): MailServices {
     search: async (query, options) => (await mail()).search(query, options),
     read: async (id) => (await mail()).read(id),
     download: async (id, attachment, output) => (await mail()).download(id, attachment, output),
+    send: async (input) => (await mail()).send(input),
   };
 }

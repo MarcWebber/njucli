@@ -1,3 +1,7 @@
+import { readFile } from "node:fs/promises";
+import { baseInput } from "./schema.js";
+import { AppError } from "../../../src/core/errors.js";
+import { saveFile } from "../../../src/core/fs.js";
 import type { SkillRuntime } from "../../../src/app/runtime.js";
 import { join } from "node:path";
 import { withBrowserSession } from "../../../src/auth/browser-session.js";
@@ -7,10 +11,21 @@ import { TableAppClient } from "./apps.js";
 import { TableClient } from "./client.js";
 
 export type TableServices = Omit<TableClient, "restoreSession"> & {
+  preset: typeof tablePreset;
   appShow(id: string): Promise<ReturnType<TableAppClient["show"]>>;
   appRows(id: string, ...args: Parameters<TableAppClient["rows"]>): ReturnType<TableAppClient["rows"]>;
   formSubmit(id: string, ...args: Parameters<TableAppClient["submit"]>): ReturnType<TableAppClient["submit"]>;
 };
+
+export async function loadTablePreset(name: string) {
+  if (name !== "gradebook") throw new AppError("INVALID_INPUT", "内置模板：gradebook");
+  return baseInput.parse(JSON.parse(await readFile(new URL("../templates/gradebook.json", import.meta.url), "utf8")));
+}
+
+async function tablePreset(name: string, output?: string) {
+  const data = await loadTablePreset(name);
+  return output ? saveFile(output, JSON.stringify(data, null, 2) + "\n") : data;
+}
 
 export function createTableServices({ withBrowser, accountStore, auth }: SkillRuntime): TableServices {
   const withTable = <T>(operation: (client: TableClient) => Promise<T>): Promise<T> => {
@@ -32,6 +47,7 @@ export function createTableServices({ withBrowser, accountStore, auth }: SkillRu
     });
   };
   return {
+    preset: tablePreset,
     appShow: (id: string) => withApp(id, client => client.show()),
     appRows: (id: string, ...args: Parameters<TableAppClient["rows"]>) => withApp(id, client => client.rows(...args)),
     formSubmit: (id: string, ...args: Parameters<TableAppClient["submit"]>) => withApp(id, client => client.submit(...args)),

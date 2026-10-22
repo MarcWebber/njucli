@@ -10,7 +10,7 @@ export type TexServices = Pick<TexClient, "templates" | "projects" | "create" | 
   download(projectKey: string, versionNo: string, path: string): ReturnType<typeof saveFile>;
   pdf(projectKey: string, versionNo: string, output: string): ReturnType<typeof saveFile>;
   compile(projectKey: string, versionNo: string, path: string, output: string): ReturnType<typeof saveFile>;
-  write(projectKey: string, versionNo: string, path: string, inputLocalPath: string): ReturnType<typeof writeTexFile>;
+  write(projectKey: string, versionNo: string, path: string, content: string): ReturnType<typeof writeTexFile>;
   upload(projectKey: string, versionNo: string, inputLocalPath: string): ReturnType<typeof uploadTexFile>;
 };
 
@@ -41,9 +41,7 @@ export function createTexServices(runtime: SkillRuntime): TexServices {
       return withTex(async (client, session) => uploadTexFile(client, await session.page(), projectKey, versionNo, basename(path), content));
     },
     read: (projectKey, versionNo, fileKey) => withTex((client) => client.read(projectKey, versionNo, fileKey)),
-    write: async (projectKey, versionNo, path, inputLocalPath) => {
-      const content = new TextDecoder("utf-8", { fatal: true }).decode(await readFile(resolve(inputLocalPath)));
-      return withTex(async (client, session) => writeTexFile(client, await session.page(), projectKey, versionNo, path, content));
-    },
+    write: (projectKey, versionNo, path, content) => withTex(async (client, session) =>
+      writeTexFile(client, await session.page(), projectKey, versionNo, path, content)),
   };
 }

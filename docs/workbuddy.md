@@ -1,6 +1,6 @@
 # 在 WorkBuddy 中使用 NjuCLI
 
-WorkBuddy 是腾讯推出的 AI 办公工作台桌面客户端，支持 MCP（Model Context Protocol）与 Skills 扩展。免费版提供对话功能，实测默认模型为 Fast（Deepseek-V4.1-Flash）。本文介绍如何在 WorkBuddy 中配置 NjuCLI 的 MCP 只读工具与 Skills 套件。
+WorkBuddy 是腾讯推出的 AI 办公工作台桌面客户端，支持 MCP（Model Context Protocol）与 Skills 扩展。免费版提供对话功能，实测默认模型为 Fast（Deepseek-V4.1-Flash）。本文介绍如何在 WorkBuddy 中配置 NjuCLI 的 MCP 查询与写入工具与 Skills 套件。
 
 ## 前提条件
 
@@ -70,7 +70,7 @@ WorkBuddy 支持用户级与项目级两处 MCP 配置文件：
 2. 点击顶部 **Connectors** 标签。
 3. 点击右上角 **Custom connectors**，打开 **MCP Server Management** 弹窗。
 
-正常状态下 `njucli` 前显示绿点，并标注已启用的工具数量。当前完整工具清单为 136 个，具体数量随安装版本变化。
+正常状态下 `njucli` 前显示绿点，并标注已启用的工具数量。工具数量随安装版本变化，以客户端展示为准。
 
 ![MCP Server Management 中的 njucli 工具列表与数量提示](images/workbuddy/02-mcp-server-management.png)
 
@@ -112,7 +112,7 @@ WorkBuddy 会按套件中的机构名录说明调用 `njucli`，返回软件学�
 
 ## 5. 限制与注意事项
 
-- **只读设计**：MCP 服务当前提供 136 个只读工具，不执行任何写操作。
+- **读写工具**：MCP 提供查询、文件操作、邮件发送和业务办理，由客户端管理执行权限。
 - **写操作执行**：提交、取消、预约等写操作由 Skill 通过 CLI 命令完成，且仅在用户提出明确要求时才会执行。
 - **身份认证**：查询课表、成绩、邮件、云盘等需要登录的服务前，必须先在运行 WorkBuddy 的计算机终端执行 `njucli auth login` 保存统一认证凭据。
 - **使用许可**：NjuCLI 采用个人使用许可证，机构或组织批量使用须另获书面授权。

@@ -38,6 +38,6 @@ njucli dorm bills --from 2026-08-01 --to 2026-10-16 --format json
 
 ## MCP
 
-只读工具为 `dorm_bindings`、`dorm_campuses`、`dorm_buildings`、`dorm_rooms`、`dorm_bills`。CLI 与 MCP 复用相同方法和账号会话。绑定、修改与解绑通过 CLI 执行。
+只读工具为 `dorm_bindings`、`dorm_campuses`、`dorm_buildings`、`dorm_rooms`、`dorm_bills`。CLI 与 MCP 复用相同方法和账号会话。MCP 使用 `dorm_bind` 绑定或修改，使用 `dorm_unbind` 解绑。
 
 接口和实网范围见[接口记录](references/interfaces.md)。

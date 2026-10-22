@@ -50,4 +50,4 @@ njucli institution dump --output ./nju-knowledge --format json
 - 导出的学院 Markdown 顶部只写一次单位办公联系方式；教师表格包含：姓名、职称/身份、单位、电话、邮箱、办公地点和来源。研究方向不在表格内，可通过详情或 JSON 查询。
 - 文本覆盖写入复用 `core/fs.ts` 的 `saveFile`，新文件权限设为 0600，已有文件保留原权限。
 
-本 Skill 提供六个只读 MCP 工具供 AI 调用：`institution_list`、`institution_show`、`institution_teachers`、`institution_teacher`、`institution_search`、`institution_services`。接口契约与数据结构详见 [interfaces.md](references/interfaces.md)。
+本 Skill 提供查询工具和 `institution_dump` 导出工具：`institution_list`、`institution_show`、`institution_teachers`、`institution_teacher`、`institution_search`、`institution_services`。接口契约与数据结构详见 [interfaces.md](references/interfaces.md)。

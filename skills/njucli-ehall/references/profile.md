@@ -42,7 +42,7 @@ njucli auth login ehall
   *注：仅能删除由本人维护添加的记录。删除后会自动回读以核对其他记录未受影响。通过学校科研系统同步的论文或带有 `KZXXWID` 标记的记录不可删除。*
 
 **关于 MCP 的限制：**
-当前 MCP 仅提供只读工具（`ehall_profile` 和 `ehall_profile_fields`）。所有写操作通过上述 CLI 命令执行。
+MCP 提供个人资料查询、`ehall_profile_add` 新增与 `ehall_profile_remove` 删除；新增直接传 `input`，附件使用本地路径，`dryRun` 支持预览。
 
 ## 字段映射与数据模板
 
