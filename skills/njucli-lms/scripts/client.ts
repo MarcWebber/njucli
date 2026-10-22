@@ -33,6 +33,26 @@ const paging = { page: z.number().int(), page_size: z.number().int(), pages: z.n
 export class LmsClient {
   constructor(private readonly fetch: FetchLike) {}
 
+  async restoreSession(): Promise<boolean> {
+    let url = `${SITE}/user/index`;
+    for (let redirects = 0; redirects < 20; redirects++) {
+      const response = await this.fetch(url, { redirect: "manual" });
+      if (response.status >= 300 && response.status < 400) {
+        const next = new URL(response.headers.get("location")!, response.url);
+        // LMS CAS 返回 HTTP 回调；与浏览器的 HSTS 行为一致，始终通过 HTTPS 交接票据。
+        if (next.hostname === "lms.nju.edu.cn") next.protocol = "https:";
+        url = next.href;
+        continue;
+      }
+      if (response.status === 401 || new URL(response.url).hostname === "authserver.nju.edu.cn") return false;
+      if (response.status === 403) throw new AppError("PERMISSION_DENIED", "智汇南雍拒绝访问，请确认账号的平台权限");
+      if (!response.ok) throw new AppError("REMOTE_UNAVAILABLE", `智汇南雍登录检查返回 HTTP ${response.status}`);
+      return new URL(response.url).origin === SITE
+        && /\bglobalData\s*=\s*\{\s*user\s*:\s*\{\s*id\s*:\s*\d+/.test(await response.text());
+    }
+    throw new AppError("REMOTE_UNAVAILABLE", "智汇南雍认证跳转次数过多");
+  }
+
   async courses(page = 1, query = "") {
     const result = parse(z.object({ ...paging, courses: z.array(courseSummary) }), await this.request("/api/my-courses", "POST", {
       page, page_size: 20,
@@ -129,7 +149,7 @@ function withActivityUrl(item: z.infer<typeof activity>, courseId: number) {
   return { ...item, course_id: courseId, url: `${SITE}/course/${courseId}/learning-activity#/${item.id}` };
 }
 
-export type LmsServices = Pick<LmsClient, keyof LmsClient>;
+export type LmsServices = Omit<LmsClient, "restoreSession">;
 
 export function createLmsServices({ withBrowser }: SkillRuntime): LmsServices {
   const withLms = <T>(operation: (client: LmsClient) => Promise<T>) =>

@@ -6,6 +6,8 @@
 
 `GET /user/index` 经 `lms-identity.nju.edu.cn/auth/realms/nju/protocol/cas/login` 与学校统一认证交换会话。认证 driver 依赖 SSO，复用 `BrowserSession` 当次 Cookie、账号锁与会话存储。登录成功以最终回到本站 `/user/index` 且 HTML 中 `globalData.user.id` 存在为准。
 
+LMS 的 CAS 回调会返回 `http://lms.nju.edu.cn/user/index`。客户端逐跳处理认证重定向，将本站回调升级为 HTTPS，保持票据参数与同一 Cookie 会话；不会发送 HTTP 票据请求。跳转及页面校验由 LMS client 负责。
+
 业务请求直接使用共享 HTTP 会话。HTTP 错误由统一输出层报告；一次写入只提交一次，请求失败后的处理交给调用方。
 
 ## 查询

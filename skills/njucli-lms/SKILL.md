@@ -5,7 +5,7 @@ description: 查询南京大学智汇南雍（lms.nju.edu.cn）的课程、课�
 
 # 智汇南雍
 
-首次使用先运行 `njucli auth login lms`；业务命令也会按需恢复校园登录。
+直接执行业务命令，NJUCLI 会使用统一认证会话连接平台。仅在命令返回需要本人登录或验证时运行 `njucli auth login lms`。
 
 ## 课程与学习任务
 

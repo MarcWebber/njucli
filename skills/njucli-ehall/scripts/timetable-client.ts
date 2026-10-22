@@ -92,12 +92,16 @@ export class EHallTimetableClient {
     const hostname = new URL(response.url).hostname;
     if (
       hostname === "authserver.nju.edu.cn" ||
-      response.status === 401 ||
-      response.status === 403
+      response.status === 401
     ) {
       throw new AppError("AUTH_REQUIRED", "课表会话未登录或已经失效", {
         hint: "运行 njucli auth login timetable",
         authCommand: "njucli auth login timetable",
+      });
+    }
+    if (response.status === 403) {
+      throw new AppError("PERMISSION_DENIED", "当前账号无权访问本科课表，请按学籍选择课表入口", {
+        hint: "研究生课表使用 njucli ehall graduate-schedule；本科生请联系学校确认应用权限",
       });
     }
     if (!response.ok) {
