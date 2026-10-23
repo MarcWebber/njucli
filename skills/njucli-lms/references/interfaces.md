@@ -45,8 +45,26 @@ LMS 的 CAS 回调会返回 `http://lms.nju.edu.cn/user/index`。客户端逐跳
 
 ## 验证范围
 
-CLI 与 MCP 共用同一业务实现；MCP 只注册查询。
+CLI 与 MCP 共用同一业务实现，提供查询、文件操作、作业管理及本人提交原子动作。
 
-认证实网已核对课程列表与筛选、课程详情、课件列表、测试列表、作业列表、助教草稿创建和详情回读。该账号的学生课程作业列表及首页待办均为空；学生作业非空列表和待办非空结果仍待实网核对。发布和发送通知待使用者提供正式作业材料与目标后核对。
+认证实网已核对课程列表与筛选、课程详情、课件列表、测试列表、作业列表、助教草稿创建和详情回读。该账号的学生课程作业列表及首页待办均为空；学生作业非空列表和待办非空结果仍待实网核对。已有验证作业发布、取消发布均取得成功回读；关闭发送通知，正式通知未验证。
 
-接入验证使用已授权的历史课程；测试草稿以未发布状态创建，关闭邮件和待办通知，核对后清理。课程本身的结束日期为空，历史内容日期仅用于确认本次验证背景。
+接入验证使用已授权的历史课程；验证草稿以未发布状态创建，关闭邮件和待办通知，核对后清理。课程本身的结束日期为空，历史内容日期仅用于确认本次验证背景。
+
+## 文件、已有作业与本人提交
+
+| 请求 | 参数与结果 |
+| --- | --- |
+| `GET /api/uploads/{id}` | 文件元数据，输出名称、类型、大小、状态、删除标志、下载权限与引用编号 |
+| `GET /api/uploads/{id}/blob` | 单个文件字节；按远端权限下载，不使用预览接口改变下载权限 |
+| `POST /api/uploads` | JSON：`name/size/parent_type=course/parent_id/is_scorm/is_wmpkg/source/is_marked_attachment/embed_material_type`；返回文件编号、实际存储类型和当次上传地址 |
+| `PUT <upload_url>` | 当前 MEDIA 存储使用 multipart 字段 `file`；随后回读文件的名称、大小与 `status=ready`。上传地址仅用于本次上传，不写入公开输出 |
+| `DELETE /api/uploads/{id}` | 删除文件；回读 `deleted=true` 或 HTTP 404/410 后确认 |
+| `PUT /api/activities/{id}` | 更新已有作业。官网将详情 `data` 展开为写入字段；`uploads` 使用编号数组，`upload_references` 保留下载权限和引用。评分方式由 `data.homework_score_percentage` 转为对应开关与比例 |
+| `GET /api/activities/{id}/completion-criteria?activity_type=homework&course_id=` | 查询完成条件的实际编号，用原有 `completion_criterion_key/value` 保留设置。`completion_criterion` 在详情中是说明文字，不能原样作为写入对象 |
+| `POST /api/courses/{id}/publish-activities` | JSON：`published` 为布尔值、`activity_ids` 为目标单项数组、`exam_ids=[]`。随后回读目标 `published`；该接口不发送通知 |
+| `DELETE /api/activities/{id}` | 删除目标作业，HTTP 404/410 回读确认 |
+| `GET /api/activities/{id}/students/{currentUserId}/submission_list` | 本人提交与草稿记录。用户编号仅从当前同一会话的官网页面读取 |
+| `POST /api/course/activities/{id}/submissions` | JSON：`comment/uploads/slides/is_draft/mode/other_resources/uploads_in_rich_text`；多选模式可含 `multiple_choice_title`。返回 `submission.id` 后回读本人记录 |
+| `PUT /api/submissions/{id}/retract` | 撤回本人目标作业中的提交，随后确认记录已移出正式提交或变为草稿 |
+

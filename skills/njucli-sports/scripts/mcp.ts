@@ -17,4 +17,5 @@ export function registerSportsTools(tool: McpTool, service: SportsServices): voi
   }, ({ page, size }) => service.bookings(page, size));
   tool("sports_booking", "读取指定体育预约详情。", { bookingId: z.string().min(1) }, ({ bookingId }) => service.booking(bookingId));
   tool("sports_cancel_link", "返回官方预约记录页，在官网取消指定预约。", { bookingId: z.string().min(1) }, ({ bookingId }) => service.cancellationLink(bookingId));
+  tool("sports_finance", "读取本人预约财务订单和确认状态。", { tradeNo: z.string().min(1) }, ({ tradeNo }) => service.finance(tradeNo));
 }

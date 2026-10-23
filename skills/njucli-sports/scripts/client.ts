@@ -1,6 +1,7 @@
 import { AppError } from "../../../src/core/errors.js";
 import { parseCampusDate } from "../../../src/core/dates.js";
-import type { FetchLike } from "../../../src/core/types.js";
+import type { FetchLike, FetchResponse } from "../../../src/core/types.js";
+import type { SportsIdentity } from "../../../src/auth/sports-token.js";
 import {
   sportsHeaders,
   SPORTS_API_BASE_URL,
@@ -27,6 +28,9 @@ interface Venue {
 }
 interface Booking {
   id: RemoteId;
+  tradeNo?: string;
+  orderRoleId?: RemoteId;
+  orderUserId?: RemoteId;
   campusName?: string | null;
   venueName?: string | null;
   siteName?: string | null;
@@ -36,11 +40,15 @@ interface Booking {
 }
 interface SlotSchedule {
   spaceTimeInfo: { id: RemoteId; beginTime: string; endTime: string }[];
-  reservationDateSpaceInfo: Record<string, ({ spaceName: string } & Record<string, unknown>)[]>;
+  reservationDateSpaceInfo: Record<string, ({ id: RemoteId; spaceName: string; venueSpaceGroupId?: RemoteId } & Record<string, unknown>)[]>;
+  reservationDateList: string[];
+  token: string;
+  orderParamView: { isCaptchaCheck: number; isForceBindMobile: number };
+  siteParam: { buddyNumMin: number; buddyNumMax: number };
 }
 
 export class SportsClient {
-  constructor(private readonly fetch: FetchLike, private readonly accessToken: string) {}
+  constructor(private readonly fetch: FetchLike, private readonly accessToken: string, private readonly identity?: SportsIdentity) {}
 
   async listVenues(sportType?: string | number): Promise<SportsVenueSiteSummary[]> {
     const query: SportsSignParameter[] = sportType === undefined ? [] : [["sportType", String(sportType).trim()]];
@@ -64,22 +72,32 @@ export class SportsClient {
     const spaces = data.reservationDateSpaceInfo[date] ?? [];
     return {
       date,
+      reservationDates: data.reservationDateList,
+      requiresVerification: data.orderParamView.isCaptchaCheck === 1,
+      boundMobileRequired: data.orderParamView.isForceBindMobile === 1,
+      buddyMin: data.siteParam.buddyNumMin,
+      buddyMax: data.siteParam.buddyNumMax,
       slots: data.spaceTimeInfo.map((time) => ({
+        timeId: String(time.id),
         startAt: time.beginTime,
         endAt: time.endTime,
         spaces: spaces.flatMap((space) => {
-          const cell = space[String(time.id)] as { reservationStatus: keyof typeof RESERVATION_STATES } | undefined;
-          return cell ? [{ name: space.spaceName, state: RESERVATION_STATES[cell.reservationStatus] }] : [];
+          const cell = space[String(time.id)] as { reservationStatus: keyof typeof RESERVATION_STATES; orderFee?: number } | undefined;
+          return cell ? [{ spaceId: String(space.id), groupId: space.venueSpaceGroupId == null ? null : String(space.venueSpaceGroupId), name: space.spaceName, state: RESERVATION_STATES[cell.reservationStatus], fee: cell.orderFee ?? null }] : [];
         }).sort((left, right) => left.name.localeCompare(right.name, "zh-CN")),
       })),
     };
   }
 
   async listBookings(page = 0, size = 20): Promise<SportsBookingSummary[]> {
+    if (!this.identity) throw new AppError("AUTH_CAPABILITY_UNKNOWN", "缺少体育登录身份，无法核对本人订单");
     const data = await this.get<{ content: Booking[] }>("/api/orders/mine", [
       ["page", String(page)], ["size", String(size)],
     ]);
-    return data.content.map(booking);
+    // The official mine list includes orders where the user is a companion.
+    // Only the creator's matching role/userId receives the detail/action buttons.
+    return data.content.filter(item => String(item.orderRoleId) === String(this.identity!.role)
+      && String(item.orderUserId) === String(this.identity!.userId)).map(booking);
   }
 
   async getBooking(orderId: string | number): Promise<SportsBookingSummary> {
@@ -99,6 +117,10 @@ export class SportsClient {
     });
   }
 
+  async finance(tradeNo: string): Promise<Record<string, unknown>> {
+    return this.get("/api/venue/finances/order/detail", [["venueTradeNo", tradeNo]]);
+  }
+
   private async get<T>(path: string, query: readonly SportsSignParameter[] = []): Promise<T> {
     const timestamp = String(Date.now());
     const signedQuery: SportsSignParameter[] = [...query, ["nocache", timestamp]];
@@ -111,11 +133,17 @@ export class SportsClient {
         cgAuthorization: this.accessToken,
       }),
     });
+    return this.result<T>(response, path);
+  }
+
+  private async result<T>(response: FetchResponse, path: string): Promise<T> {
     if (response.status === 401 || response.status === 403) throw authRequired();
     if (!response.ok) throw new Error(`体育场馆服务返回 HTTP ${response.status}: ${path}`);
-    const result = JSON.parse(await response.text()) as { code: number; data: T; message?: string };
+    let result: { code: number; data: T; message?: string };
+    try { result = JSON.parse(await response.text()) as typeof result; }
+    catch (cause) { throw new AppError("REMOTE_SCHEMA_CHANGED", "体育场馆接口未返回 JSON", { cause, details: { path } }); }
     if (result.code === 401 || result.code === 403) throw authRequired();
-    if (result.code !== 200) throw new Error(result.message ?? `体育场馆接口错误 ${result.code}: ${path}`);
+    if (result.code !== 200) throw new AppError("REMOTE_UNAVAILABLE", result.message ?? `体育场馆接口错误 ${result.code}: ${path}`, { details: { remoteCode: result.code, path } });
     return result.data;
   }
 }
@@ -136,6 +164,7 @@ function venue(data: Venue): SportsVenueSiteSummary {
 function booking(data: Booking): SportsBookingSummary {
   return {
     bookingId: String(data.id),
+    tradeNo: data.tradeNo ?? null,
     campus: data.campusName ?? null,
     venue: data.venueName ?? null,
     site: data.siteName ?? null,

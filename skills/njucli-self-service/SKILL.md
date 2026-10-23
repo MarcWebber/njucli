@@ -55,14 +55,18 @@ njucli self-service cancel ORDER_ID --format json
 
 ```bash
 njucli self-service cloud --format json
+njucli self-service cloud-upload ./文件.pdf --terminal TERMINAL_CODE --format json
+njucli self-service cloud-delete ORDER_ID --terminal TERMINAL_CODE --format json
 ```
 
 查询平台当前收费/免费份数配置、文件页数上限及待打印文件。`initFreeCopies` 是平台规则，非个人剩余额度。云打印支持 PDF、Word 和图片：文件上限 5 MB，图片宽高不超过 14400 像素，文档页数上限取 `config.filePageLimit`。
 
-CLI 仅提供规则与列表查询。上传、删除和现场打印未封装，需通过打印机当次二维码进入官方页面操作。请勿将二维码链接保存为通用入口。
+`cloud-upload` 上传一个文件并回读本人待打印列表，返回订单编号、取件信息和费用。`TERMINAL_CODE` 来自 `terminals` 返回的真实终端。当前学校部署可复用本人统一认证会话完成上传和删除，无需保存或伪造设备二维码参数。
+
+`cloud-delete` 删除本人待打印列表中的一个文件，回读确认目标已移除。现场打印仍由本人在终端操作；上传不会启动设备出纸。
 
 ## MCP 接口说明
 
-MCP 提供查询及 `self_service_create`、`self_service_send`、`self_service_cancel`，与 CLI 共用身份、费用检查和结果回读。
+MCP 提供查询及 `self_service_create`、`self_service_send`、`self_service_cancel`、`self_service_cloud_upload`、`self_service_cloud_delete`，与 CLI 共用身份、费用检查和结果回读。
 
 接口与实网验证范围见[接口记录](references/interfaces.md)。

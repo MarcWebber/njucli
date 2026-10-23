@@ -20,7 +20,7 @@ export function registerSportsCommands(
   service: SportsServices,
   runtime: CommandRuntime,
 ): Command {
-  const sports = program.command("sports").description("查询体育场馆与预约记录");
+  const sports = program.command("sports").description("体育场馆时段、本人预约与官方办理链接");
 
   addFormatOption(sports.command("venues").description("列出体育场馆").option("--sport-id <id>", "运动类型 ID"))
     .action(async (options: FormatOptions & { sportId?: string }) => runCommand(runtime, options, async () => {
@@ -73,6 +73,11 @@ export function registerSportsCommands(
     .action(async (bookingId: string, options: FormatOptions) => runCommand(runtime, options, async () => {
       const data = await service.booking(bookingId);
       return { data, text: sportsBookingText(data) };
+    }));
+
+  addFormatOption(sports.command("finance <trade-no>").description("读取本人预约财务订单和确认状态"))
+    .action((tradeNo: string, options: FormatOptions) => runCommand(runtime, options, async () => {
+      const data = await service.finance(tradeNo); return { data, text: JSON.stringify(data, null, 2) };
     }));
 
   return sports;

@@ -10,7 +10,7 @@ NjuCLI 提供统一 CLI、stdio MCP 工具和 NjuCLI Skills 套件。安装步�
 | 支持本地 stdio MCP | 收发邮件、编辑文档与论文、管理文件和表格、选退课、报名及查询 |
 | 只支持远程 HTTP 工具 | 需要宿主另行提供本地执行环境 |
 
-仓库的 `.codex-plugin/plugin.json` 提供套件清单，`.mcp.json` 提供 MCP 配置。全局安装将整个套件注册到 `${CODEX_HOME:-~/.codex}/skills/njucli/`，其中 18 个业务子目录各有自己的 `SKILL.md`，宿主按任务选择对应 Skill。其他支持递归发现的宿主可通过 `NJUCLI_SKILLS_DIR` 指定全局 Skills 目录，套件注册到其中的 `njucli/`。目录与验证范围见[安装与维护](installation.md)。
+仓库的 `.codex-plugin/plugin.json` 提供套件清单，`.mcp.json` 提供 MCP 配置。全局安装将整个套件注册到 `${CODEX_HOME:-~/.codex}/skills/njucli/`，各业务子目录保留自己的 `SKILL.md`，宿主按任务选择对应 Skill。其他支持递归发现的宿主可通过 `NJUCLI_SKILLS_DIR` 指定全局 Skills 目录，套件注册到其中的 `njucli/`。目录与验证范围见[安装与维护](installation.md)。
 
 Claude Code 使用 `.claude-plugin/` 中的原生插件与 marketplace 声明，按[Claude Code 安装步骤](installation.md#claude-code)一次安装全部业务 Skill 和 MCP 入口。
 
@@ -33,7 +33,7 @@ Claude Code 使用 `.claude-plugin/` 中的原生插件与 marketplace 声明，
 
 ## MCP 工具概览
 
-`njucli mcp` 注册全部公开 CLI 动作，提供 245 个工具，其中 87 个写操作。工具名称、参数和读写属性由客户端通过 `tools/list` 发现。新增 CLI 动作时，安装检查会核对对应 MCP 入口。
+`njucli mcp` 注册全部公开 CLI 动作。工具名称、参数和读写属性由客户端通过 `tools/list` 发现。新增 CLI 动作时，安装检查会核对对应 MCP 入口。
 
 ## 客户端指南
 

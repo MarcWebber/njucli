@@ -22,6 +22,12 @@ export interface HoldingRow {
 }
 
 export interface LoanRow {
+  loanId: string | number;
   title: string;
   normReturnDate: string;
+}
+
+export interface LibraryRequestRow {
+  requestId: string | number;
+  [key: string]: unknown;
 }

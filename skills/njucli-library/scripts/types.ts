@@ -29,6 +29,7 @@ export interface LibrarySearchPage {
 }
 
 export interface LibraryLoan {
+  loanId: string;
   title: string;
   dueOn: string;
   overdue: boolean;

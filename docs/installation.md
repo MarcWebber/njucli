@@ -21,7 +21,7 @@ skills/
     ├── njucli-auth/SKILL.md
     ├── njucli-ehall/SKILL.md
     ├── njucli-campus/SKILL.md
-    └── …                      ← 共 18 个业务 Skill
+    └── …                      ← 全部业务 Skill
 ```
 
 宿主递归读取套件中的业务 Skill。Codex 与 NJURunner 的 Pi 加载器已实际验证；其他客户端需支持目录递归发现。升级会将本包管理的旧业务链接收拢到套件；其他内容保持原有归属。
@@ -34,7 +34,7 @@ skills/
 claude plugin install njucli --marketplace MarcWebber/njucli --scope user
 ```
 
-重新打开 Claude Code 会话后，插件提供 18 个业务 Skill 和 `njucli` MCP 服务。可使用 `/njucli:njucli-campus` 查询公开镜像，或直接描述校园任务。插件中的 Skill 统一调用全局 `njucli`，校园账号和会话使用同一份 CLI 配置。
+重新打开 Claude Code 会话后，插件提供完整业务 Skills 和 `njucli` MCP 服务。可使用 `/njucli:njucli-campus` 查询公开镜像，或直接描述校园任务。插件中的 Skill 统一调用全局 `njucli`，校园账号和会话使用同一份 CLI 配置。
 
 使用 `claude plugin details njucli@njucli` 查看组件清单，使用 `claude plugin update njucli@njucli` 更新插件。CLI 与依赖通过 `njucli upgrade` 更新。
 
