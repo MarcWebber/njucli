@@ -70,7 +70,7 @@ SSO 的 CAS `service` 使用 EHall `/login?service=https%3A%2F%2Fehall.nju.edu.c
 
 书目与馆藏使用 OPAC，校外限制下通过已登录的官方 WebVPN 访问。读者登录依赖 SSO，CAS service 为 `http://opac.nju.edu.cn:8081/CASSSO2/caslogin.jsp`；正式 `loginExternal` 回跳令牌写入对应站点的 `jwt` Cookie 后，以 `jwtOpacAuth` 请求头回读 `/find/loanInfo/loanList` 确认会话。Cookie 经共享 `BrowserSession`、账号锁和原子文件保存，后续借阅调用复用当次会话；令牌字段在输出边界脱敏。
 
-实网通过五种检索字段、检索翻页和空结果、书目详情、8 册及跨页 90 册馆藏、读者登录、跨进程探测和当前借阅空列表。CLI 与 MCP 查询均已核对。正数借阅及逾期映射待实际业务核对。运行前提见[HTTPS 配置](../skills/njucli-library/references/network.md)，原始现象和截图见[校园网验证报告](reports/2026-10-10-intranet.md)。
+实网通过五种检索字段、检索翻页和空结果、书目详情、8 册及跨页 90 册馆藏、读者登录、跨进程探测和当前借阅空列表。CLI 与 MCP 查询均已核对。正数借阅及逾期映射待实际业务核对。运行前提见[HTTPS 配置](../skills/njucli-library/references/network.md)。
 
 ## 体育场馆
 
@@ -83,7 +83,7 @@ SSO 的 CAS `service` 使用 EHall `/login?service=https%3A%2F%2Fehall.nju.edu.c
 | `/api/reservation/day/info` | `venueSiteId/searchDate/hasReserveInfo=1`；结果 `spaceTimeInfo/reservationDateSpaceInfo` |
 | `/api/orders/mine`、`/api/orders/{id}` | 订单列表与详情；列表分页从 0 开始 |
 
-请求携带 `cgAuthorization` 和 `scripts/signing.ts` 生成的签名。时段状态来自 `reservationStatus`，CLI 输出为 `state`。2026-10-10 实网通过 35 个场地列表、场地详情、当日 7 个时段、14 条预约列表与可读取的预约详情。列表中的两条记录在详情接口返回学校的归属校验拒绝；CLI 保留该错误。官网详情按钮指向的记录已核对。具体查询与权限范围见[校园网验证报告](reports/2026-10-10-intranet.md)。
+请求携带 `cgAuthorization` 和 `scripts/signing.ts` 生成的签名。时段状态来自 `reservationStatus`，CLI 输出为 `state`。实网通过 35 个场地列表、场地详情、当日 7 个时段、14 条预约列表与可读取的预约详情。列表中的两条记录在详情接口返回学校的归属校验拒绝；CLI 保留该错误。官网详情按钮指向的记录已核对。
 
 ## 校园信息
 
@@ -101,13 +101,13 @@ SSO 的 CAS `service` 使用 EHall `/login?service=https%3A%2F%2Fehall.nju.edu.c
 
 [南大邮箱](https://mail.nju.edu.cn/)使用 `imap.exmail.qq.com:993` TLS；客户端专用密码需配合官网 IMAP/SMTP 开关。查询使用 `EXAMINE/BODY.PEEK`，保持邮件已读状态。邮件 ID 编码邮箱地址、邮件夹、`uidValidity` 与 UID，正文和附件按 ID 定位所属邮箱；附件编号从 1 开始。
 
-发送通过 `smtp.exmail.qq.com:465` TLS，使用当前绑定邮箱与客户端专用密码。`mail send` 和 `mail_send` 共用 `MailClient.send`，成功表示 SMTP 已接收全部目标收件人；部分拒收保留已接收与拒收地址，发送失败保持单次提交。公开协议结果与认证投递待验范围见[MCP 与邮件验证](reports/2026-10-21-mcp-write-tools.md)。
+发送通过 `smtp.exmail.qq.com:465` TLS，使用当前绑定邮箱与客户端专用密码。`mail send` 和 `mail_send` 共用 `MailClient.send`，成功表示 SMTP 已接收全部目标收件人；部分拒收保留已接收与拒收地址，发送失败保持单次提交。已验证 SMTP TLS 握手和 EHLO 响应；真实认证发送及收件箱最终投递仍待实网核对。
 
 两个真实邮箱的绑定、切换、分页、搜索和正文已验证。真实附件下载及自动生成专用密码的完整绑定向导待实网验收。
 
 
 ## 校医院
 
-[医院官网](https://hospital.nju.edu.cn/)的“自助服务”指向 [自助服务平台](https://ndyy.nju.edu.cn/zzfw/)。2026-10-10 已通过 `/zzfw/asLogin.aspx` 复用 SSO，回到 `/zzfw/Pages/Default.Aspx`，并读取 `/zzfw/ashx/PageInit.ashx` 的 `homeInfo/menuInfo`。实际菜单包括体检、疫苗、急救课程、活动和结核筛查预约，以及报告、大学生医保入口。
+[医院官网](https://hospital.nju.edu.cn/)的“自助服务”指向 [自助服务平台](https://ndyy.nju.edu.cn/zzfw/)，菜单包括体检、疫苗、急救课程、活动和结核筛查预约，以及报告、大学生医保入口。
 
-`njucli-hospital` 已提供医院项目与时段、本人预约、体检报告和大学生医保的原子动作。本站会话交接由业务 client 复用公共 SSO，会话探测以医院本人页面为准。请求字段、权限范围及已验证结果随所属 Skill 的[接口说明](../skills/njucli-hospital/references/interfaces.md)维护，实际 CLI/MCP 及写入回读见[验证报告](reports/2026-10-22-hospital-dorm-atomic.md)。
+`njucli-hospital` 已提供医院项目与时段、本人预约、体检报告和大学生医保的原子动作。本站会话交接由业务 client 复用公共 SSO，会话探测以医院本人页面为准。请求字段、权限范围及已验证结果随所属 Skill 的[接口说明](../skills/njucli-hospital/references/interfaces.md)维护。

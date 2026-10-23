@@ -1,4 +1,3 @@
-import { mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { AsyncLocalStorage } from "node:async_hooks";
 
@@ -70,7 +69,7 @@ async function openBrowserSession(account: AccountRecord, headless: boolean): Pr
   const cookiePath = join(account.configDir, "session-cookies.json");
   const cookies = await readJsonFile<Awaited<ReturnType<BrowserContext["cookies"]>>>(cookiePath) ?? [];
   const context = await request.newContext({ ...proxyOptions(), storageState: { cookies, origins: [] } });
-  return new BrowserSession(context, cookiePath, { directory: account.browserDataDir, headless });
+  return new BrowserSession(context, cookiePath, { headless });
 }
 
 export class BrowserSession {
@@ -78,7 +77,7 @@ export class BrowserSession {
   constructor(
     private context: BrowserContext | APIRequestContext,
     private readonly cookiePath: string,
-    private readonly browser?: { directory: string; headless: boolean },
+    private readonly browser?: { headless: boolean },
   ) {}
 
   readonly request: FetchLike = async (input, init = {}) => {
@@ -124,10 +123,9 @@ export class BrowserSession {
     if (!("pages" in this.context)) {
       const previous = this.context;
       const { cookies } = await previous.storageState();
-      const { directory } = this.browser!;
-      await mkdir(directory, { recursive: true });
       const executablePath = process.env.NJUCLI_BROWSER_EXECUTABLE;
-      const context = await chromium.launchPersistentContext(directory, {
+      // Cookies are persisted separately; Chromium's profile locks must stay local to this process.
+      const context = await chromium.launchPersistentContext("", {
         ...proxyOptions(),
         headless, ...(executablePath ? { executablePath } : { channel: "chrome" }),
       });

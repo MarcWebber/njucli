@@ -58,7 +58,7 @@
 
 上传为 `POST /order/cloud-print-order/create` multipart，字段 `file/fileType/terminalCode`；`fileType` 是文件扩展名。文件不超过 5 MB，支持 pdf/doc/docx/png/jpg/jpeg/gif/bmp，图片宽高不超过 14400 像素，PDF/Word 页数按 `filePageLimit`。成功 `data` 返回 `orderId/takeCode/expireTime/fee`，上传后在本人待打印列表中按订单编号、文件名与类型回读。
 
-删除使用 `GET /order/cloud-print-order-byGet/{orderId}/{terminalCode}`，是写操作；先确认订单在本人的待打印列表，提交一次后回读目标已移除。上传和删除不启动现场打印。真实入口及清理证据见[原子能力报告](../../../docs/reports/2026-10-22-learning-atomic.md#云打印)。
+删除使用 `GET /order/cloud-print-order-byGet/{orderId}/{terminalCode}`，是写操作；先确认订单在本人的待打印列表，提交一次后回读目标已移除。上传和删除不启动现场打印。
 
 ## 领取与错误处理
 

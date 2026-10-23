@@ -68,4 +68,3 @@ CLI 与 MCP 共用同一业务实现，提供查询、文件操作、作业管�
 | `POST /api/course/activities/{id}/submissions` | JSON：`comment/uploads/slides/is_draft/mode/other_resources/uploads_in_rich_text`；多选模式可含 `multiple_choice_title`。返回 `submission.id` 后回读本人记录 |
 | `PUT /api/submissions/{id}/retract` | 撤回本人目标作业中的提交，随后确认记录已移出正式提交或变为草稿 |
 
-实际 CLI/MCP 与回读结果、已清理的验证材料、学生提交权限边界见[原子能力验证报告](../../../docs/reports/2026-10-22-learning-atomic.md)。
