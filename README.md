@@ -58,7 +58,7 @@ https://github.com/MarcWebber/njucli
 
 [点击加入飞书用户群](https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=dc4hab18-9c9e-4ca7-bdf0-dde104e2552c)，交流用法、反馈问题和获取更新。
 
-<img src="docs/assets/njucli-user-group.png" alt="NjuCLI 用户群二维码" width="200" />
+<img src="docs/assets/njucli-user-group.jpg" alt="NjuCLI 用户群二维码" width="200" />
 
 扫码加入 NjuCLI 用户群，也可使用上方链接。
 
