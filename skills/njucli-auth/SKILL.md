@@ -35,7 +35,7 @@ njucli auth authenticate --credentials - --format json < /path/to/auth.json
 
 `account use` 或环境变量 `NJUCLI_ACCOUNT` 用于选择本地账号。业务命令会按需恢复登录，`auth status` 返回 `valid` 表示会话可用。CLI 使用专用浏览器与账号目录，普通浏览器中的登录由该浏览器独立保存。
 
-凭据和 Cookie 保存在 `~/.config/njucli/accounts/<账号>/`，可通过 `XDG_CONFIG_HOME` 设置配置根目录，文件权限为 0600。浏览器资料目录由 `XDG_DATA_HOME` 设置数据根目录。同一账号的调用通过进程锁串行读写 Cookie。
+凭据和 Cookie 保存在 `~/.config/njucli/accounts/<账号>/`，可通过 `XDG_CONFIG_HOME` 设置配置根目录，文件权限为 0600。浏览器每次启动使用临时资料目录，Cookie 从账号配置目录加载并保存。同一账号的调用通过进程锁串行读写 Cookie。
 
 ## 会话维护
 

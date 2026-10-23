@@ -1,9 +1,0 @@
-{
-  "host": "smtp.exmail.qq.com",
-  "port": 465,
-  "success": true,
-  "tlsAuthorized": true,
-  "response": "220 smtp.qq.com Esmtp QQ QMail Server\r\n250-smtp.qq.com\r\n250-PIPELINING\r\n250-SIZE 73400320\r\n250-AUTH LOGIN PLAIN\r\n250-AUTH=LOGIN\r\n250-MAILCOMPRESS\r\n250 8BITMIME\r\n",
-  "authAttempted": false,
-  "messageSent": false
-}

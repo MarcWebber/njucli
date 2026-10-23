@@ -29,5 +29,3 @@ njucli library loans --format json
 ```
 
 返回当前在借图书列表、应还日期及逾期状态；支持 `--page` 和 `--page-size`，页码从 1 开始。逾期按南京当地日期与应还日期比较。
-
-2026-10-10 已核对五种检索字段、翻页、空结果、详情、跨页馆藏、读者登录和当前借阅空列表。CLI 与只读 MCP 的实网结果见[验证报告](https://github.com/MarcWebber/njucli/blob/main/docs/reports/2026-10-10-intranet.md)。
