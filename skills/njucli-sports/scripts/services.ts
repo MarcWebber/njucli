@@ -10,11 +10,7 @@ export type SportsServices = {
   slots: SportsClient["listSlots"];
   bookings: SportsClient["listBookings"];
   booking: SportsClient["getBooking"];
-  reservationInfo: SportsClient["reservationInfo"];
-  reserve: SportsClient["reserve"];
   finance: SportsClient["finance"];
-  confirmFree: SportsClient["confirmFree"];
-  cancel: SportsClient["cancel"];
   reservationLink(venueSiteId: string, date: string): Promise<SportsReservationLink>;
   cancellationLink(bookingId: string): Promise<{
     url: string;
@@ -39,11 +35,7 @@ export function createSportsServices(runtime: SkillRuntime): SportsServices {
     slots: (venueSiteId, date) => withSports((client) => client.listSlots(venueSiteId, date)),
     bookings: (page, size) => withSports((client) => client.listBookings(page, size)),
     booking: (bookingId) => withSports((client) => client.getBooking(bookingId)),
-    reservationInfo: (input) => withSports((client) => client.reservationInfo(input)),
-    reserve: (input) => withSports((client) => client.reserve(input)),
     finance: (tradeNo) => withSports((client) => client.finance(tradeNo)),
-    confirmFree: (tradeNo) => withSports((client) => client.confirmFree(tradeNo)),
-    cancel: (tradeNo, reason) => withSports((client) => client.cancel(tradeNo, reason)),
     reservationLink: async (venueSiteId, date) => ({
       url: `https://ggtypt.nju.edu.cn/venue/venue-reservation/${encodeURIComponent(venueSiteId)}`,
       venueSiteId,

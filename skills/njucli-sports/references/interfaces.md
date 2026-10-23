@@ -1,18 +1,14 @@
 # 体育场馆原子接口
 
-官方入口：[南京大学体育场馆](https://ggtypt.nju.edu.cn/venue/)。以下契约来自本次真实加载的官方前端及已登录请求；写请求按学校客户端签名，正文为 URL 编码字符串。
+官方入口：[南京大学体育场馆](https://ggtypt.nju.edu.cn/venue/)。CLI 与 MCP 提供已验证的只读查询和官网办理链接。
 
 | 动作 | 官方接口 | 输入及回读 |
 | --- | --- | --- |
-| 预约确认信息 | POST `/venue-server/api/reservation/order/info` | `venueSiteId`、`reservationDate`、`weekStartDate`、`reservationOrderJson`、`reservationType`、时段接口返回的 `token`；不创建订单 |
-| 提交预约 | POST `/venue-server/api/reservation/order/submit` | 确认信息字段、金额、`orderPin`、可选电话/同伴/官方验证码；成功返回 `tradeNo` 后读取财务详情 |
 | 财务详情 | GET `/venue-server/api/venue/finances/order/detail` | `venueTradeNo` |
-| 零元确认 | POST `/venue-server/api/venue/finances/order/pay` | `venueTradeNo`、空支付方式及支付凭据、`isApp=0`；仅执行实际回读 `payFee=0`，回读 `orderStatus=1,payStatus=2` |
-| 取消预约 | POST `/venue-server/api/venue/finances/order/cancel` | `venueTradeNo`、`remark`；回读 `orderStatus=2` |
 
-时段 GET `/venue-server/api/reservation/day/info` 返回数字场地、时间编号以及当次防重复参数。CLI 不输出防重复参数，预约确认或提交内部从相同场地日期取得；调用者也可显式提供学校生成的 `token`。
+时段 GET `/venue-server/api/reservation/day/info` 返回数字场地、时间编号以及当次防重复参数。CLI 仅输出时段信息，不输出防重复参数。
 
-官方预约页的 `orderPin` 是客户端点击位置编码，验证码字段由学校验证组件成功回调生成。CLI 不模拟人机验证，不猜造同伴身份。
+预约、官方人机验证、付款与取消均通过官网完成。
 
 ## 本人订单范围
 
@@ -26,7 +22,7 @@
 
 真实 CLI/MCP 已查询时段和本人创建订单：原始 14 条中过滤出 8 条创建者记录，与官方比较集合完全一致；本人订单及财务详情均成功读取。确认信息使用学校真实返回的时段编号作只读预检查，请求正文已是 URL 编码字符串，但学校返回跳转后的 `/venue/404` HTML，尚未取得业务确认信息。该接口契约仍只由官方前端确认，不能算成功接入。
 
-未提交过去时段或伪造验证码来制造成功记录。预约创建、零元确认和取消的成功回读仍待具备可预约未来时段及官方验证结果后完成，不计为成功验收。
+未提交过去时段或伪造验证码来制造成功记录。由于预约确认信息、创建、零元确认和取消未取得成功回读，这四个动作及其输入定义已从 client、CLI、MCP 移除。
 
 详细证据见[当次验证报告](../../../docs/reports/2026-10-22-learning-atomic.md)。
 

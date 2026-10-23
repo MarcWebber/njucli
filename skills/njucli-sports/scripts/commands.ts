@@ -1,8 +1,4 @@
 import type { Command } from "commander";
-import { readFile } from "node:fs/promises";
-import { z } from "zod";
-import { AppError } from "../../../src/core/errors.js";
-import { reservationInput, reserveInput } from "./input.js";
 
 import type { SportsServices } from './services.js';
 import { addFormatOption, runCommand, type CommandRuntime, type FormatOptions } from "../../../src/core/command.js";
@@ -24,7 +20,7 @@ export function registerSportsCommands(
   service: SportsServices,
   runtime: CommandRuntime,
 ): Command {
-  const sports = program.command("sports").description("体育场馆时段、预约提交、零元确认与取消");
+  const sports = program.command("sports").description("体育场馆时段、本人预约与官方办理链接");
 
   addFormatOption(sports.command("venues").description("列出体育场馆").option("--sport-id <id>", "运动类型 ID"))
     .action(async (options: FormatOptions & { sportId?: string }) => runCommand(runtime, options, async () => {
@@ -79,33 +75,9 @@ export function registerSportsCommands(
       return { data, text: sportsBookingText(data) };
     }));
 
-  for (const [name, description, schema, operation] of [
-    ["reservation-info", "读取所选场地时段的预约确认信息及金额", reservationInput, service.reservationInfo],
-    ["reserve", "提交指定场地时段的预约，验证码由官方页面完成", reserveInput, service.reserve],
-  ] as const) {
-    addFormatOption(sports.command(name).description(description).requiredOption("--input <path>", "JSON 输入文件，字段见 Skill"))
-      .action((options: FormatOptions & { input: string }) => runCommand(runtime, options, async () => {
-        let value: unknown;
-        try { value = JSON.parse(await readFile(options.input, "utf8")); }
-        catch (cause) { throw new AppError("INVALID_INPUT", "请提供可读取的 JSON 文件", { cause }); }
-        const parsed = schema.safeParse(value);
-        if (!parsed.success) throw new AppError("INVALID_INPUT", "预约输入格式有误", { details: parsed.error.issues });
-        // The schema and operation in each registration entry describe the same input.
-        const data = await (operation as (input: z.infer<typeof schema>) => Promise<unknown>)(parsed.data);
-        return { data, text: JSON.stringify(data, null, 2) };
-      }));
-  }
   addFormatOption(sports.command("finance <trade-no>").description("读取本人预约财务订单和确认状态"))
     .action((tradeNo: string, options: FormatOptions) => runCommand(runtime, options, async () => {
       const data = await service.finance(tradeNo); return { data, text: JSON.stringify(data, null, 2) };
-    }));
-  addFormatOption(sports.command("confirm-free <trade-no>").description("确认学校回读金额为零的预约订单"))
-    .action((tradeNo: string, options: FormatOptions) => runCommand(runtime, options, async () => {
-      const data = await service.confirmFree(tradeNo); return { data, text: JSON.stringify(data, null, 2) };
-    }));
-  addFormatOption(sports.command("cancel <trade-no>").description("取消本人预约并回读状态").option("--reason <text>", "取消原因"))
-    .action((tradeNo: string, options: FormatOptions & { reason?: string }) => runCommand(runtime, options, async () => {
-      const data = await service.cancel(tradeNo, options.reason); return { data, text: JSON.stringify(data, null, 2) };
     }));
 
   return sports;

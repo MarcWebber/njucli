@@ -33,7 +33,7 @@ Claude Code 使用 `.claude-plugin/` 中的原生插件与 marketplace 声明，
 
 ## MCP 工具概览
 
-`njucli mcp` 注册全部公开 CLI 动作，提供 245 个工具，其中 87 个写操作。工具名称、参数和读写属性由客户端通过 `tools/list` 发现。新增 CLI 动作时，安装检查会核对对应 MCP 入口。
+`njucli mcp` 注册全部公开 CLI 动作。工具名称、参数和读写属性由客户端通过 `tools/list` 发现。新增 CLI 动作时，安装检查会核对对应 MCP 入口。
 
 ## 客户端指南
 
