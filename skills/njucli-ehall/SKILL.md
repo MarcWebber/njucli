@@ -1,6 +1,6 @@
 ---
 name: njucli-ehall
-description: 查询南京大学教务与网上办事大厅 (e-Hall)，包括空闲教室、课表、成绩、考试、培养方案与日历导出，办理研究生选退课、行程填报、个人资料维护及奖学金草稿填写。
+description: 查询南京大学教务与网上办事大厅 (e-Hall)，包括空闲教室、课表、成绩、考试、培养方案与日历导出，办理研究生选退课、行程填报、个人资料维护及奖学金草稿填写与确认后提交。
 ---
 
 # 教务与网上办事
@@ -96,10 +96,19 @@ njucli ehall scholarship list --format json
 njucli ehall scholarship applications --format json
 njucli ehall scholarship save --input ./draft.json --dry-run --format json
 njucli ehall scholarship save --input ./draft.json --format json
+njucli ehall scholarship submit 申请编号 --format json
 ```
 
 使用 `scholarship list`、`show` 和 `form` 查询奖种、等级及填写模板。先用 `save --dry-run` 预览，再保存本人 `SHZT=0` 的草稿并回读确认；支持申请理由、社会实践、科研创新说明、联系方式及首次附件上传。已有附件保留，替换和删除在官网办理。参数及验证范围见[奖学金填写](references/scholarship.md)。
 
-使用 `scholarship applications` 和 `application` 核对本人申请，状态采用远端原文；“待辅导员审核”表示流程仍在进行。大厅通用 `ehall applications` 的空结果不能判断奖学金未提交。草稿保存后向用户提供返回的 `reviewUrl` 核对链接和申请编号，说明用相应账号进入“我的申请”，确认内容及附件后自行提交。
+使用 `scholarship applications` 和 `application` 核对本人申请，状态采用远端原文；“待辅导员审核”表示流程仍在进行。大厅通用 `ehall applications` 的空结果不能判断奖学金未提交。奖学金申请按以下顺序办理：
+
+1. 保存草稿并回读，使用 `scholarship submit 申请编号` 获取提交预览。
+2. 向用户展示奖种、学年、等级、金额、申请理由、附件和返回的 `reviewUrl` 核对链接，请用户用对应账号进入“我的申请”核对，并明确询问“是否提交这份申请？”。
+3. 等待用户针对这份申请明确同意提交。用户提出“申请一下”时先完成草稿和上述确认步骤；内容或目标变化后重新核对并询问。
+4. 收到明确同意后执行 `njucli ehall scholarship submit 申请编号 --yes --format json`。MCP 使用 `ehall_scholarship_submit`，预览采用 `confirmed=false`，用户确认后设置 `confirmed=true`。
+5. 依据回读结果报告申请编号与学校返回的审核状态。结果待确认时先查询该申请，再决定后续操作。
+
+上述确认流程同样适用于官网页面和直接接口提交。
 
 接口字段见[接口说明](references/interfaces.md)。

@@ -35,6 +35,13 @@ test("统一安装：njucli、全局套件、目录、模板与 MCP", async (t) 
   await execute("npm", ["install", "--global", "--prefix", prefix, "--foreground-scripts", "--no-audit", "--no-fund", join(directory, packed.filename)], { cwd: directory, env });
   const run = async (args) => (await execute("njucli", args, { cwd: directory, env })).stdout;
   assert.match(await run(["--help"]), /Usage: njucli/);
+  const submitHelp = await run(["ehall", "scholarship", "submit", "--help"]);
+  assert.match(submitHelp, /--yes/);
+  assert.match(submitHelp, /--dry-run/);
+  await assert.rejects(run(["ehall", "scholarship", "submit", " ", "--yes", "--format", "json"]), error => {
+    assert.equal(JSON.parse(error.stdout).error.code, "INVALID_INPUT");
+    return true;
+  });
   const skillsRoot = join(env.CODEX_HOME, "skills");
   assert.deepEqual(await readdir(skillsRoot), ["njucli"]);
   assert.deepEqual((await readdir(join(skillsRoot, "njucli"))).sort(), names.sort());
@@ -60,6 +67,12 @@ test("统一安装：njucli、全局套件、目录、模板与 MCP", async (t) 
     await client.connect(transport);
     const { tools } = await client.listTools();
     assert.equal(new Set(tools.map((tool) => tool.name)).size, tools.length);
+    const submitTool = tools.find(tool => tool.name === "ehall_scholarship_submit");
+    assert.equal(submitTool.annotations.readOnlyHint, false);
+    assert.equal(submitTool.annotations.idempotentHint, false);
+    assert.equal(submitTool.inputSchema.properties.confirmed.default, false);
+    const invalidSubmit = await client.callTool({ name: "ehall_scholarship_submit", arguments: { applicationId: " " } });
+    assert.equal(invalidSubmit.isError, true);
     const toolsByName = new Set(tools.map(tool => tool.name));
     const namesByCommand = { ehall_scholarship_list: "ehall_scholarships", ehall_scholarship_show: "ehall_scholarship" };
     const checkCommands = (program, path = []) => {
