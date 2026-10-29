@@ -1,5 +1,5 @@
 import { classroomQuerySchema } from './classrooms.js';
-import { scholarshipDraftSchema } from './scholarship.js';
+import { scholarshipDraftSchema, scholarshipSubmitSchema } from './scholarship.js';
 import { tripInputSchema } from './trip.js';
 import { profileInputSchema } from './profile.js';
 import { z } from 'zod';
@@ -74,6 +74,8 @@ export function registerEHallTools(tool: McpTool, service: EHallServices): void 
   tool("ehall_scholarship_save", "保存本人奖学金草稿并回读；dryRun 预览，输入中的附件使用本地路径。", {
     input: scholarshipDraftSchema, dryRun: z.boolean().optional(),
   }, ({ input, dryRun }) => service.saveScholarshipDraft(input, dryRun), { destructiveHint: true });
+  tool("ehall_scholarship_submit", "预览本人奖学金申请及官网链接；向用户展示并询问是否提交，收到明确同意后设置 confirmed=true 提交草稿并回读。", scholarshipSubmitSchema.shape,
+    ({ applicationId, confirmed }) => service.submitScholarship(applicationId, confirmed), { destructiveHint: true });
   tool("ehall_trip_submit", "提交本人假期行程登记并回读；dryRun 预览。", {
     input: tripInputSchema, dryRun: z.boolean().optional(),
   }, ({ input, dryRun }) => service.submitTrip(input, dryRun), { destructiveHint: true });

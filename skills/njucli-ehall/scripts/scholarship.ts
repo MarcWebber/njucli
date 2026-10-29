@@ -30,6 +30,11 @@ export const scholarshipDraftSchema = z.object({
     ctx.addIssue({ code: "custom", message: "至少填写一个内容字段" });
   }
 });
+export const scholarshipSubmitSchema = z.object({
+  applicationId: id,
+  confirmed: z.boolean().default(false),
+});
+
 export type ScholarshipDraftInput = z.infer<typeof scholarshipDraftSchema>;
 const EDIT_FIELDS = { reason: "SQLY", practice: "BZ5", research: "DZ_KYCX", phone: "BZ18", contactPhone: "BZ19", email: "DZ_DZYX" } as const;
 // These are the fields collected by the official save handler, not an arbitrary model update.
@@ -147,6 +152,43 @@ export class ScholarshipClient {
     return { ...application(entry), editable: text(entry, "SHZT") === "0" && text(row, "SHZT") === "0", values: values(row), attachments: await this.attachments(text(row, "FJ")), link: SCHOLARSHIP_LINK };
   }
 
+  async submitScholarship(applicationId: string, confirmed = false) {
+    await this.prepare();
+    const { entry, row } = await this.ownRecord(applicationId);
+    const canSubmit = text(entry, "SHZT") === "0" && text(row, "SHZT") === "0";
+    const preview = {
+      application: application(entry), level: text(entry, "DJMC"), amount: text(row, "JE"),
+      values: values(row), attachments: await this.attachments(text(row, "FJ")), canSubmit,
+    };
+    if (!confirmed) return {
+      submitted: false, preview, reviewUrl: SCHOLARSHIP_LINK,
+      nextStep: canSubmit ? "请向用户展示申请内容和核对链接，询问是否提交；收到明确同意后执行 submit --yes。" : "请查看当前申请的审核状态。",
+    };
+    if (!canSubmit) throw new AppError("INVALID_INPUT", `提交对象须为本人草稿（SHZT=0）；当前状态：${required(entry, "SHZT_DISPLAY")}`);
+    const award = await this.scholarship(required(row, "JXJDM"));
+    if (award.groupAward) throw new AppError("INVALID_INPUT", "团体奖学金请通过官网核对成员后提交");
+    const data = Object.fromEntries(PRESERVED_FIELDS.filter(key => row[key] !== undefined).map(key => [key, row[key]]));
+    data.JXJSQLXCS = required(entry, "FLDM");
+    for (const key of ["PCDM", "PDXN", "PDXQ", "JXJDJDM", "SQLY"]) required(data, key);
+    if (!["0", "1"].includes(text(data, "DZ_SFQYSQBSZ"))) throw new AppError("REMOTE_SCHEMA_CHANGED", "请通过官网核对当前申请表单模式");
+    const current = await this.ownRecord(applicationId);
+    if (text(current.entry, "SHZT") !== "0" || text(current.row, "SHZT") !== "0" || PRESERVED_FIELDS.some(key => text(current.row, key) !== text(row, key))) {
+      throw new AppError("INVALID_INPUT", "申请内容或状态已变化，请重新预览并取得用户确认");
+    }
+    const result = await this.post("/modules/scholarShipApply/Applyjxj.do", {
+      data: JSON.stringify({ INDATA: JSON.stringify(data), MODE: "T_JXJ_PDXX", ACTIONTYPE: "MODIFY", TYPE: "1" }),
+    });
+    if (result.returnCode !== "#E000000000000" || !result.data || String((result.data as Row).flag) !== "1") {
+      throw new AppError("REMOTE_UNAVAILABLE", "提交结果待确认，请先查询申请状态，再决定后续操作");
+    }
+    const after = await this.ownRecord(applicationId);
+    if (text(after.entry, "SHZT") === "0" || required(after.row, "SHZT") !== text(after.entry, "SHZT") ||
+      PRESERVED_FIELDS.some(key => data[key] !== undefined && text(after.row, key) !== text(data, key))) {
+      throw new AppError("REMOTE_SCHEMA_CHANGED", "提交响应已成功，申请状态或内容回读待核对，请通过官网确认");
+    }
+    return { submitted: true, application: application(after.entry), reviewUrl: SCHOLARSHIP_LINK };
+  }
+
   async saveScholarshipDraft(input: ScholarshipDraftInput, dryRun = false) {
     const files = await Promise.all((input.attachments ?? []).map(async path => {
       if (![".doc", ".jpg", ".png", ".jpeg", ".bmp", ".docx", ".zip", ".rar", ".pdf", ".xls", ".xlsx", ".txt"].includes(extname(path).toLowerCase())) throw new AppError("INVALID_INPUT", "附件格式不受支持");
@@ -233,7 +275,7 @@ export class ScholarshipClient {
     if (text(after.entry, "SHZT") !== "0" || text(after.row, "SHZT") !== "0" || PRESERVED_FIELDS.some(key => data[key] !== undefined && text(after.row, key) !== text(data, key))) {
       throw new AppError("REMOTE_SCHEMA_CHANGED", "保存已返回成功，但草稿状态、内容或附件回读不一致，请到官网核对；不会自动重试");
     }
-    return { saved: true, application: application(after.entry), values: values(after.row), reviewUrl: SCHOLARSHIP_LINK, nextStep: "请使用保存草稿的账号打开官网，在“我的申请”中核对该申请，确认无误后自行提交。" };
+    return { saved: true, application: application(after.entry), values: values(after.row), reviewUrl: SCHOLARSHIP_LINK, nextStep: "请向用户展示草稿内容和核对链接，询问是否提交；收到明确同意后执行 scholarship submit。" };
   }
 }
 function text(row: Row, key: string): string { const v = row[key]; return v === null || v === undefined ? "" : String(v); }

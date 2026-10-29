@@ -1,4 +1,4 @@
-import { scholarshipDraftSchema } from "./scholarship.js";
+import { scholarshipDraftSchema, scholarshipSubmitSchema } from "./scholarship.js";
 import { classroomQuerySchema } from "./classrooms.js";
 import { requiredText } from "../../../src/core/guards.js";
 import type { Command } from "commander";
@@ -141,7 +141,7 @@ export function registerEHallCommands(
       return { data, text: `已删除并核对：${data.title}\n编号：${data.id}` };
     }));
 
-  const scholarship = ehall.command("scholarship").description("研究生奖学金查询、填写与草稿保存");
+  const scholarship = ehall.command("scholarship").description("研究生奖学金查询、草稿保存与提交");
   for (const [name, description, method] of [
     ["list", "查询奖种与开放时间", service.scholarships],
     ["applications", "查询本人奖学金申请与审核状态", service.scholarshipApplications],
@@ -179,7 +179,17 @@ export function registerEHallCommands(
       const parsed = scholarshipDraftSchema.safeParse(value);
       if (!parsed.success) throw new AppError("INVALID_INPUT", parsed.error.issues.map(i => `${i.path.join(".")}: ${i.message}`).join("；"));
       const data = await service.saveScholarshipDraft(parsed.data, options.dryRun);
-      return { data, text: `${data.saved ? `草稿已保存并回读确认，尚未提交\n核对链接：${data.reviewUrl}\n${data.nextStep}` : "填写预览（未保存）"}\n${JSON.stringify(data, null, 2)}` };
+      return { data, text: `${data.saved ? `草稿已保存并回读确认\n核对链接：${data.reviewUrl}\n${data.nextStep}` : "草稿填写预览"}\n${JSON.stringify(data, null, 2)}` };
+    }));
+
+  addFormatOption(scholarship.command("submit <applicationId>").description("预览本人奖学金申请；用户确认后提交草稿并回读")
+    .option("--yes", "用户已核对内容及官网链接，并明确同意提交")
+    .option("--dry-run", "读取申请预览和官网核对链接"))
+    .action(async (applicationId: string, options: FormatOptions & { yes?: boolean; dryRun?: boolean }) => runCommand(runtime, options, async () => {
+      const parsed = scholarshipSubmitSchema.safeParse({ applicationId, confirmed: Boolean(options.yes) && !options.dryRun });
+      if (!parsed.success) throw new AppError("INVALID_INPUT", "请提供有效的申请编号");
+      const data = await service.submitScholarship(parsed.data.applicationId, parsed.data.confirmed);
+      return { data, text: `${data.submitted ? "申请已提交并回读确认" : "申请提交预览"}\n核对链接：${data.reviewUrl}\n${JSON.stringify(data, null, 2)}` };
     }));
 
   addFormatOption(ehall.command("trip").description("查询研究生节假日行程登记、默认联系方式与缺失信息"))
