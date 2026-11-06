@@ -1,0 +1,126 @@
+{
+  "verifiedOn": "2026-11-07",
+  "node": "v26.10.0",
+  "cli": [
+    {
+      "command": "node dist/cli.js market boards --format json",
+      "ms": 1127,
+      "count": 11
+    },
+    {
+      "command": "node dist/cli.js market posts --format json",
+      "ms": 1062,
+      "scope": {
+        "method": "latest-pages",
+        "scannedPages": 1,
+        "scannedPosts": 10,
+        "newest": "2026-11-06T15:31:05.000Z",
+        "oldest": "2026-11-06T14:46:37.000Z",
+        "finished": false
+      },
+      "matches": 10
+    },
+    {
+      "command": "node dist/cli.js market posts --cursor <returned cursor> --format json",
+      "ms": 1032,
+      "scope": {
+        "method": "latest-pages",
+        "scannedPages": 1,
+        "scannedPosts": 10,
+        "newest": "2026-11-06T14:42:04.000Z",
+        "oldest": "2026-11-06T12:34:06.000Z",
+        "finished": false
+      },
+      "matches": 10,
+      "overlapWithPrevious": 0
+    },
+    {
+      "command": "node dist/cli.js market search 显示器 --board 635552598 --pages 10 --format json",
+      "ms": 7586,
+      "scope": {
+        "method": "latest-pages",
+        "scannedPages": 10,
+        "scannedPosts": 120,
+        "newest": "2026-11-06T18:24:25.000Z",
+        "oldest": "2026-10-28T07:52:41.000Z",
+        "finished": false
+      },
+      "matches": 1
+    },
+    {
+      "command": "node dist/cli.js market search 显示器 --board 635552598 --pages 2 --cursor <returned cursor> --format json",
+      "ms": 805,
+      "scope": {
+        "method": "latest-pages",
+        "scannedPages": 1,
+        "scannedPosts": 0,
+        "newest": null,
+        "oldest": null,
+        "finished": true
+      },
+      "matches": 0,
+      "hasNextCursor": false
+    },
+    {
+      "command": "node dist/cli.js market show <returned post id> --format json",
+      "ms": 1227,
+      "images": 2,
+      "authorMatches": true,
+      "bodyPresent": true
+    },
+    {
+      "command": "node dist/cli.js market posts --author <returned author id> --pages 2 --format json",
+      "ms": 1532,
+      "matches": 1,
+      "scope": {
+        "method": "latest-pages",
+        "scannedPages": 2,
+        "scannedPosts": 20,
+        "newest": "2026-11-06T15:31:05.000Z",
+        "oldest": "2026-11-06T12:34:06.000Z",
+        "finished": false
+      }
+    },
+    {
+      "command": "node dist/cli.js market search 显示器 --pages 0 --format json",
+      "errorCode": "INVALID_INPUT",
+      "exitCode": 2
+    },
+    {
+      "command": "node dist/cli.js market show invalid-id --format json",
+      "errorCode": "INVALID_INPUT",
+      "exitCode": 2
+    },
+    {
+      "command": "node dist/cli.js market search \" \" --format json",
+      "errorCode": "INVALID_INPUT",
+      "exitCode": 2
+    }
+  ],
+  "mcp": {
+    "tools": [
+      "market_boards",
+      "market_posts",
+      "market_search",
+      "market_show"
+    ],
+    "totalTools": 297,
+    "search": {
+      "arguments": {
+        "query": "显示器",
+        "board": "635552598",
+        "pages": 10
+      },
+      "scope": {
+        "method": "latest-pages",
+        "scannedPages": 10,
+        "scannedPosts": 120,
+        "newest": "2026-11-06T15:31:05.000Z",
+        "oldest": "2026-10-28T07:19:00.000Z",
+        "finished": false
+      },
+      "matches": 1
+    },
+    "invalidPagesRejected": true
+  }
+}
