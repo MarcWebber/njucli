@@ -47,7 +47,7 @@ https://github.com/MarcWebber/njucli
 | 就医与医保 | [预约与取消医院项目、查询及下载体检报告、查询医保资料和参保记录](skills/njucli-hospital/SKILL.md) |
 | 校园事务 | [查青年平台活动](skills/njucli-youth/SKILL.md)，[申请成绩单与证明](skills/njucli-self-service/SKILL.md)，[预约 IT 侠维修](skills/njucli-itxia/SKILL.md)，[查教师与后勤联系方式](skills/njucli-institution/SKILL.md) |
 
-全部业务见 [Skills 目录](skills/)。使用条件和验证范围随各 Skill 维护。
+套件包含 21 个 Skill，完整业务见 [Skills 目录](skills/)，CLI、Web 与 Runner 的覆盖范围见[能力矩阵](https://github.com/MarcWebber/njuweb/blob/main/docs/capability-matrix.md)。使用条件和验证范围随各 Skill 维护。
 
 ## 接入与文档
 

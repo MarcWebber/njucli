@@ -83,7 +83,7 @@ njucli ehall applications --state active --format json
 njucli ehall trip --format json
 ```
 
-应用 ID 来自 `services` 的 `appId`，用 `link` 获取官网入口。
+应用 ID 来自 `services` 的 `appId`，用 `link` 获取官网入口。查询宿舍申办、勤工助学等事项时，按事项名称检索，返回办理说明和官方链接，用户在对应页面完成办理。通用入口为[网上办事大厅](https://ehall.nju.edu.cn/)，操作说明见[官方指南](https://guide.nju.edu.cn/faq/33/07/c44791a537351/page.htm)。
 
 `tasks` 查看任务（`--kind` 支持 `todo/done/started`）；`applications` 查看本人发起的审批（`--state` 支持 `active/completed/cancelled`）。
 
