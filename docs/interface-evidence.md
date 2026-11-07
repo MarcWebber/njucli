@@ -14,6 +14,7 @@
 | 体育场馆 | [场馆、时段与预约记录](#体育场馆) |
 | 校园信息 | [新闻、通知与食堂](#校园信息)；[NJU Mirror 镜像](../skills/njucli-campus/references/mirrors.md) |
 | 正版软件 | [目录与安装包](#正版软件) |
+| 南哪咸鱼 | [游客会话、分页检索与帖子详情](../skills/njucli-market/references/interfaces.md) |
 | 校园邮箱 | [绑定、邮件与附件](#校园邮箱) |
 | 青年平台 | [活动、志愿时长与第二课堂](../skills/njucli-youth/references/interfaces.md) |
 | 协同表格 | [表格、记录、公式、视图与外部应用填报](../skills/njucli-table/references/interfaces.md) |

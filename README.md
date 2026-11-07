@@ -43,7 +43,7 @@ https://github.com/MarcWebber/njucli
 | 上课与教务 | [查课表、成绩、考试和空闲教室，填写奖学金草稿并确认提交](skills/njucli-ehall/SKILL.md)，查看[软件学院](skills/njucli-se/SKILL.md)和[智汇南雍](skills/njucli-lms/SKILL.md)的课程与作业 |
 | 邮件与文件 | [收发邮件与附件](skills/njucli-mail/SKILL.md)，[管理云盘、在线文档与白板](skills/njucli-box/SKILL.md)，[填写协同表格](skills/njucli-table/SKILL.md) |
 | 学习与写作 | [图书检索、借阅和请求管理](skills/njucli-library/SKILL.md)，[研修间预约与取消](skills/njucli-library-room/SKILL.md)，[撰写与编译 LaTeX](skills/njucli-tex/SKILL.md)，[查找校园正版软件](skills/njucli-software/SKILL.md) |
-| 校园生活 | [看通知、食堂信息、查镜像](skills/njucli-campus/SKILL.md)，[查体育场馆](skills/njucli-sports/SKILL.md)，查看[校园卡](skills/njucli-pay/SKILL.md)和[宿舍电费](skills/njucli-dorm/SKILL.md) |
+| 校园生活 | [看通知、食堂信息、查镜像](skills/njucli-campus/SKILL.md)，[检索南哪咸鱼二手与互助帖子](skills/njucli-market/SKILL.md)，[查体育场馆](skills/njucli-sports/SKILL.md)，查看[校园卡](skills/njucli-pay/SKILL.md)和[宿舍电费](skills/njucli-dorm/SKILL.md) |
 | 就医与医保 | [预约与取消医院项目、查询及下载体检报告、查询医保资料和参保记录](skills/njucli-hospital/SKILL.md) |
 | 校园事务 | [查青年平台活动](skills/njucli-youth/SKILL.md)，[申请成绩单与证明](skills/njucli-self-service/SKILL.md)，[预约 IT 侠维修](skills/njucli-itxia/SKILL.md)，[查教师与后勤联系方式](skills/njucli-institution/SKILL.md) |
 

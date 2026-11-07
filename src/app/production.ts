@@ -1,4 +1,6 @@
 import { createPayServices } from "../../skills/njucli-pay/scripts/client.js";
+import { MarketClient } from "../../skills/njucli-market/scripts/client.js";
+import { registerMarketCommands, registerMarketTools } from "../../skills/njucli-market/scripts/commands.js";
 import { registerPayCommands, registerPayTools } from "../../skills/njucli-pay/scripts/commands.js";
 import { createDormServices } from "../../skills/njucli-dorm/scripts/client.js";
 import { registerDormCommands, registerDormTools } from "../../skills/njucli-dorm/scripts/commands.js";
@@ -80,6 +82,7 @@ export function createCli(runtime: CommandRuntime): Command {
   }
 
   mount(new InstitutionClient(), registerInstitutionCommands, registerInstitutionTools);
+  mount(new MarketClient(), registerMarketCommands, registerMarketTools);
   mount(createAccountServices(context), registerAccountCommands, registerAccountTools);
   mount(createAuthServices(context, youth.identity), registerAuthCommands, registerAuthTools);
   mount(createBoxServices(context), registerBoxCommands, registerBoxTools);
