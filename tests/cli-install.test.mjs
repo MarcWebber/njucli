@@ -42,6 +42,13 @@ test("统一安装：njucli、全局套件、目录、模板与 MCP", async (t) 
     assert.equal(JSON.parse(error.stdout).error.code, "INVALID_INPUT");
     return true;
   });
+  for (const args of [["posts", "--pages", "0"], ["search", " "], ["show", "invalid-id"]]) {
+    await assert.rejects(run(["market", ...args, "--format", "json"]), error => {
+      assert.equal(error.code, 2);
+      assert.equal(JSON.parse(error.stdout).error.code, "INVALID_INPUT");
+      return true;
+    });
+  }
   const skillsRoot = join(env.CODEX_HOME, "skills");
   assert.deepEqual(await readdir(skillsRoot), ["njucli"]);
   assert.deepEqual((await readdir(join(skillsRoot, "njucli"))).sort(), names.sort());
